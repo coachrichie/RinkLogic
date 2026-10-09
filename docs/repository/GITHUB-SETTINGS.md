@@ -27,7 +27,19 @@ Sichtbarkeitsänderung als aktiv dokumentiert, wenn GitHub sie bestätigt.
 
 ## Nachweis nach Veröffentlichung
 
-Der Abschlussnachweis ergänzt öffentliche URL, `main`-SHA, Sichtbarkeit,
-Branch-Protection-Antwort, privaten Sicherheitskanal und Ergebnis eines
-unangemeldeten frischen Clones. Ungeprüfte Einstellungen werden nicht als aktiv
-dargestellt.
+Am 10. Oktober 2026 wurde der geprüfte, historienfreie Snapshot veröffentlicht:
+
+- öffentliche URL: <https://github.com/coachrichie/RinkLogic>;
+- initialer `main`-Commit: `7180a0b88cfe715cf535800fe02e6f7473dc8f66`;
+- GitHub-Sichtbarkeit: `PUBLIC`;
+- Standardbranch: `main`;
+- erster GitHub-Actions-Lauf `Python tests`: erfolgreich;
+- Pflichtcheck `python-tests`: strikt und aktuell;
+- Änderungen über Pull Requests und aufgelöste Konversationen erforderlich;
+- Force-Push und Branch-Löschung: deaktiviert;
+- Private Vulnerability Reporting: aktiviert und per API zurückgelesen.
+
+Ein frischer Clone über die öffentliche HTTPS-URL wurde mit deaktivierter
+Git-Anmeldehilfe erstellt. Er erreichte den genannten Commit und bestand 32
+Analysetests plus drei Subtests, 20 Repository-/Audit-Tests, Repository-Policy,
+Release-Audit und REUSE 146/146.
