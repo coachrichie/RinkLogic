@@ -1,0 +1,38 @@
+<resources xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+    <fitContributions>
+        <fitField id="1" sortOrder="1" dataLabel="@Strings.FitSchemaVersionLabel" unitLabel="@Strings.FitUnitVersion" />
+        <fitField id="2" sortOrder="2" dataLabel="@Strings.FitHockeyModeLabel" unitLabel="@Strings.FitUnitEnum" />
+        <fitField id="3" sortOrder="3" dataLabel="@Strings.FitShiftStateLabel" unitLabel="@Strings.FitUnitEnum" />
+        <fitField id="4" sortOrder="4" dataLabel="@Strings.FitShiftSourceLabel" unitLabel="@Strings.FitUnitEnum" />
+        <fitField id="5" sortOrder="5" dataLabel="@Strings.FitShiftConfidenceLabel" unitLabel="@Strings.FitUnitPercent" />
+        <fitField id="6" sortOrder="6" displayInChart="true" precision="0" chartTitle="@Strings.FitMovementIntensityLabel" dataLabel="@Strings.FitMovementIntensityLabel" unitLabel="@Strings.FitUnitIntensity" fillColor="#3D7EFF" />
+        <fitField id="7" sortOrder="7" dataLabel="@Strings.FitQualityFlagsLabel" unitLabel="@Strings.FitUnitFlags" />
+        <fitField id="8" sortOrder="8" dataLabel="@Strings.FitHrSourceLabel" unitLabel="@Strings.FitUnitEnum" />
+        <fitField id="9" sortOrder="9" displayInChart="true" precision="0" chartTitle="@Strings.FitEstimatedDistanceLabel" dataLabel="@Strings.FitEstimatedDistanceLabel" unitLabel="@Strings.FitUnitCentimeters" fillColor="#42A5F5" />
+        <fitField id="10" sortOrder="10" dataLabel="@Strings.FitPropulsionCountLabel" unitLabel="@Strings.FitUnitCount" />
+        <fitField id="11" sortOrder="11" displayInChart="true" precision="0" chartTitle="@Strings.FitPropulsionCadenceLabel" dataLabel="@Strings.FitPropulsionCadenceLabel" unitLabel="@Strings.FitUnitPushesPerMinute" fillColor="#26A69A" />
+        <fitField id="12" sortOrder="12" dataLabel="@Strings.FitStrideLengthLabel" unitLabel="@Strings.FitUnitCentimeters" />
+        <fitField id="13" sortOrder="13" displayInChart="true" precision="0" chartTitle="@Strings.FitGlidePushRatioLabel" dataLabel="@Strings.FitGlidePushRatioLabel" unitLabel="@Strings.FitUnitRatio" fillColor="#AB47BC" />
+        <fitField id="14" sortOrder="14" displayInChart="true" precision="0" chartTitle="@Strings.FitImpactLabel" dataLabel="@Strings.FitImpactLabel" unitLabel="@Strings.FitUnitMillig" fillColor="#EF5350" />
+        <fitField id="15" sortOrder="15" dataLabel="@Strings.FitSensorGapLabel" unitLabel="@Strings.FitUnitMilliseconds" />
+        <fitField id="16" sortOrder="16" dataLabel="@Strings.FitShiftIndexLabel" unitLabel="@Strings.FitUnitCount" />
+        <fitField id="17" sortOrder="17" dataLabel="@Strings.FitShiftStateLabel" unitLabel="@Strings.FitUnitEnum" />
+        <fitField id="18" sortOrder="18" dataLabel="@Strings.FitShiftTimestampLabel" unitLabel="@Strings.FitUnitMilliseconds" />
+        <fitField id="19" sortOrder="19" displayInActivityLaps="true" precision="0" dataLabel="@Strings.FitShiftDurationLabel" unitLabel="@Strings.FitUnitMilliseconds" />
+        <fitField id="20" sortOrder="20" displayInActivityLaps="true" precision="0" dataLabel="@Strings.FitShiftConfidenceLabel" unitLabel="@Strings.FitUnitPercent" />
+        <fitField id="21" sortOrder="21" dataLabel="@Strings.FitShiftSourceLabel" unitLabel="@Strings.FitUnitEnum" />
+        <fitField id="22" sortOrder="22" displayInActivityLaps="true" precision="0" dataLabel="@Strings.FitMovementIntensityLabel" unitLabel="@Strings.FitUnitIntensity" />
+        <fitField id="23" sortOrder="23" dataLabel="@Strings.FitQualityFlagsLabel" unitLabel="@Strings.FitUnitFlags" />
+        <fitField id="24" sortOrder="24" dataLabel="@Strings.FitSchemaVersionLabel" unitLabel="@Strings.FitUnitVersion" />
+        <fitField id="25" sortOrder="25" dataLabel="@Strings.FitHockeyModeLabel" unitLabel="@Strings.FitUnitEnum" />
+        <fitField id="26" sortOrder="26" displayInActivitySummary="true" precision="0" dataLabel="@Strings.FitShiftCountLabel" unitLabel="@Strings.FitUnitCount" />
+        <fitField id="27" sortOrder="27" displayInActivitySummary="true" precision="0" dataLabel="@Strings.FitIceTimeLabel" unitLabel="@Strings.FitUnitMilliseconds" />
+        <fitField id="28" sortOrder="28" displayInActivitySummary="true" precision="0" dataLabel="@Strings.FitBenchTimeLabel" unitLabel="@Strings.FitUnitMilliseconds" />
+        <fitField id="29" sortOrder="29" displayInActivitySummary="true" precision="0" dataLabel="@Strings.FitEstimatedDistanceLabel" unitLabel="@Strings.FitUnitCentimeters" />
+        <fitField id="30" sortOrder="30" dataLabel="@Strings.FitQualityFlagsLabel" unitLabel="@Strings.FitUnitFlags" />
+        <fitField id="31" sortOrder="31" dataLabel="@Strings.FitCalibrationVersionLabel" unitLabel="@Strings.FitUnitVersion" />
+        <fitField id="32" sortOrder="32" displayInActivitySummary="true" precision="0" dataLabel="@Strings.FitHitsLabel" unitLabel="@Strings.FitUnitCount" />
+        <fitField id="33" sortOrder="33" displayInActivitySummary="true" precision="0" dataLabel="@Strings.FitPassesLabel" unitLabel="@Strings.FitUnitCount" />
+        <fitField id="34" sortOrder="34" displayInActivitySummary="true" precision="0" dataLabel="@Strings.FitShotsLabel" unitLabel="@Strings.FitUnitCount" />
+    </fitContributions>
+</resources>

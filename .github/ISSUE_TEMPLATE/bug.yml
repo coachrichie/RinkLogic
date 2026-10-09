@@ -1,0 +1,57 @@
+name: Fehlerbericht
+description: Reproduzierbaren App-, Analyse- oder Dokumentationsfehler melden
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: Bitte keine persönlichen FIT-Dateien, Uhr-Logs, Kontodaten, Standorte, Schlüssel oder Tokens anhängen.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Beobachtetes Problem
+      description: Was ist passiert und was wurde stattdessen erwartet?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduktion
+      description: Schritte vom App-Start bis zum Fehler, ohne private Rohdaten.
+      placeholder: |
+        1. App öffnen
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit oder Build
+      description: Git-Commit und, falls bekannt, dokumentierter Build-Hash.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Gerät und Firmware
+      description: Zum Beispiel Garmin Venu 2 Plus mit Firmwareversion; bei reinen Analysefehlern „nicht zutreffend“.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Betroffener Bereich
+      options:
+        - Uhr-App
+        - Garmin Connect Mobile
+        - Garmin Connect Web
+        - FIT-Export oder lokale Analyse
+        - Dokumentation oder CI
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Datenschutz
+      options:
+        - label: Dieser Bericht enthält keine privaten Trainingsdaten oder Geheimnisse.
+          required: true

@@ -1,0 +1,29 @@
+<resources xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+    <fitContributions>
+        <fitField id="62" displayInChart="true" sortOrder="0" precision="0" chartTitle="@Strings.ConnectPushCount" dataLabel="@Strings.ConnectPushCount" unitLabel="@Strings.ConnectPushUnit" fillColor="#12C986" />
+        <fitField id="63" displayInChart="true" sortOrder="1" precision="0" chartTitle="@Strings.ConnectEstimatedDistance" dataLabel="@Strings.ConnectEstimatedDistance" unitLabel="@Strings.ConnectCmUnit" fillColor="#1477E6" />
+        <fitField id="65" displayInActivityLaps="true" sortOrder="3" precision="0" dataLabel="@Strings.ConnectShiftPushCount" unitLabel="@Strings.ConnectPushUnit" />
+        <fitField id="66" displayInActivityLaps="true" sortOrder="4" precision="0" dataLabel="@Strings.ConnectShiftEstimatedDistance" unitLabel="@Strings.ConnectCmUnit" />
+        <fitField id="71" displayInActivityLaps="true" sortOrder="5" precision="0" dataLabel="@Strings.ConnectShiftShortPushCount" unitLabel="@Strings.ConnectPushUnit" />
+        <fitField id="72" displayInActivityLaps="true" sortOrder="6" precision="0" dataLabel="@Strings.ConnectShiftMotionCoverage" unitLabel="@Strings.ConnectPercentUnit" />
+        <fitField id="74" displayInActivitySummary="true" sortOrder="7" precision="0" dataLabel="@Strings.ConnectShiftCount" unitLabel="@Strings.ConnectShiftUnit" />
+        <fitField id="75" displayInActivitySummary="true" sortOrder="10" precision="0" dataLabel="@Strings.ConnectTimeOnIce" unitLabel="@Strings.ConnectSecondsUnit" />
+        <fitField id="76" displayInActivitySummary="true" sortOrder="11" precision="0" dataLabel="@Strings.ConnectBenchTime" unitLabel="@Strings.ConnectSecondsUnit" />
+        <fitField id="77" displayInActivitySummary="true" sortOrder="8" precision="0" dataLabel="@Strings.ConnectAverageShift" unitLabel="@Strings.ConnectSecondsUnit" />
+        <fitField id="78" displayInActivitySummary="true" sortOrder="9" precision="0" dataLabel="@Strings.ConnectAverageShiftHeartRate" unitLabel="@Strings.ConnectBpmUnit" />
+        <fitField id="79" displayInActivitySummary="true" sortOrder="12" precision="0" dataLabel="@Strings.ConnectHrZone1" unitLabel="@Strings.ConnectSecondsUnit" />
+        <fitField id="80" displayInActivitySummary="true" sortOrder="13" precision="0" dataLabel="@Strings.ConnectHrZone2" unitLabel="@Strings.ConnectSecondsUnit" />
+        <fitField id="81" displayInActivitySummary="true" sortOrder="14" precision="0" dataLabel="@Strings.ConnectHrZone3" unitLabel="@Strings.ConnectSecondsUnit" />
+        <fitField id="82" displayInActivitySummary="true" sortOrder="15" precision="0" dataLabel="@Strings.ConnectHrZone4" unitLabel="@Strings.ConnectSecondsUnit" />
+        <fitField id="83" displayInActivitySummary="true" sortOrder="16" precision="0" dataLabel="@Strings.ConnectHrZone5" unitLabel="@Strings.ConnectSecondsUnit" />
+        <fitField id="84" displayInActivitySummary="true" sortOrder="17" precision="0" dataLabel="@Strings.ConnectAboveNinety" unitLabel="@Strings.ConnectSecondsUnit" />
+        <fitField id="85" displayInActivitySummary="true" sortOrder="18" precision="0" dataLabel="@Strings.ConnectWorkRest" unitLabel="@Strings.ConnectRatioUnit" />
+        <fitField id="86" displayInActivitySummary="true" sortOrder="19" precision="0" dataLabel="@Strings.ConnectShiftDensity" unitLabel="@Strings.ConnectShiftsPerHourUnit" />
+        <fitField id="87" displayInActivitySummary="true" sortOrder="20" precision="0" dataLabel="@Strings.ConnectShortestShift" unitLabel="@Strings.ConnectSecondsUnit" />
+        <fitField id="88" displayInActivitySummary="true" sortOrder="21" precision="0" dataLabel="@Strings.ConnectLongestShift" unitLabel="@Strings.ConnectSecondsUnit" />
+        <fitField id="89" displayInActivitySummary="true" sortOrder="22" precision="0" dataLabel="@Strings.ConnectMedianShift" unitLabel="@Strings.ConnectSecondsUnit" />
+        <fitField id="93" displayInActivityLaps="true" sortOrder="26" precision="0" dataLabel="@Strings.ConnectHrDrop30" unitLabel="@Strings.ConnectBpmUnit" />
+        <fitField id="94" displayInActivityLaps="true" sortOrder="27" precision="0" dataLabel="@Strings.ConnectHrDrop60" unitLabel="@Strings.ConnectBpmUnit" />
+        <fitField id="95" displayInActivityLaps="true" sortOrder="28" precision="0" dataLabel="@Strings.ConnectShiftAverageHeartRate" unitLabel="@Strings.ConnectBpmUnit" />
+    </fitContributions>
+</resources>

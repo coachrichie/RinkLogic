@@ -1,0 +1,53 @@
+name: Hardware- und Garmin-Connect-Test
+description: Reproduzierbaren Geräte-, Synchronisations- oder FIT-Befund dokumentieren
+title: "test: "
+body:
+  - type: markdown
+    attributes:
+      value: Keine FIT-Rohdatei, Uhr-Logs, Kontonamen, Standorte oder Screenshots mit persönlichen Trainingsdaten hochladen.
+  - type: input
+    id: commit
+    attributes:
+      label: Commit und Build-Hash
+      description: Vollständiger Git-Commit und SHA-256 des getesteten PRG-Builds.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Gerät und Firmware
+      description: Exaktes Garmin-Modell und Firmwareversion.
+    validations:
+      required: true
+  - type: checkboxes
+    id: installation
+    attributes:
+      label: Installation und Uhr
+      options:
+        - label: Build installiert und Uhr sicher getrennt
+        - label: Training gestartet und manuelle Shifts markiert
+        - label: Aktivität erfolgreich gespeichert
+        - label: Alle drei Post-Training-Seiten geprüft
+  - type: checkboxes
+    id: connect
+    attributes:
+      label: Garmin Connect und Export
+      options:
+        - label: Aktivität mit Garmin Connect Mobile synchronisiert
+        - label: Benutzerdefinierte Aktivitätsfelder geprüft
+        - label: Shift-Laps und Erholungsfelder geprüft
+        - label: Schema-7-FIT lokal exportiert und dekodiert
+  - type: textarea
+    id: result
+    attributes:
+      label: Beobachtung
+      description: Erwartete und tatsächliche Anzeige, fehlende Werte und genaue Bedienfolge ohne private Rohdaten.
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Datenschutz
+      options:
+        - label: Der Bericht enthält keine privaten Aktivitätsdateien oder identifizierenden Daten.
+          required: true

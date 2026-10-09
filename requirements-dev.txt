@@ -1,0 +1,1 @@
+reuse[charset-normalizer]==6.2.0

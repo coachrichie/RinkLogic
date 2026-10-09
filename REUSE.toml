@@ -1,0 +1,34 @@
+version = 1
+SPDX-PackageName = "RinkLogic"
+SPDX-PackageSupplier = "Richard Dominik Haimerl Schwarzwaldau"
+SPDX-PackageDownloadLocation = "https://github.com/coachrichie/RinkLogic"
+
+[[annotations]]
+path = [
+  "**/*.py",
+  "**/*.mc",
+  "**/*.xml",
+  "**/*.yml",
+  "**/*.yaml",
+  "**/*.json",
+  "**/*.ps1",
+  "**/*.jungle",
+  "**/*.toml",
+  ".gitignore",
+  ".github/CODEOWNERS",
+  "analysis/requirements.txt",
+  "docs/.nojekyll",
+  "LICENSE",
+  "NOTICE",
+  "requirements-dev.txt",
+  "REUSE.toml",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Richard Dominik Haimerl Schwarzwaldau"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["**/*.md", "**/*.html", "**/*.png"]
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Richard Dominik Haimerl Schwarzwaldau"
+SPDX-License-Identifier = "CC-BY-4.0"

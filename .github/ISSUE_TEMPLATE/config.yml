@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Sicherheits- und Datenschutzregeln
+    url: https://github.com/coachrichie/RinkLogic/blob/main/SECURITY.md
+    about: Vor einer vertraulichen Meldung den aktuell verfügbaren Meldeweg prüfen.

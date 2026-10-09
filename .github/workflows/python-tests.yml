@@ -1,0 +1,38 @@
+name: Python tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  python-tests:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            analysis/requirements.txt
+            requirements-dev.txt
+      - name: Install test and license dependencies
+        run: |
+          python -m pip install -r analysis/requirements.txt
+          python -m pip install -r requirements-dev.txt
+      - name: Run analysis tests
+        run: python -m unittest discover -s analysis/tests -p "test_*.py" -v
+      - name: Run repository and release-audit tests
+        run: python -m unittest discover -s scripts/tests -p "test_*.py" -v
+      - name: Enforce repository policy
+        run: python scripts/repository_policy.py
+      - name: Validate license mapping
+        run: python -m reuse lint

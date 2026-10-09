@@ -1,0 +1,39 @@
+name: Funktionswunsch
+description: Neue Funktion oder messbare Verbesserung vorschlagen
+title: "feature: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem und Ziel
+      description: Welches Nutzerproblem soll gelöst werden und woran wäre Erfolg erkennbar?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Gewünschtes Ergebnis
+      description: Beschreibe Verhalten und Anzeige, nicht nur eine technische Lösung.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidenz und Validierung
+      description: Welche Definition, Referenzmessung oder Hardwareprüfung wäre nötig?
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Datenschutz- und Exportfolgen
+      description: Welche persönlichen Daten, FIT-Felder oder Berechtigungen wären betroffen?
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Grenzen
+      options:
+        - label: Der Vorschlag behauptet keine medizinische oder sportwissenschaftliche Validierung ohne Nachweis.
+          required: true
