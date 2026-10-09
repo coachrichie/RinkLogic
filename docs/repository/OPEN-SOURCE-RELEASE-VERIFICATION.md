@@ -86,7 +86,20 @@ sind von diesen Lizenzen ausgeschlossen und werden nicht weitergegeben.
 
 ## Öffentliche GitHub-Prüfung
 
-Nach dem Push werden öffentliche URL, `main`-SHA, Sichtbarkeit, unangemeldeter
-Clone, GitHub Actions, Branch Protection und Private Vulnerability Reporting
-mit den tatsächlich gelesenen GitHub-Antworten ergänzt oder in den
-Release-Notizen dokumentiert.
+Am 10. Oktober 2026 bestätigte GitHub nach dem Push:
+
+- Repository: <https://github.com/coachrichie/RinkLogic>;
+- Sichtbarkeit: `PUBLIC`;
+- initialer `main`-Commit: `7180a0b88cfe715cf535800fe02e6f7473dc8f66`;
+- Standardbranch: `main`;
+- GitHub Actions `Python tests`: erfolgreich;
+- strikter Pflichtcheck `python-tests`;
+- Pull-Request- und Konversationsauflösungsschutz aktiv;
+- Force-Push und Löschung von `main` deaktiviert;
+- Private Vulnerability Reporting aktiviert.
+
+Ein frischer öffentlicher HTTPS-Clone wurde ohne Git-Anmeldehilfe erstellt und
+erreichte denselben Commit. Dort bestanden erneut 32 Analysetests plus drei
+Subtests, 20 Repository-/Audit-Tests, Repository-Policy, Release-Audit und
+REUSE 146/146. Gitleaks 8.29.1 hatte den Snapshot vor dem Push vollständig und
+ohne Fund geprüft.
