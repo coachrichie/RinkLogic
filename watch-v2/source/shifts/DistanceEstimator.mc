@@ -1,6 +1,12 @@
 using Toybox.Lang;
+using Toybox.Math;
 
 class DistanceEstimator {
+    private var mDistanceModelMode = :fixed;
+    private var mDistanceModelSource = :default;
+    private var mStartDistanceCm = 125;
+    private var mRhythmDistanceCm = 225;
+    private var mDistanceModelLocked = false;
     private var mShiftStartedAt = null;
     private var mShiftPushes = 0;
     private var mShiftDistanceCm = 0;
@@ -31,7 +37,40 @@ class DistanceEstimator {
 
     function initialize() { }
 
+    function configure(modelMode, heightCm) as Void {
+        if (mDistanceModelLocked) { return; }
+        mDistanceModelLocked = true;
+        if (modelMode != :profile_height) { return; }
+        try {
+            if (heightCm == null || heightCm < 80 || heightCm > 250) { return; }
+            var factor = 1.0 + ((heightCm - 180) / 360.0);
+            var factorNumerator = heightCm + 180;
+            var factorDenominator = 360.0;
+            if (factor < 0.94) {
+                factor = 0.94;
+                factorNumerator = 47;
+                factorDenominator = 50.0;
+            }
+            if (factor > 1.06) {
+                factor = 1.06;
+                factorNumerator = 53;
+                factorDenominator = 50.0;
+            }
+            mStartDistanceCm = Math.floor(
+                125.0 * factorNumerator / factorDenominator + 0.5).toNumber();
+            mRhythmDistanceCm = Math.floor(
+                225.0 * factorNumerator / factorDenominator + 0.5).toNumber();
+            mDistanceModelMode = :profile_height;
+            mDistanceModelSource = :profile_height;
+        } catch (ex) { }
+    }
+
+    function getModelSource() as Lang.Symbol {
+        return mDistanceModelSource;
+    }
+
     function beginShift(atMs) as Void {
+        mDistanceModelLocked = true;
         if (mShiftStartedAt != null) { return; }
         mShiftStartedAt = atMs;
         mShiftPushes = 0;
@@ -94,7 +133,7 @@ class DistanceEstimator {
                 if (at == null || at < mShiftStartedAt || at > now) { continue; }
                 if (events[e][:startsBurst]) { mBurstPushes = 0; }
                 var shortPush = mBurstPushes < 4;
-                var centimetres = shortPush ? 125 : 225;
+                var centimetres = shortPush ? mStartDistanceCm : mRhythmDistanceCm;
                 mMotionProfile = shortPush ? :start : :rhythm;
                 mBurstPushes += 1;
                 mShiftPushes += 1;
@@ -126,6 +165,7 @@ class DistanceEstimator {
         mLastShiftTimebase = mShiftTimebase;
         var result = {:pushes=>mShiftPushes,
             :distanceCm=>mShiftDistanceCm,
+            :distanceModelSource=>mDistanceModelSource,
             :shortPushes=>mShiftShortPushes,
             :coveragePercent=>mLastShiftCoverage,
             :partial=>mLastShiftPartial,
@@ -150,6 +190,7 @@ class DistanceEstimator {
             :lastShiftDistanceCm=>mLastShiftDistanceCm,
             :totalPushes=>mTotalPushes,
             :totalDistanceCm=>mTotalDistanceCm,
+            :distanceModelSource=>mDistanceModelSource,
             :cadencePerMin=>cadence(atMs),
             :shortPushesTotal=>mShortPushesTotal,
             :coveragePercent=>coverage, :partial=>partial,
@@ -169,6 +210,7 @@ class DistanceEstimator {
         }
         return {:totalPushes=>mTotalPushes,
             :totalDistanceCm=>mTotalDistanceCm,
+            :distanceModelSource=>mDistanceModelSource,
             :shortPushesTotal=>mShortPushesTotal,
             :coveragePercent=>percentage(valid, ice),
             :partial=>ice > 0 && valid < ice,
