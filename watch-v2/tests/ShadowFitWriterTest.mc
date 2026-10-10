@@ -99,6 +99,34 @@ class ShadowRecordingFactoryFake {
 }
 
 (:test)
+function distanceModelSourceDoesNotCreateFitField(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    var writer = new ShadowFitWriter(session);
+    var expectedIds = [51, 52, 55, 56, 62, 63, 65, 66, 71, 72,
+        73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86,
+        87, 88, 89, 93, 94, 95];
+    var expectedNames = ["manual_boundary_ms", "manual_boundary_state",
+        "auto_boundary_ms", "auto_boundary_state", "push_count_total",
+        "estimated_distance_cm_total", "shift_push_count", "shift_estimated_distance_cm",
+        "shift_short_push_count", "shift_motion_coverage_percent", "summary_schema_version",
+        "shift_count", "time_on_ice", "bench_time", "average_shift_duration",
+        "average_shift_heart_rate", "heart_rate_zone_1_time", "heart_rate_zone_2_time",
+        "heart_rate_zone_3_time", "heart_rate_zone_4_time", "heart_rate_zone_5_time",
+        "time_above_90_percent_hrmax", "work_rest_ratio_tenths", "shift_density_per_hour",
+        "shortest_shift_duration", "longest_shift_duration", "median_shift_duration",
+        "heart_rate_drop_30", "heart_rate_drop_60", "shift_average_heart_rate"];
+    if (!writer.allocate() || !writer.writeSecond(null, null, :on_ice,
+        0, 1, 1000, {:totalPushes=>2, :totalDistanceCm=>264,
+            :cadencePerMin=>12, :distanceModelSource=>:profile_height}) ||
+        session.fieldIds.size() != 30 || session.fieldNames.size() != 30) { return false; }
+    for (var i = 0; i < expectedIds.size(); i += 1) {
+        if (session.fieldIds[i] != expectedIds[i] ||
+            !session.fieldNames[expectedIds[i]].equals(expectedNames[i])) { return false; }
+    }
+    return session.fields[62].lastValue == 2 && session.fields[63].lastValue == 264;
+}
+
+(:test)
 function shadowWriterUsesOnlyNewStableFieldIds(logger as Test.Logger) as Lang.Boolean {
     var session = new ShadowSessionFake();
     var writer = new ShadowFitWriter(session);
