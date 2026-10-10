@@ -4,6 +4,13 @@ Stand: 2026-10-06
 
 Zweck: lokale Validierung der heuristischen Anschub-/Distanzschätzung von ShiftSense auf der Venu 2 Plus.
 
+Dieses Protokoll mit mindestens fünf gültigen Wiederholungen je Bedingung
+dient der persönlichen Kalibrierungsprüfung. Auch `profile_status: eligible`
+ist keine Freigabe eines populationsweiten Höhenmodells. Dafür gelten die
+spielergruppengetrennten Kriterien in
+[`player-profile-distance-validation.md`](player-profile-distance-validation.md);
+der normale Build bleibt bis zu deren Erfüllung bei `:fixed`.
+
 ## Sicherheits- und Messgrenze
 
 Die Uhr liefert hier **keine GPS-Distanz**. `estimated_distance_cm` ist ein experimenteller Modellwert aus Bewegungsmerkmalen und Anschüben. Eine hohe Sensorabdeckung beweist keine hohe Distanzgenauigkeit. Die Ergebnisse gelten zunächst nur für die getestete Person, Uhrposition und Bewegungsart.

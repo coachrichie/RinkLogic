@@ -19,6 +19,20 @@ Manuelle Eingaben sind die Autorität für veröffentlichte Shift-Statistiken.
 Automatische Vorschläge bleiben ein separater experimenteller Shadow-Pfad und
 ändern keine bestätigten Shiftgrenzen.
 
+Für die experimentelle Distanzschätzung liest `GarminProfileService` die
+Garmin-Profilhöhe und normalisiert sie auf 80–250 cm. `RecordingCoordinator`
+übergibt beim Aufnahmestart ausschließlich `heightCm` und den von
+`DistanceModelConfig.mode()` gelieferten Modus an `DistanceEstimator`, vor
+dem ersten Shift. Der festgelegte Anschub-Abstand bleibt für die Aufnahme
+gesperrt; bei ungültiger Höhe gelten die festen 125/225 cm. Der normale
+Release-Modus ist `:fixed`, `:profile_height` dient einem gesonderten
+Validierungs-Build. Gewicht/BMI gelangen nicht in die Distanzformel. Die
+Quelle `:default` oder `:profile_height` erscheint nur in Speicher-Snapshots
+und im Dashboard (`:distanceModelSource`), nicht in FIT, Einstellungen oder
+Logs. Der Konfigurations-Einschub vor Start ist intern für Tests/Validierung,
+keine Nutzeroption. Die Oberfläche Eis/Inline wird nur in der lokalen
+Validierung extern notiert; die App hat keinen Selektor.
+
 ### Watch V1
 
 `watch/` bewahrt die frühere Implementierung und ihre Regressionstests. Sie ist
@@ -59,3 +73,4 @@ Feldbedeutung, ersetzt aber keine Prüfung der realen Garmin-Connect-Anzeige.
 - [`docs/data/FIT-SCHEMA.md`](docs/data/FIT-SCHEMA.md)
 - [`docs/data/HOCKEY-EVIDENCE-AUDIT-2026-09-28.md`](docs/data/HOCKEY-EVIDENCE-AUDIT-2026-09-28.md)
 - [`docs/testing/V2-POST-TRAINING-SUMMARY.md`](docs/testing/V2-POST-TRAINING-SUMMARY.md)
+- [`docs/testing/player-profile-distance-validation.md`](docs/testing/player-profile-distance-validation.md)
