@@ -7,6 +7,25 @@ from analysis.shift_pilot import load_pilot_fit, normalize_messages, score_bound
 
 
 class PilotReportTests(unittest.TestCase):
+    def test_schema_eight_uses_record_marker_and_new_summary_fields(self):
+        start = "2026-10-10T12:00:00+00:00"
+        report = normalize_messages([
+            {"type": "session", "start_time": start,
+             "total_elapsed_time": 60, "detected_push_count": 14,
+             "estimated_distance_m": 220.0,
+             "average_shift_minutes": 1.4},
+            {"type": "record", "summary_schema_version": 8,
+             "timestamp": start, "push_count_total": 14,
+             "estimated_distance_cm_total": 22000},
+            {"type": "lap", "manual_boundary_ms": 1000,
+             "manual_boundary_state": 1},
+            {"type": "lap", "manual_boundary_ms": 60000,
+             "manual_boundary_state": 2},
+        ])
+        self.assertEqual(report["schema_version"], 8)
+        self.assertEqual(report["push_metrics"]["total_pushes"], 14)
+        self.assertEqual(report["push_metrics"]["estimated_distance_cm"], 22000)
+
     def test_schema_four_with_or_without_summary_fields_remains_readable(self):
         for extra in ({}, {"shift_count": 4, "time_on_ice": 120,
                            "bench_time": 80, "average_shift_duration": 30,

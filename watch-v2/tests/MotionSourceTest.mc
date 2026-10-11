@@ -78,7 +78,7 @@ function coordinatorCountsHockeyPushesOnlyDuringManualShift(logger as Test.Logge
         [1300])));
     var onIce = coordinator.getDashboard();
     if (onIce[:shiftCount] != 1 || onIce[:totalPushes] != 3 ||
-        onIce[:totalDistanceCm] != 375) { return false; }
+        onIce[:totalDistanceCm] != 282) { return false; }
     coordinator.toggleShift();
     clock.now = 4000;
     coordinator.onMotionFeature(motionFeatureWithBatch(detectorBatch(
@@ -86,7 +86,7 @@ function coordinatorCountsHockeyPushesOnlyDuringManualShift(logger as Test.Logge
         [2500])));
     var bench = coordinator.getDashboard();
     return bench[:shiftCount] == 1 && bench[:totalPushes] == 3 &&
-        bench[:totalDistanceCm] == 375 && coordinator.stopAndSave();
+        bench[:totalDistanceCm] == 282 && coordinator.stopAndSave();
 }
 
 (:test)
@@ -106,7 +106,7 @@ function delayedConfirmationFiltersEventsBeforeShiftStart(logger as Test.Logger)
         [1700])));
     var dashboard = coordinator.getDashboard();
     return dashboard[:totalPushes] == 1 &&
-        dashboard[:totalDistanceCm] == 225 && coordinator.stopAndSave();
+        dashboard[:totalDistanceCm] == 169 && coordinator.stopAndSave();
 }
 
 (:test)

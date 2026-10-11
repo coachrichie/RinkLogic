@@ -131,8 +131,8 @@ function shadowWriterUsesOnlyNewStableFieldIds(logger as Test.Logger) as Lang.Bo
     var session = new ShadowSessionFake();
     var writer = new ShadowFitWriter(session);
     var expected = [51, 52, 55, 56, 62, 63, 65, 66, 71, 72,
-        73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86,
-        87, 88, 89, 93, 94, 95];
+        73, 74, 75, 76, 78, 79, 80, 81, 82, 83, 84, 85, 86,
+        89, 93, 94, 95, 96, 97, 98];
     if (!writer.allocate() || session.fieldIds.size() != 30) { return false; }
     for (var i = 0; i < expected.size(); i += 1) {
         if (session.fieldIds[i] != expected[i]) { return false; }
@@ -144,14 +144,16 @@ function shadowWriterUsesOnlyNewStableFieldIds(logger as Test.Logger) as Lang.Bo
         session.fieldTypes[62] == FitContributor.DATA_TYPE_UINT32 &&
         session.fieldTypes[74] == FitContributor.DATA_TYPE_UINT8 &&
         session.fieldTypes[75] == FitContributor.DATA_TYPE_UINT16 &&
-        session.fieldTypes[77] == FitContributor.DATA_TYPE_UINT8 &&
+        session.fieldTypes[96] == FitContributor.DATA_TYPE_UINT16 &&
+        session.fieldTypes[97] == FitContributor.DATA_TYPE_FLOAT &&
+        session.fieldTypes[98] == FitContributor.DATA_TYPE_FLOAT &&
         session.fieldTypes[93] == FitContributor.DATA_TYPE_SINT16 &&
         session.fieldScopes[62] == FitContributor.MESG_TYPE_RECORD &&
         session.fieldScopes[65] == FitContributor.MESG_TYPE_LAP &&
         session.fieldScopes[73] == FitContributor.MESG_TYPE_RECORD &&
         session.fieldScopes[84] == FitContributor.MESG_TYPE_SESSION &&
         session.fieldScopes[93] == FitContributor.MESG_TYPE_LAP &&
-        session.fields[73].lastValue == 7 &&
+        session.fields[73].lastValue == 8 &&
         writer.writeManualBoundary(12000, :on_ice, null) && session.laps == 1 &&
         session.lastBoundaryMs == 12000 && session.fields[51].lastValue == 0 &&
         session.fields[52].lastValue == 0;
@@ -168,7 +170,7 @@ function unknownCoverageUsesInvalidSentinelButKnownZeroIsZero(logger as Test.Log
         :workRestTenths=>null, :shiftDensityPerHour=>null,
         :shortestShiftMs=>null, :longestShiftMs=>null,
         :medianShiftMs=>null, :topShiftHeartRates=>[]})) { return false; }
-    if (session.fields[77].lastValue != 255 ||
+    if (session.fields[98].lastValue == session.fields[98].lastValue ||
         session.fields[78].lastValue != 255 ||
         session.fields[79].lastValue != 65535) { return false; }
     if (!writer.writeManualBoundary(1000, :bench,
@@ -214,8 +216,10 @@ function unavailableSessionEstimateStaysUnknown(logger as Test.Logger) as Lang.B
     var recorder = new SessionRecorder(factory);
     recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
     var coordinator = new RecordingCoordinator(recorder, new ClockFake());
-    return coordinator.start() && coordinator.stopAndSave() &&
-        factory.session.fields[77].lastValue == 255 &&
+    if (!coordinator.start() || !coordinator.stopAndSave()) { return false; }
+    var averageMinutes = factory.session.fields[98].lastValue;
+    var distanceMetres = factory.session.fields[97].lastValue;
+    return averageMinutes != averageMinutes && distanceMetres != distanceMetres &&
         factory.session.fields[78].lastValue == 255 &&
         factory.session.fields[79].lastValue == 65535;
 }
@@ -281,7 +285,10 @@ function openShiftPushSummaryIsLappedBeforeSessionStop(logger as Test.Logger) as
     var lap = factory.session.lapSnapshots[0];
     return factory.session.stopLapCount == 1 &&
         lap[:manualState] == 2 && lap[:pushes] == 1 &&
-        lap[:distance] == 125 && factory.session.fields[74].lastValue == 1;
+        lap[:distance] == 94 && factory.session.fields[74].lastValue == 1 &&
+        factory.session.fields[96].lastValue == 1 &&
+        factory.session.fields[97].lastValue > 0.93 &&
+        factory.session.fields[97].lastValue < 0.95;
 }
 
 (:test)
@@ -295,15 +302,18 @@ function activitySummaryWritesHockeyMetricsBeforeSave(logger as Test.Logger) as 
         :zoneSeconds=>[11, 22, 33, 44, 55], :overNinetySeconds=>12,
         :workRestTenths=>5, :shiftDensityPerHour=>36,
         :shortestShiftMs=>28000, :longestShiftMs=>36000,
-        :medianShiftMs=>31000, :topShiftHeartRates=>[181, 175, 169]
+        :medianShiftMs=>31000, :topShiftHeartRates=>[181, 175, 169],
+        :detectedPushes=>146, :estimatedDistanceCm=>22000
     })) { return false; }
-    return session.fields[74].lastValue == 3 &&
+    return session.fields.hasKey(96) && session.fields.hasKey(97) &&
+        session.fields.hasKey(98) && session.fields[74].lastValue == 3 &&
         session.fields[75].lastValue == 95 && session.fields[76].lastValue == 205 &&
-        session.fields[77].lastValue == 31 && session.fields[78].lastValue == 157 &&
+        session.fields[98].lastValue > 0.527 && session.fields[98].lastValue < 0.529 &&
+        session.fields[78].lastValue == 157 &&
+        session.fields[96].lastValue == 146 && session.fields[97].lastValue == 220.0 &&
         session.fields[79].lastValue == 11 && session.fields[83].lastValue == 55 &&
         session.fields[84].lastValue == 12 && session.fields[85].lastValue == 5 &&
-        session.fields[86].lastValue == 36 && session.fields[87].lastValue == 28 &&
-        session.fields[88].lastValue == 36 && session.fields[89].lastValue == 31;
+        session.fields[86].lastValue == 36 && session.fields[89].lastValue == 31;
 }
 
 (:test)
@@ -326,7 +336,7 @@ function savedSummaryRejectsSparseShiftHeartRate(logger as Test.Logger) as Lang.
     return factory.session.fields[74].lastValue == 2 &&
         factory.session.fields[75].lastValue == 60 &&
         factory.session.fields[76].lastValue == 30 &&
-        factory.session.fields[77].lastValue == 30 &&
+        factory.session.fields[98].lastValue == 0.5 &&
         factory.session.fields[78].lastValue == 255;
 }
 
@@ -363,7 +373,8 @@ function summaryOverflowUsesMissingInsteadOfClamping(logger as Test.Logger) as L
     return session.fields[74].lastValue == 255 &&
         session.fields[75].lastValue == 65535 &&
         session.fields[76].lastValue == 65535 &&
-        session.fields[77].lastValue == 255 &&
+        session.fields[98].lastValue > 1092.24 &&
+        session.fields[98].lastValue < 1092.26 &&
         session.fields[78].lastValue == 255 &&
         session.fields[79].lastValue == 65535;
 }

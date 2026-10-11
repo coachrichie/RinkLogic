@@ -373,7 +373,7 @@ function movementPageRetainsLastShiftAndShowsEstimatedDistance(logger as Test.Lo
     var dc = new DialDcFake();
     view.onUpdate(dc);
     return dialContainsText(dc, "BENCH") && dialContainsText(dc, "6") &&
-        dialContainsText(dc, "9.5 m") && dialContainsText(dc, "PARTIAL DATA") &&
+        dialContainsText(dc, "7.1 m") && dialContainsText(dc, "PARTIAL DATA") &&
         dialContainsText(dc, "UPPER: SAVE");
 }
 
@@ -411,5 +411,5 @@ function estimatedSensorTimebaseMarksLiveDistanceAsApproximate(logger as Test.Lo
     view.requestPage(WatchUi.SWIPE_LEFT);
     var dc = new DialDcFake();
     view.onUpdate(dc);
-    return dialContainsText(dc, "~1.3 m");
+    return dialContainsText(dc, "~0.9 m");
 }

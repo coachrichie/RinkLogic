@@ -276,6 +276,11 @@ class RecordingCoordinator {
         }
         if (mSessionSummary == null) {
             mSessionSummary = mAnalytics.finish(stopAt);
+            var propulsion = mDistanceEstimator.sessionSummary();
+            mSessionSummary[:detectedPushes] = propulsion[:hasValidMotion] ?
+                propulsion[:totalPushes] : null;
+            mSessionSummary[:estimatedDistanceCm] = propulsion[:hasValidMotion] ?
+                propulsion[:totalDistanceCm] : null;
         }
         drainReadyShiftLaps(stopAt);
         mRecorder.writeActivitySummary(mSessionSummary);

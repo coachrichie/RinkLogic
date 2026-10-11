@@ -1,5 +1,6 @@
 using Toybox.FitContributor;
 using Toybox.Lang;
+using Toybox.Math;
 
 class SystemShadowWriterFactory {
     function create(session) { return new ShadowFitWriter(session); }
@@ -30,7 +31,6 @@ class ShadowFitWriter {
                 !addField(74, "shift_count", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_SESSION, "shifts") ||
                 !addField(75, "time_on_ice", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_SESSION, "s") ||
                 !addField(76, "bench_time", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_SESSION, "s") ||
-                !addField(77, "average_shift_duration", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_SESSION, "s") ||
                 !addField(78, "average_shift_heart_rate", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_SESSION, "bpm") ||
                 !addField(79, "heart_rate_zone_1_time", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_SESSION, "s") ||
                 !addField(80, "heart_rate_zone_2_time", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_SESSION, "s") ||
@@ -40,13 +40,14 @@ class ShadowFitWriter {
                 !addField(84, "time_above_90_percent_hrmax", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_SESSION, "s") ||
                 !addField(85, "work_rest_ratio_tenths", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_SESSION, "ratio_x10") ||
                 !addField(86, "shift_density_per_hour", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_SESSION, "shifts_per_hour") ||
-                !addField(87, "shortest_shift_duration", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_SESSION, "s") ||
-                !addField(88, "longest_shift_duration", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_SESSION, "s") ||
                 !addField(89, "median_shift_duration", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_SESSION, "s") ||
                 !addField(93, "heart_rate_drop_30", FitContributor.DATA_TYPE_SINT16, FitContributor.MESG_TYPE_LAP, "bpm") ||
                 !addField(94, "heart_rate_drop_60", FitContributor.DATA_TYPE_SINT16, FitContributor.MESG_TYPE_LAP, "bpm") ||
-                !addField(95, "shift_average_heart_rate", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_LAP, "bpm")) { return false; }
-            mFields[73].setData(7);
+                !addField(95, "shift_average_heart_rate", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_LAP, "bpm") ||
+                !addField(96, "detected_push_count", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_SESSION, "pushes") ||
+                !addField(97, "estimated_distance_m", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_SESSION, "m") ||
+                !addField(98, "average_shift_minutes", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_SESSION, "min")) { return false; }
+            mFields[73].setData(8);
             clearLapMetrics();
             mAllocated = true;
             return true;
@@ -122,7 +123,7 @@ class ShadowFitWriter {
             mFields[74].setData(uint8OrMissing(summary[:shiftCount]));
             mFields[75].setData(millisecondsOrMissing(summary[:timeOnIceMs]));
             mFields[76].setData(millisecondsOrMissing(summary[:benchTimeMs]));
-            mFields[77].setData(millisecondsUint8OrMissing(summary[:averageShiftMs]));
+            mFields[98].setData(millisecondsMinutesOrMissing(summary[:averageShiftMs]));
             mFields[78].setData(uint8OrMissing(summary[:averageShiftHeartRate]));
             var zones = summary[:zoneSeconds];
             for (var i = 0; i < 5; i += 1) {
@@ -132,9 +133,9 @@ class ShadowFitWriter {
             mFields[84].setData(uint16StrictOrMissing(summary[:overNinetySeconds]));
             mFields[85].setData(uint8OrMissing(summary[:workRestTenths]));
             mFields[86].setData(uint8OrMissing(summary[:shiftDensityPerHour]));
-            mFields[87].setData(millisecondsUint8OrMissing(summary[:shortestShiftMs]));
-            mFields[88].setData(millisecondsUint8OrMissing(summary[:longestShiftMs]));
             mFields[89].setData(millisecondsUint8OrMissing(summary[:medianShiftMs]));
+            mFields[96].setData(uint16StrictOrMissing(summary[:detectedPushes]));
+            mFields[97].setData(centimetresMetresOrMissing(summary[:estimatedDistanceCm]));
             return true;
         } catch (ex) { return false; }
     }
@@ -154,6 +155,14 @@ class ShadowFitWriter {
     private function millisecondsUint8OrMissing(value) as Lang.Number {
         if (value == null || value < 0) { return 255; }
         return uint8OrMissing(value / 1000);
+    }
+    private function millisecondsMinutesOrMissing(value) as Lang.Float {
+        if (value == null || value < 0) { return Math.sqrt(-1.0).toFloat(); }
+        return (value.toFloat() / 60000.0).toFloat();
+    }
+    private function centimetresMetresOrMissing(value) as Lang.Float {
+        if (value == null || value < 0) { return Math.sqrt(-1.0).toFloat(); }
+        return (value.toFloat() / 100.0).toFloat();
     }
     private function sint16OrMissing(value) as Lang.Number {
         if (value == null || value < -32768 || value > 32766) { return 32767; }

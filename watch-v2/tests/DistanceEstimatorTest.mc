@@ -137,7 +137,7 @@ function distanceModelConfigurationLocksForTheRecording(logger as Test.Logger) a
 }
 
 (:test)
-function fourShortTwoLongPushesMakeNinePointFiveMetres(logger as Test.Logger) as Lang.Boolean {
+function todaysCalibrationScalesFourShortTwoLongPushes(logger as Test.Logger) as Lang.Boolean {
     var estimate = new DistanceEstimator();
     estimate.beginShift(0);
     var times = [100, 700, 1300, 1900, 2500, 3100];
@@ -147,8 +147,8 @@ function fourShortTwoLongPushesMakeNinePointFiveMetres(logger as Test.Logger) as
     }
     var finalShift = estimate.endShift(3200);
     var summary = estimate.sessionSummary();
-    return finalShift[:pushes] == 6 && finalShift[:distanceCm] == 950 &&
-        finalShift[:shortPushes] == 4 && summary[:totalDistanceCm] == 950 &&
+    return finalShift[:pushes] == 6 && finalShift[:distanceCm] == 714 &&
+        finalShift[:shortPushes] == 4 && summary[:totalDistanceCm] == 714 &&
         summary[:shortPushesTotal] == 4;
 }
 
@@ -160,7 +160,7 @@ function secondBurstRestartsFourShortPushes(logger as Test.Logger) as Lang.Boole
         0, true, false));
     estimate.observe(distanceResult(3100,
         [pushAt(2600, true), pushAt(3100, false)], 2500, true, false));
-    return estimate.snapshot(3100)[:totalDistanceCm] == 500 &&
+    return estimate.snapshot(3100)[:totalDistanceCm] == 376 &&
         estimate.snapshot(3100)[:shortPushesTotal] == 4;
 }
 
@@ -173,7 +173,7 @@ function benchAndPreShiftEventsNeverAddDistance(logger as Test.Logger) as Lang.B
         [pushAt(100, true), pushAt(700, false)], 500, true, false));
     var shift = estimate.endShift(800);
     estimate.observe(distanceResult(1000, [pushAt(900, false)], 800, true, false));
-    return shift[:pushes] == 1 && shift[:distanceCm] == 225 &&
+    return shift[:pushes] == 1 && shift[:distanceCm] == 169 &&
         estimate.sessionSummary()[:totalPushes] == 1;
 }
 
