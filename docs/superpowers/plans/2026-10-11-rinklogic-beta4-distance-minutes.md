@@ -55,7 +55,7 @@
 
 - [ ] **Step 1: Write failing estimator tests for the two-layer model**
 
-Add tests named `calibratedProfileAppliesHeightThenPersonalFactor`, `calibratedProfileUsesExactFixedBaselineForInvalidHeight`, and `calibratedProfileLocksBothProvenanceSources`. Assert calibrated constants/results equivalent to 89/160 cm at 80 cm, 94/169 cm at 180 cm, 100/180 cm at 250 cm, and 94/169 cm for null/NaN/out-of-range height. Assert `:profile_height` only for valid height and `:local_known_distance` for every calibrated-beta case.
+Add tests named `calibratedProfileAppliesHeightThenPersonalFactor`, `calibratedProfileUsesExactFixedBaselineForInvalidHeight`, and `calibratedProfileLocksBothProvenanceSources`. Assert calibrated constants/results equivalent to 89/159 cm at 80 cm, 94/169 cm at 180 cm, 100/180 cm at 250 cm, and 94/169 cm for null/NaN/out-of-range height. Assert `:profile_height` only for valid height and `:local_known_distance` for every calibrated-beta case.
 
 - [ ] **Step 2: Run the targeted fixed test binary and verify RED**
 

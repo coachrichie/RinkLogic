@@ -4,20 +4,25 @@ param(
     [string]$Device,
     [switch]$UnitTest,
     [string]$TestName,
-    [ValidateSet("Fixed", "ProfileHeight")]
+    [ValidateSet("Fixed", "ProfileHeight", "CalibratedProfile")]
     [string]$DistanceModel = "Fixed",
+    [switch]$ExportPackage,
     [switch]$DescribeConfiguration
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$jungle = if ($DistanceModel -eq "ProfileHeight") {
-    "watch-v2/monkey-profile-test.jungle"
-} else {
-    "watch-v2/monkey.jungle"
+$jungle = switch ($DistanceModel) {
+    "ProfileHeight" { "watch-v2/monkey-profile-test.jungle" }
+    "CalibratedProfile" { "watch-v2/monkey-calibrated-profile-test.jungle" }
+    default { "watch-v2/monkey.jungle" }
 }
-$artifact = if ($DistanceModel -eq "ProfileHeight") {
+$artifact = if ($ExportPackage -and $DistanceModel -eq "CalibratedProfile") {
+    "RinkLogic-0.2.0-beta.4.iq"
+} elseif ($DistanceModel -eq "ProfileHeight") {
     "RinkLogic-profile-test.prg"
+} elseif ($DistanceModel -eq "CalibratedProfile") {
+    "RinkLogic-calibrated-profile-test.prg"
 } else {
     "ShiftSenseV2.prg"
 }
@@ -27,6 +32,7 @@ if ($DescribeConfiguration) {
         distanceModel = $DistanceModel
         jungle = $jungle
         artifact = $artifact
+        exportPackage = [bool]$ExportPackage
     } | ConvertTo-Json -Compress
     exit 0
 }
@@ -53,8 +59,10 @@ try {
     $outputPath = Join-Path $outputDirectory $artifact
     $unitArgs = @()
     if ($UnitTest) { $unitArgs += "-t" }
+    $exportArgs = @()
+    if ($ExportPackage) { $exportArgs += "-e" }
 
-    & "$sdkRoot\bin\monkeyc.bat" -f $jungle -d $Device -o $outputPath -y $env:SHIFTSENSE_DEVELOPER_KEY @unitArgs
+    & "$sdkRoot\bin\monkeyc.bat" -f $jungle -d $Device -o $outputPath -y $env:SHIFTSENSE_DEVELOPER_KEY @unitArgs @exportArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     if ($UnitTest) {

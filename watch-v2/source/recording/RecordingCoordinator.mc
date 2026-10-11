@@ -75,11 +75,23 @@ class RecordingCoordinator {
         if (mProfileSource != null) {
             try { mProfile = mProfileSource.read(); } catch (ex) { mProfile = null; }
         }
+        var heightCm = mProfile != null && mProfile.hasKey(:heightCm) ?
+            mProfile[:heightCm] : null;
+        var mode = :fixed;
+        try { mode = mDistanceModelConfig.mode(); }
+        catch (distanceModeEx) { mode = :fixed; }
+        var personalFactor = 1.0;
+        var calibrationSource = :none;
         try {
-            var heightCm = mProfile != null && mProfile.hasKey(:heightCm) ?
-                mProfile[:heightCm] : null;
-            var mode = mDistanceModelConfig.mode();
-            mDistanceEstimator.configure(mode, heightCm);
+            personalFactor = mDistanceModelConfig.personalCalibrationFactor();
+            calibrationSource = mDistanceModelConfig.calibrationSource();
+        } catch (distanceCalibrationEx) {
+            personalFactor = 1.0;
+            calibrationSource = :none;
+        }
+        try {
+            mDistanceEstimator.configure(mode, heightCm, personalFactor,
+                calibrationSource);
         } catch (distanceConfigEx) { }
         if (mHeartRateSource != null) {
             try { mHeartRateSourceStarted = mHeartRateSource.start(method(:onHeartRate)); }
@@ -214,6 +226,10 @@ class RecordingCoordinator {
             dashboard[:totalTimebase] = push[:totalTimebase];
             if (push.hasKey(:distanceModelSource)) {
                 dashboard[:distanceModelSource] = push[:distanceModelSource];
+            }
+            if (push.hasKey(:distanceCalibrationSource)) {
+                dashboard[:distanceCalibrationSource] =
+                    push[:distanceCalibrationSource];
             }
         } catch (ex) { }
         return dashboard;

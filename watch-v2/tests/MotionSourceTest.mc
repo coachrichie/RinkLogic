@@ -68,6 +68,9 @@ function coordinatorCountsHockeyPushesOnlyDuringManualShift(logger as Test.Logge
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), clock);
+    var distanceConfig = new DistanceModelConfigFake();
+    distanceConfig.selectedMode = :fixed;
+    coordinator.setDistanceModelConfig(distanceConfig);
     if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
     clock.now = 2000;
     coordinator.onMotionFeature(motionFeatureWithBatch(detectorBatch(
@@ -94,6 +97,9 @@ function delayedConfirmationFiltersEventsBeforeShiftStart(logger as Test.Logger)
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), clock);
+    var distanceConfig = new DistanceModelConfigFake();
+    distanceConfig.selectedMode = :fixed;
+    coordinator.setDistanceModelConfig(distanceConfig);
     if (!coordinator.start()) { return false; }
     clock.now = 2000;
     coordinator.onMotionFeature(motionFeatureWithBatch(detectorBatch(
