@@ -21,17 +21,17 @@ function sessionSummaryRendersAllThreePages(logger as Test.Logger) as Lang.Boole
     var view = new SessionSummaryView(completeSummary());
     var dc = new DialDcFake();
     view.onUpdate(dc);
-    if (!dialContainsText(dc, "01:01:01") || !dialContainsText(dc, "150") ||
+    if (!dialContainsText(dc, "61.0 min") || !dialContainsText(dc, "150") ||
         !dialContainsText(dc, "190")) { return false; }
     view.requestPage(WatchUi.SWIPE_LEFT);
     dc = new DialDcFake();
     view.onUpdate(dc);
-    if (!dialContainsText(dc, "12") || !dialContainsText(dc, "10:00") ||
-        !dialContainsText(dc, "51:01")) { return false; }
+    if (!dialContainsText(dc, "12") || !dialContainsText(dc, "10.0 min") ||
+        !dialContainsText(dc, "51.0 min")) { return false; }
     view.requestPage(WatchUi.SWIPE_LEFT);
     dc = new DialDcFake();
     view.onUpdate(dc);
-    return dialContainsText(dc, "00:50") && dialContainsText(dc, "01:20") &&
+    return dialContainsText(dc, "0.83 min") && dialContainsText(dc, "1.33 min") &&
         dialContainsText(dc, "165");
 }
 
@@ -45,7 +45,7 @@ function sessionSummaryUsesMissingMarker(logger as Test.Logger) as Lang.Boolean 
     });
     var dc = new DialDcFake();
     view.onUpdate(dc);
-    return dialContainsText(dc, "00:00") && dialContainsText(dc, "--");
+    return dialContainsText(dc, "0.0 min") && dialContainsText(dc, "--");
 }
 
 (:test)

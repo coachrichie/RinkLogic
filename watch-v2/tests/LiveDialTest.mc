@@ -265,7 +265,7 @@ function dialKeepsElapsedClearOfSaveHint(logger as Test.Logger) as Lang.Boolean 
         if ((dc.textJustifications[i] & Graphics.TEXT_JUSTIFY_VCENTER) != 0) {
             top -= height / 2;
         }
-        if (dc.texts[i].equals("00:00") && dc.textYs[i] >= dc.getHeight() * 70 / 100) {
+        if (dc.texts[i].equals("0.0 min") && dc.textYs[i] >= dc.getHeight() * 70 / 100) {
             elapsedBottom = top + height;
         }
         if (dc.texts[i].equals("UPPER: SAVE")) { hintTop = top; }

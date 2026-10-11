@@ -672,7 +672,7 @@ function liveScreenFormatsAllSevenRequestedMetrics(logger as Test.Logger) as Lan
     if (initial[:lastShift] == null || initial[:averageShift] == null ||
         initial[:timeOnIce] == null || initial[:elapsed] == null) { return false; }
     if (!initial[:lastShift].equals("--") || !initial[:averageShift].equals("--") ||
-        !initial[:timeOnIce].equals("00:00") || !initial[:elapsed].equals("00:00")) { return false; }
+        !initial[:timeOnIce].equals("0.0 min") || !initial[:elapsed].equals("0.0 min")) { return false; }
     coordinator.onHeartRate({:heartRate=>150, :quality=>:active});
     if (!new LiveInputDelegate(live).onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC))) { return false; }
     clock.now = 31000;
@@ -683,9 +683,9 @@ function liveScreenFormatsAllSevenRequestedMetrics(logger as Test.Logger) as Lan
         values[:averageShift] == null || values[:timeOnIce] == null ||
         values[:elapsed] == null) { return false; }
     return values[:heartRate].equals("--") && values[:averageHeartRate].equals("150") &&
-        values[:shiftCount].equals("1") && values[:lastShift].equals("00:30") &&
-        values[:averageShift].equals("00:30") && values[:timeOnIce].equals("00:30") &&
-        values[:elapsed].equals("01:00");
+        values[:shiftCount].equals("1") && values[:lastShift].equals("0.50 min") &&
+        values[:averageShift].equals("0.50 min") && values[:timeOnIce].equals("0.5 min") &&
+        values[:elapsed].equals("1.0 min");
 }
 
 (:test)
