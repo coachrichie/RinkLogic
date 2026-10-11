@@ -1,4 +1,5 @@
 using Toybox.Lang;
+using Toybox.Math;
 using Toybox.Test as Test;
 
 function distanceResult(atMs, events, startMs, sensorValid, gap) as Lang.Dictionary {
@@ -60,6 +61,23 @@ function profileHeightModeFallsBackForInvalidHeight(logger as Test.Logger) as La
         }
     }
     return true;
+}
+
+(:test)
+function profileHeightModeFallsBackAndLocksForNanHeight(logger as Test.Logger) as Lang.Boolean {
+    var estimate = new DistanceEstimator();
+    estimate.configure(:profile_height, Math.sqrt(-1));
+    estimate.configure(:profile_height, 200);
+    estimate.beginShift(0);
+    var times = [100, 700, 1300, 1900, 2500, 3100];
+    for (var i = 0; i < times.size(); i += 1) {
+        estimate.observe(distanceResult(times[i],
+            [pushAt(times[i], i == 0)], times[i] - 100, true, false));
+    }
+    var shift = estimate.endShift(3200);
+    return shift[:distanceCm] == 950 &&
+        shift[:distanceModelSource] == :default &&
+        estimate.getModelSource() == :default;
 }
 
 (:test)

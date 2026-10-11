@@ -42,7 +42,8 @@ class DistanceEstimator {
         mDistanceModelLocked = true;
         if (modelMode != :profile_height) { return; }
         try {
-            if (heightCm == null || heightCm < 80 || heightCm > 250) { return; }
+            if (heightCm == null || heightCm != heightCm ||
+                heightCm < 80 || heightCm > 250) { return; }
             var factor = 1.0 + ((heightCm - 180) / 360.0);
             var factorNumerator = heightCm + 180;
             var factorDenominator = 360.0;

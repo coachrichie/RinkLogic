@@ -88,6 +88,15 @@ einem **95-%-paired-bootstrap**-Intervall bestimmen: Spieler mit Zurücklegen
 ziehen, alle zugehörigen gepaarten Beobachtungen (auch beide Oberflächen)
 gemeinsam mitnehmen und die Metrik je Ziehung erneut berechnen. Resampling
 auf Versuch- oder Sitzungsebene würde die Spielerabhängigkeit unterschätzen.
+Für Eis, Inline und die kombinierte Auswertung jeweils **10.000** Replikate
+mit NumPy `Generator(PCG64(20261010))` erzeugen. Das Intervall ist das
+unadjustierte Perzentilintervall vom 2,5. bis 97,5. Perzentil der 10.000
+replizierten MAE-Differenzen, berechnet mit `numpy.quantile(...,
+method="linear")`; die Punktschätzung wird separat aus den ursprünglichen
+Held-out-Daten berechnet. Im Ergebnisbericht müssen die Python- und
+NumPy-Version sowie der Git-Commit des Analyseskripts (oder, falls es nicht
+versioniert ist, dessen SHA-256-Prüfsumme) stehen. Diese Angaben und der
+fixierte Seed sind vor dem Entsperren der Held-out-Ergebnisse festzuhalten.
 Vorab definierte Höhendrittel innerhalb jeder Oberfläche getrennt zeigen;
 diese kleinen Gruppen sind explorativ und kein zusätzliches Aktivierungstor.
 Auffällige Schäden in einem Drittel erfordern eine gesonderte Prüfung.
@@ -126,7 +135,7 @@ Venu 2 Plus und die oben definierte Populationserhebung stehen noch aus.
 ## Implementierungsprüfung vom 2026-10-10
 
 - Connect IQ SDK **9.2.0**, Ziel **Venu 2 Plus** (`venu2plus`): vollständige
-  Simulator-Suite **171/171 bestanden, 0 fehlgeschlagen, 0 Fehler**.
+  Simulator-Suite **172/172 bestanden, 0 fehlgeschlagen, 0 Fehler**.
 - Normaler App-Build für `venu2plus`: **BUILD SUCCESSFUL**, Exitcode 0.
 - Der geprüfte, eingecheckte `DistanceModelConfig.mode()` gibt weiterhin
   `:fixed` zurück. Es wurde kein Profil-Build für eine Genauigkeitsmessung
