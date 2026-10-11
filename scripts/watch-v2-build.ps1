@@ -3,11 +3,34 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Device,
     [switch]$UnitTest,
-    [string]$TestName
+    [string]$TestName,
+    [ValidateSet("Fixed", "ProfileHeight")]
+    [string]$DistanceModel = "Fixed",
+    [switch]$DescribeConfiguration
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$jungle = if ($DistanceModel -eq "ProfileHeight") {
+    "watch-v2/monkey-profile-test.jungle"
+} else {
+    "watch-v2/monkey.jungle"
+}
+$artifact = if ($DistanceModel -eq "ProfileHeight") {
+    "RinkLogic-profile-test.prg"
+} else {
+    "ShiftSenseV2.prg"
+}
+
+if ($DescribeConfiguration) {
+    [ordered]@{
+        distanceModel = $DistanceModel
+        jungle = $jungle
+        artifact = $artifact
+    } | ConvertTo-Json -Compress
+    exit 0
+}
+
 $sdkConfig = Join-Path $env:APPDATA "Garmin\ConnectIQ\current-sdk.cfg"
 
 if (-not (Test-Path -LiteralPath $sdkConfig)) {
@@ -27,10 +50,11 @@ Push-Location $repoRoot
 try {
     $outputDirectory = Join-Path $repoRoot "watch-v2\bin\$Device"
     New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
+    $outputPath = Join-Path $outputDirectory $artifact
     $unitArgs = @()
     if ($UnitTest) { $unitArgs += "-t" }
 
-    & "$sdkRoot\bin\monkeyc.bat" -f watch-v2\monkey.jungle -d $Device -o "watch-v2\bin\$Device\ShiftSenseV2.prg" -y $env:SHIFTSENSE_DEVELOPER_KEY @unitArgs
+    & "$sdkRoot\bin\monkeyc.bat" -f $jungle -d $Device -o $outputPath -y $env:SHIFTSENSE_DEVELOPER_KEY @unitArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     if ($UnitTest) {
@@ -38,7 +62,7 @@ try {
             Start-Process -FilePath "$sdkRoot\bin\simulator.exe" -WindowStyle Hidden
             Start-Sleep -Seconds 2
         }
-        $testArgs = @("watch-v2\bin\$Device\ShiftSenseV2.prg", $Device, "/t")
+        $testArgs = @($outputPath, $Device, "/t")
         if (-not [string]::IsNullOrWhiteSpace($TestName)) { $testArgs += $TestName }
         $testOutput = & "$sdkRoot\bin\monkeydo.bat" @testArgs 2>&1
         $testOutput | ForEach-Object { Write-Output $_ }

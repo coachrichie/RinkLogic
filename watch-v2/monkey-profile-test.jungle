@@ -1,0 +1,4 @@
+project.manifest = manifest.xml
+base.sourcePath = source;source-config/profile-test;tests
+base.resourcePath = resources
+base.lang.deu = resources-deu
