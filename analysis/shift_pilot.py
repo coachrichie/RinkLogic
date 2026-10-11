@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 from datetime import datetime
 from pathlib import Path
 from statistics import median
@@ -43,6 +44,31 @@ PILOT_FIELD_NAMES = {
     70: "short_push_count_total",
     71: "shift_short_push_count",
     72: "shift_motion_coverage_percent",
+    73: "summary_schema_version",
+    74: "shift_count",
+    75: "time_on_ice",
+    76: "bench_time",
+    77: "average_shift_duration",
+    78: "average_shift_heart_rate",
+    79: "heart_rate_zone_1_time",
+    80: "heart_rate_zone_2_time",
+    81: "heart_rate_zone_3_time",
+    82: "heart_rate_zone_4_time",
+    83: "heart_rate_zone_5_time",
+    84: "time_above_90_percent_hrmax",
+    85: "work_rest_ratio_tenths",
+    86: "shift_density_per_hour",
+    87: "shortest_shift_duration",
+    88: "longest_shift_duration",
+    89: "median_shift_duration",
+    93: "heart_rate_drop_30",
+    94: "heart_rate_drop_60",
+    95: "shift_average_heart_rate",
+    96: "detected_push_count",
+    97: "estimated_distance_m",
+    98: "average_shift_minutes",
+    99: "shift_duration_minutes",
+    100: "raw_push_candidate_count_total",
 }
 STATE_NAMES = {1: "ice", 2: "bench"}
 
@@ -87,7 +113,9 @@ def _valid_uint(value, invalid):
 def _push_metrics(session, records, messages, schema_version):
     empty = {"total_pushes": None, "estimated_distance_cm": None,
              "short_pushes": None, "coverage_percent": None,
-             "cadence_latest_per_min": None, "manual_shifts": []}
+             "cadence_latest_per_min": None,
+             "raw_candidate_count_total": None,
+             "shift_duration_seconds": None, "manual_shifts": []}
     if schema_version < 6:
         return empty
     manual_shifts = []
@@ -96,8 +124,16 @@ def _push_metrics(session, records, messages, schema_version):
             continue
         if lap.get("manual_boundary_ms") is None:
             continue
+        duration_seconds = None
+        try:
+            duration_minutes = float(lap.get("shift_duration_minutes"))
+            if math.isfinite(duration_minutes) and duration_minutes >= 0:
+                duration_seconds = duration_minutes * 60
+        except (TypeError, ValueError):
+            pass
         manual_shifts.append({
             "at_ms": int(lap["manual_boundary_ms"]),
+            "duration_seconds": duration_seconds,
             "pushes": _valid_uint(lap.get("shift_push_count"), 65535),
             "estimated_distance_cm": _valid_uint(
                 lap.get("shift_estimated_distance_cm"), 4294967295),
@@ -108,13 +144,38 @@ def _push_metrics(session, records, messages, schema_version):
     cadence = None
     for record in records:
         cadence = _valid_uint(record.get("push_cadence_per_min"), 65535)
+    latest_record = records[-1] if records else {}
+    total_pushes = session.get("push_count_total")
+    if total_pushes is None:
+        total_pushes = session.get("detected_push_count")
+    if total_pushes is None:
+        total_pushes = latest_record.get("push_count_total")
+    distance_cm = session.get("estimated_distance_cm_total")
+    distance_m = session.get("estimated_distance_m")
+    if distance_cm is None and distance_m is not None:
+        try:
+            distance_cm = round(float(distance_m) * 100) if math.isfinite(float(distance_m)) else None
+        except (TypeError, ValueError):
+            distance_cm = None
+    if distance_cm is None:
+        distance_cm = latest_record.get("estimated_distance_cm_total")
+    raw_candidates = _valid_uint(
+        latest_record.get("raw_push_candidate_count_total"), 4294967295)
+    durations = [shift["duration_seconds"] for shift in manual_shifts
+                 if shift["duration_seconds"] is not None]
+    duration_stats = None
+    if durations:
+        duration_stats = {"shortest": min(durations),
+                          "longest": max(durations),
+                          "median": median(durations)}
     return {
-        "total_pushes": _valid_uint(session.get("push_count_total"), 4294967295),
-        "estimated_distance_cm": _valid_uint(
-            session.get("estimated_distance_cm_total"), 4294967295),
+        "total_pushes": _valid_uint(total_pushes, 4294967295),
+        "estimated_distance_cm": _valid_uint(distance_cm, 4294967295),
         "short_pushes": _valid_uint(session.get("short_push_count_total"), 4294967295),
         "coverage_percent": _valid_uint(session.get("motion_coverage_percent"), 255),
         "cadence_latest_per_min": cadence,
+        "raw_candidate_count_total": raw_candidates,
+        "shift_duration_seconds": duration_stats,
         "manual_shifts": manual_shifts,
     }
 
@@ -181,12 +242,21 @@ def normalize_messages(messages):
     messages = list(messages)
     sessions = [m for m in messages if m.get("type") == "session"]
     session = next((m for m in sessions if m.get("shadow_schema_version") in (4, 5, 6)), None)
+    schema_version = session.get("shadow_schema_version") if session is not None else None
     if session is None:
-        raise ValueError("This activity has no ShiftSense shadow schema 4, 5 or 6 session")
-    schema_version = session["shadow_schema_version"]
+        summary_record = next((m for m in messages if m.get("type") == "record"
+                               and m.get("summary_schema_version") in (7, 8)), None)
+        if summary_record is not None and sessions:
+            session = sessions[0]
+            schema_version = summary_record["summary_schema_version"]
+    if session is None:
+        raise ValueError("This activity has no ShiftSense schema 4 through 8")
     start = session.get("start_time")
-    records = [m for m in messages if m.get("type") == "record"
-               and m.get("shadow_schema_version") == schema_version]
+    if schema_version <= 6:
+        records = [m for m in messages if m.get("type") == "record"
+                   and m.get("shadow_schema_version") == schema_version]
+    else:
+        records = [m for m in messages if m.get("type") == "record"]
     boundaries = sorted(
         ({"at_ms": int(m["manual_boundary_ms"]),
           "state": STATE_NAMES[m["manual_boundary_state"]]}
@@ -273,7 +343,7 @@ def normalize_messages(messages):
 
 
 def load_pilot_fit(path):
-    """CRC-check one user-owned FIT file and decode its schema-4/5/6 fields."""
+    """CRC-check one user-owned FIT file and decode schema 4 through 8."""
     import fitdecode
     from fitdecode.types import DevFieldDefinition
 
@@ -316,7 +386,7 @@ def _read_reference_csv(path):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("fit", nargs="+", type=Path, help="local schema-4/5/6 FIT files")
+    parser.add_argument("fit", nargs="+", type=Path, help="local schema-4 through schema-8 FIT files")
     parser.add_argument("--reference", action="append", type=Path,
                         help="optional elapsed_ms,state CSV; repeat per FIT file")
     parser.add_argument("--output", type=Path, help="write local JSON report")

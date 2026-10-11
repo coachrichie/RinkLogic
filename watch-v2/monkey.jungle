@@ -1,4 +1,4 @@
 project.manifest = manifest.xml
-base.sourcePath = source;tests
+base.sourcePath = source;source-config/fixed;tests
 base.resourcePath = resources
 base.lang.deu = resources-deu

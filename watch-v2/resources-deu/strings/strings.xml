@@ -47,10 +47,12 @@
     <string id="ConnectTimeOnIce">Time on Ice</string>
     <string id="ConnectBenchTime">Bankzeit</string>
     <string id="ConnectAverageShift">Ø Shift-Dauer</string>
+    <string id="ConnectShiftDuration">Shift-Dauer</string>
     <string id="ConnectAverageShiftHeartRate">Ø Herzfrequenz / Shift</string>
     <string id="ConnectSecondsUnit">s</string>
     <string id="ConnectBpmUnit">bpm</string>
     <string id="ConnectPushCount">Anschübe</string>
+    <string id="ConnectDetectedPushCount">Erkannte Anschübe</string>
     <string id="ConnectEstimatedDistance">Geschätzte Distanz ≈</string>
     <string id="ConnectPushCadence">Anschubkadenz</string>
     <string id="ConnectShiftPushCount">Anschübe pro Shift</string>
@@ -62,6 +64,8 @@
     <string id="ConnectPushUnit">Anschübe</string>
     <string id="ConnectPushPerMinuteUnit">Anschübe/min</string>
     <string id="ConnectCmUnit">cm</string>
+    <string id="ConnectMetresUnit">m</string>
+    <string id="ConnectMinutesUnit">min</string>
     <string id="ConnectPercentUnit">%</string>
     <string id="ConnectHrZone1">Zeit in HF-Zone 1</string>
     <string id="ConnectHrZone2">Zeit in HF-Zone 2</string>

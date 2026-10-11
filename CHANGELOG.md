@@ -15,6 +15,12 @@ dokumentiert. Das detaillierte Entwicklungsjournal befindet sich in
 - Lap-Felder für Durchschnittspuls und HR-Abfall nach 30 beziehungsweise
   60 Sekunden auf der Bank.
 - Lokale Kalibrierungs- und Pilotberichte für experimentelle Bewegungswerte.
+- Experimentelle, höhenabhängige Variante der geschätzten Anschubdistanz mit
+  begrenztem Faktor, festem Rückfall und internem Quellenmerkmal. Der normale
+  Release-Build verwendet weiter `:fixed`; `:profile_height` ist für
+  Validierungs-Builds vorgesehen. Gewicht/BMI verändern die Distanz nicht.
+  Das populationsweite Aktivierungstor steht in
+  [`docs/testing/player-profile-distance-validation.md`](docs/testing/player-profile-distance-validation.md).
 
 ### Changed
 

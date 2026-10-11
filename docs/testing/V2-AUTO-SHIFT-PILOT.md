@@ -107,3 +107,18 @@ Die praktische 20–30-m-Vorlage mit Messdefinitionen und Fehlerkennzahlen liegt
 - Zwei manuelle Grenzmarker (`ice` bei 4,860 s, `bench` bei 8,362 s) ergeben einen abgeschlossenen Shift von 3,502 s. Die Session speichert `shift_count = 1`, `time_on_ice = 3 s` und `average_shift_duration = 3 s`; die ganzzahligen FIT-Felder runden die Grenzzeiten ab. Sechs der elf Records enthalten Standard-HR-Werte von 73–78 bpm; die Session enthält AVG HR 75 bpm und Shift AVG HR 74 bpm. Die FIT-Daten identifizieren die aktive HR-Quelle **nicht**; ein Polar-H10-Einsatz ist damit nicht nachgewiesen.
 - Anschübe, Kadenz und geschätzte Distanz sind im FIT ungültig/unbekannt (`null`), nicht als gemessene Null gespeichert. `motion_coverage_percent = 0` bezieht sich auf den zeitstempelabhängigen Anschubpfad; es widerspricht nicht den elf vorhandenen 1-Hz-Bewegungsmerkmalen des Shadow-Pilots. Diese Unterscheidung muss auch in Garmin Connect sichtbar bleiben.
 - Es gibt keinen automatischen Grenzvorschlag. Precision/Recall `0` aus einem rein mechanisch erzeugten Kurzreport wären irreführend und werden für diese 11-s-Bedienprobe **nicht** als Leistungswerte berichtet. Die Datei zählt nicht als vollständige Hockey-Pilotsitzung. Ein lokales FIT belegt die gespeicherte Aktivität auf der Uhr, aber nicht ihre Anzeige in Garmin Connect Mobile, die dritte Live-Seite, die Polar-H10-Quelle oder eine Distanzgenauigkeit.
+
+## 2026-10-10 – Grenze zwischen Release- und Distanz-Validierungs-Build
+
+Der normale Build verwendet weiterhin `DistanceModelConfig.mode() == :fixed`.
+Die höhenabhängige Variante `:profile_height` ist nur für einen gesonderten
+Validierungs-Build vorgesehen; die interne Konfiguration vor Aufnahmestart ist
+keine Nutzereinstellung. Die Oberfläche wird extern als Eis oder Inline
+protokolliert, nicht in der App gewählt. Die früheren Simulator-, FIT- und
+Hardwarebefunde oben behalten ihren damaligen Geltungsbereich. Die neue
+Simulator-Suite und der normale Build sind im
+[Validierungsprotokoll](player-profile-distance-validation.md) dokumentiert.
+Eine bestandene Simulation ist kein Genauigkeitsnachweis. Die persönliche
+Fünf-Wiederholungen-Kalibrierung kann das populationsweite Höhenmodell nicht
+aktivieren; dessen Spielergruppen-Gate muss auf Eis, Inline und kombiniert
+erfüllt sein.

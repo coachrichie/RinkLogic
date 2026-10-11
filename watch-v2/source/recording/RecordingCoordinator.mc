@@ -25,6 +25,7 @@ class RecordingCoordinator {
     private var mSampleSeq = 0;
     private var mPushDetector;
     private var mDistanceEstimator;
+    private var mDistanceModelConfig;
     private var mLastCompletedPushSummary = null;
     private var mOpenShiftFinalized = false;
     private var mCalibrationOptions = null;
@@ -39,6 +40,7 @@ class RecordingCoordinator {
         mShiftInference = new ShiftInference();
         mPushDetector = new PushDetector();
         mDistanceEstimator = new DistanceEstimator();
+        mDistanceModelConfig = new DistanceModelConfig();
         mAnalytics = new SessionAnalytics();
         mPendingPushSummaries = {};
     }
@@ -51,6 +53,12 @@ class RecordingCoordinator {
     function setMotionSource(source) as Void { mMotionSource = source; }
     function setPushDetector(detector) as Void { mPushDetector = detector; }
     function setDistanceEstimator(estimator) as Void { mDistanceEstimator = estimator; }
+
+    function setDistanceModelConfig(config) as Lang.Boolean {
+        if (config == null || mStartedAt != null) { return false; }
+        mDistanceModelConfig = config;
+        return true;
+    }
 
     function start() as Lang.Boolean {
         mCalibrationOptions = null;
@@ -67,6 +75,12 @@ class RecordingCoordinator {
         if (mProfileSource != null) {
             try { mProfile = mProfileSource.read(); } catch (ex) { mProfile = null; }
         }
+        try {
+            var heightCm = mProfile != null && mProfile.hasKey(:heightCm) ?
+                mProfile[:heightCm] : null;
+            var mode = mDistanceModelConfig.mode();
+            mDistanceEstimator.configure(mode, heightCm);
+        } catch (distanceConfigEx) { }
         if (mHeartRateSource != null) {
             try { mHeartRateSourceStarted = mHeartRateSource.start(method(:onHeartRate)); }
             catch (ex) { mHeartRateSourceStarted = false; }
@@ -198,6 +212,9 @@ class RecordingCoordinator {
             dashboard[:motionProfile] = push[:motionProfile];
             dashboard[:timebase] = push[:timebase];
             dashboard[:totalTimebase] = push[:totalTimebase];
+            if (push.hasKey(:distanceModelSource)) {
+                dashboard[:distanceModelSource] = push[:distanceModelSource];
+            }
         } catch (ex) { }
         return dashboard;
     }
@@ -259,6 +276,11 @@ class RecordingCoordinator {
         }
         if (mSessionSummary == null) {
             mSessionSummary = mAnalytics.finish(stopAt);
+            var propulsion = mDistanceEstimator.sessionSummary();
+            mSessionSummary[:detectedPushes] = propulsion[:hasValidMotion] ?
+                propulsion[:totalPushes] : null;
+            mSessionSummary[:estimatedDistanceCm] = propulsion[:hasValidMotion] ?
+                propulsion[:totalDistanceCm] : null;
         }
         drainReadyShiftLaps(stopAt);
         mRecorder.writeActivitySummary(mSessionSummary);

@@ -47,10 +47,12 @@
     <string id="ConnectTimeOnIce">Time on Ice</string>
     <string id="ConnectBenchTime">Bench Time</string>
     <string id="ConnectAverageShift">Avg Shift Duration</string>
+    <string id="ConnectShiftDuration">Shift Duration</string>
     <string id="ConnectAverageShiftHeartRate">Avg Heart Rate / Shift</string>
     <string id="ConnectSecondsUnit">s</string>
     <string id="ConnectBpmUnit">bpm</string>
     <string id="ConnectPushCount">Pushes</string>
+    <string id="ConnectDetectedPushCount">Detected pushes</string>
     <string id="ConnectEstimatedDistance">Estimated distance ≈</string>
     <string id="ConnectPushCadence">Push cadence</string>
     <string id="ConnectShiftPushCount">Shift pushes</string>
@@ -62,6 +64,8 @@
     <string id="ConnectPushUnit">pushes</string>
     <string id="ConnectPushPerMinuteUnit">pushes/min</string>
     <string id="ConnectCmUnit">cm</string>
+    <string id="ConnectMetresUnit">m</string>
+    <string id="ConnectMinutesUnit">min</string>
     <string id="ConnectPercentUnit">%</string>
     <string id="ConnectHrZone1">Time in HR Zone 1</string>
     <string id="ConnectHrZone2">Time in HR Zone 2</string>

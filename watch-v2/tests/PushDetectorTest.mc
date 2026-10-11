@@ -40,6 +40,30 @@ function detectorNeedsThreeRhythmicPeaksAndRejectsSingleSpike(logger as Test.Log
 }
 
 (:test)
+function detectorSeparatesRawCandidatesFromAcceptedPushes(logger as Test.Logger) as Lang.Boolean {
+    var detector = new PushDetector();
+    var single = detector.push(detectorBatch(
+        [0, 100, 200, 300, 400], [100]), 400);
+    if (single[:candidateCountTotal] != 1 || single[:events].size() != 0) {
+        return false;
+    }
+    var pair = detector.push(detectorBatch(
+        [500, 600, 700, 800, 900], [700]), 900);
+    if (pair[:candidateCountTotal] != 2 || pair[:events].size() != 0) {
+        return false;
+    }
+    var accepted = detector.push(detectorBatch(
+        [1000, 1100, 1200, 1300, 1400], [1300]), 1400);
+    if (accepted[:candidateCountTotal] != 3 || accepted[:events].size() != 3) {
+        return false;
+    }
+    detector.reset();
+    var afterReset = detector.push(detectorBatch(
+        [0, 100, 200, 300, 400], []), 400);
+    return afterReset[:candidateCountTotal] == 0;
+}
+
+(:test)
 function detectorCooldownDoesNotDoubleCountPeak(logger as Test.Logger) as Lang.Boolean {
     var detector = new PushDetector();
     var result = detector.push(detectorBatch(

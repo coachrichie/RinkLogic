@@ -1,4 +1,5 @@
 using Toybox.Lang;
+using Toybox.Math;
 using Toybox.Test as Test;
 
 function distanceResult(atMs, events, startMs, sensorValid, gap) as Lang.Dictionary {
@@ -16,8 +17,127 @@ function pushAt(atMs, startsBurst) as Lang.Dictionary {
     return {:atMs=>atMs, :startsBurst=>startsBurst};
 }
 
+function runSixPushDistanceBurst(modelMode, heightCm) as Lang.Dictionary {
+    var estimate = new DistanceEstimator();
+    estimate.configure(modelMode, heightCm);
+    estimate.beginShift(0);
+    var times = [100, 700, 1300, 1900, 2500, 3100];
+    for (var i = 0; i < times.size(); i += 1) {
+        estimate.observe(distanceResult(times[i],
+            [pushAt(times[i], i == 0)], times[i] - 100, true, false));
+    }
+    var snapshot = estimate.snapshot(3200);
+    var shift = estimate.endShift(3200);
+    return {:shift=>shift, :snapshot=>snapshot,
+        :summary=>estimate.sessionSummary()};
+}
+
+function hasDistanceModelSource(result as Lang.Dictionary, source as Lang.Symbol) as Lang.Boolean {
+    return result[:shift][:distanceCm] == 950 &&
+        result[:shift][:distanceModelSource] == source &&
+        result[:snapshot][:distanceModelSource] == source &&
+        result[:summary][:distanceModelSource] == source;
+}
+
 (:test)
-function fourShortTwoLongPushesMakeNinePointFiveMetres(logger as Test.Logger) as Lang.Boolean {
+function fixedDistanceModeIgnoresEveryHeight(logger as Test.Logger) as Lang.Boolean {
+    var heights = [null, 180, 200];
+    for (var i = 0; i < heights.size(); i += 1) {
+        if (!hasDistanceModelSource(
+            runSixPushDistanceBurst(:fixed, heights[i]), :default)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+(:test)
+function profileHeightModeFallsBackForInvalidHeight(logger as Test.Logger) as Lang.Boolean {
+    var heights = [null, "180", 79, 251];
+    for (var i = 0; i < heights.size(); i += 1) {
+        if (!hasDistanceModelSource(
+            runSixPushDistanceBurst(:profile_height, heights[i]), :default)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+(:test)
+function profileHeightModeFallsBackAndLocksForNanHeight(logger as Test.Logger) as Lang.Boolean {
+    var estimate = new DistanceEstimator();
+    estimate.configure(:profile_height, Math.sqrt(-1));
+    estimate.configure(:profile_height, 200);
+    estimate.beginShift(0);
+    var times = [100, 700, 1300, 1900, 2500, 3100];
+    for (var i = 0; i < times.size(); i += 1) {
+        estimate.observe(distanceResult(times[i],
+            [pushAt(times[i], i == 0)], times[i] - 100, true, false));
+    }
+    var shift = estimate.endShift(3200);
+    return shift[:distanceCm] == 950 &&
+        shift[:distanceModelSource] == :default &&
+        estimate.getModelSource() == :default;
+}
+
+(:test)
+function profileHeightModeUsesReferenceAndBoundedFactors(logger as Test.Logger) as Lang.Boolean {
+    var heights = [160, 180, 200, 80, 250];
+    var expected = [898, 950, 1004, 896, 1010];
+    for (var i = 0; i < heights.size(); i += 1) {
+        var result = runSixPushDistanceBurst(:profile_height, heights[i]);
+        if (result[:shift][:distanceCm] != expected[i] ||
+            result[:shift][:distanceModelSource] != :profile_height ||
+            result[:snapshot][:distanceModelSource] != :profile_height ||
+            result[:summary][:distanceModelSource] != :profile_height) {
+            return false;
+        }
+    }
+    return true;
+}
+
+(:test)
+function distanceModelConfigurationLocksForTheRecording(logger as Test.Logger) as Lang.Boolean {
+    var configured = new DistanceEstimator();
+    configured.configure(:profile_height, 160);
+    configured.configure(:profile_height, 200);
+    configured.beginShift(0);
+    var times = [100, 700, 1300, 1900, 2500, 3100];
+    for (var i = 0; i < times.size(); i += 1) {
+        configured.observe(distanceResult(times[i],
+            [pushAt(times[i], i == 0)], times[i] - 100, true, false));
+    }
+    var live = configured.snapshot(3100);
+    var closed = configured.endShift(3200);
+    var summary = configured.sessionSummary();
+    if (live[:shiftDistanceCm] != 898 ||
+        live[:distanceModelSource] != :profile_height ||
+        closed[:distanceCm] != 898 ||
+        closed[:distanceModelSource] != :profile_height ||
+        summary[:totalDistanceCm] != 898 ||
+        summary[:distanceModelSource] != :profile_height ||
+        configured.getModelSource() != :profile_height) {
+        return false;
+    }
+
+    var started = new DistanceEstimator();
+    started.beginShift(0);
+    started.configure(:profile_height, 160);
+    started.observe(distanceResult(100, [pushAt(100, true)], 0, true, false));
+    var startedLive = started.snapshot(100);
+    var startedClosed = started.endShift(200);
+    var startedSummary = started.sessionSummary();
+    return startedLive[:shiftDistanceCm] == 125 &&
+        startedLive[:distanceModelSource] == :default &&
+        startedClosed[:distanceCm] == 125 &&
+        startedClosed[:distanceModelSource] == :default &&
+        startedSummary[:totalDistanceCm] == 125 &&
+        startedSummary[:distanceModelSource] == :default &&
+        started.getModelSource() == :default;
+}
+
+(:test)
+function fixedBaselineCountsFourShortTwoLongPushes(logger as Test.Logger) as Lang.Boolean {
     var estimate = new DistanceEstimator();
     estimate.beginShift(0);
     var times = [100, 700, 1300, 1900, 2500, 3100];
