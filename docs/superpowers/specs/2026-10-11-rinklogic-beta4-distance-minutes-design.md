@@ -36,8 +36,9 @@ Die getestete `0.2.0-beta.3` bleibt unverändert als Rückfallversion erhalten.
 
 Alle von RinkLogic erzeugten Zeitwerte werden in Minuten ausgegeben. Das gilt
 für Live-Ansichten, Abschlussseiten, Connect-IQ-Zusammenfassung,
-Connect-Details, HR-Zonen und Shift-Runden. Intern bleiben Millisekunden die
-Zeitbasis, damit Berechnungen nicht an Genauigkeit verlieren.
+Connect-Details, HR-Zonen und Shift-Runden. Intern bleiben die vorhandenen
+Millisekundenwerte und sekundengenauen HR-Buckets erhalten, damit Anzeige-
+einheiten keine Berechnungslogik oder Genauigkeit verändern.
 
 - Gesamt-, Eis- und Bankzeit: Dezimalminuten mit einer Nachkommastelle.
 - Durchschnittliche, kürzeste, längste, Median- und einzelne Shiftdauer:
