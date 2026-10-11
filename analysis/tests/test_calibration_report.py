@@ -84,6 +84,14 @@ class CalibrationReportTests(unittest.TestCase):
         self.assertEqual(result["groups"]["inline/skate_only"]["profile_status"], "eligible")
         self.assertEqual(result["profile_status"], "provisional")
 
+    def test_report_identifies_factor_as_local_personal_test_only(self):
+        result = build_calibration_report_from_report(normalized_report([]), [])
+        calibration = result["personal_test_calibration"]
+        self.assertAlmostEqual(calibration["factor"], 220.0 / 292.5)
+        self.assertEqual(calibration["scope"], "local_personal_test")
+        self.assertFalse(calibration["population_coefficient"])
+        self.assertFalse(calibration["automatic_activation"])
+
     def test_both_conditions_required_for_overall_eligibility(self):
         rows = [self.row(i) for i in range(1, 6)] + [
             self.row(i, condition="puck_stickhandling") for i in range(6, 11)

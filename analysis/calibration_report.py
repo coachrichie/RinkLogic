@@ -162,6 +162,14 @@ def build_calibration_report_from_report(report: dict, manifest: list[dict]) -> 
     return {
         "profile_status": profile_status,
         "session_start": report.get("session_start"),
+        "personal_test_calibration": {
+            "factor": 220.0 / 292.5,
+            "numerator_cm": 220.0,
+            "denominator_cm": 292.5,
+            "scope": "local_personal_test",
+            "population_coefficient": False,
+            "automatic_activation": False,
+        },
         "trials": trials,
         "groups": summaries,
     }

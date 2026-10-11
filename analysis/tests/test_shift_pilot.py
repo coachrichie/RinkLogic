@@ -7,6 +7,59 @@ from analysis.shift_pilot import load_pilot_fit, normalize_messages, score_bound
 
 
 class PilotReportTests(unittest.TestCase):
+    def test_schema_nine_preserves_raw_minutes_and_derives_lap_statistics(self):
+        report = normalize_messages([
+            {"type": "session", "total_elapsed_time": 180,
+             "time_on_ice_minutes": 1.5, "bench_time_minutes": 0.0,
+             "heart_rate_zone_1_minutes": float("nan"),
+             "heart_rate_zone_2_minutes": 0.0,
+             "heart_rate_zone_3_minutes": 0.5,
+             "heart_rate_zone_4_minutes": 0.75,
+             "heart_rate_zone_5_minutes": 1.0,
+             "time_above_90_percent_hrmax_minutes": 0.25,
+             "median_shift_minutes": 99.0, "unknown_field_777": 12,
+             "estimated_distance_m": 42.5},
+            {"type": "record", "summary_schema_version": 9,
+             "estimated_distance_cm_total": 4250},
+            {"type": "lap", "manual_boundary_ms": 30000,
+             "manual_boundary_state": 2, "shift_duration_minutes": 0.5,
+             "shift_estimated_distance_cm": 1000},
+            {"type": "lap", "manual_boundary_ms": 75000,
+             "manual_boundary_state": 2, "shift_duration_minutes": 0.75,
+             "shift_estimated_distance_cm": 1500},
+            {"type": "lap", "manual_boundary_ms": 150000,
+             "manual_boundary_state": 2, "shift_duration_minutes": 1.25,
+             "shift_estimated_distance_cm": 1750},
+        ])
+        self.assertEqual(report["schema_version"], 9)
+        self.assertEqual(report["time_metrics_minutes"]["time_on_ice"], 1.5)
+        self.assertEqual(report["time_metrics_minutes"]["bench_time"], 0.0)
+        self.assertIsNone(report["time_metrics_minutes"]["heart_rate_zone_1"])
+        self.assertEqual(report["time_metrics_minutes"]["heart_rate_zone_2"], 0.0)
+        self.assertEqual(report["time_metrics_minutes"]["shortest_shift"], 0.5)
+        self.assertEqual(report["time_metrics_minutes"]["median_shift"], 0.75)
+        self.assertEqual(report["time_metrics_minutes"]["longest_shift"], 1.25)
+        self.assertEqual(report["raw_time_fields"]["median_shift_minutes"], 99.0)
+        self.assertEqual(report["raw_session"]["unknown_field_777"], 12)
+
+    def test_legacy_seconds_convert_once_but_schema_eight_minutes_do_not(self):
+        for schema in (4, 5, 6, 7, 8):
+            messages = [{"type": "session", "time_on_ice": 90,
+                         "bench_time": 30, "heart_rate_zone_1_time": 15,
+                         "median_shift_duration": 45,
+                         "average_shift_minutes": 0.75}]
+            if schema <= 6:
+                messages[0]["shadow_schema_version"] = schema
+            else:
+                messages.append({"type": "record", "summary_schema_version": schema})
+            report = normalize_messages(messages)
+            with self.subTest(schema=schema):
+                self.assertEqual(report["time_metrics_minutes"]["time_on_ice"], 1.5)
+                self.assertEqual(report["time_metrics_minutes"]["bench_time"], 0.5)
+                self.assertEqual(report["time_metrics_minutes"]["heart_rate_zone_1"], 0.25)
+                self.assertEqual(report["time_metrics_minutes"]["median_shift"], 0.75)
+                self.assertEqual(report["time_metrics_minutes"]["average_shift"], 0.75)
+
     def test_schema_eight_uses_record_marker_and_new_summary_fields(self):
         start = "2026-10-10T12:00:00+00:00"
         report = normalize_messages([
