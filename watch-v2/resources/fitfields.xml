@@ -24,5 +24,6 @@
         <fitField id="96" displayInActivitySummary="true" sortOrder="10" precision="0" dataLabel="@Strings.ConnectDetectedPushCount" unitLabel="@Strings.ConnectPushUnit" />
         <fitField id="97" displayInActivitySummary="true" sortOrder="11" precision="1" dataLabel="@Strings.ConnectEstimatedDistance" unitLabel="@Strings.ConnectMetresUnit" />
         <fitField id="98" displayInActivitySummary="true" sortOrder="8" precision="1" dataLabel="@Strings.ConnectAverageShift" unitLabel="@Strings.ConnectMinutesUnit" />
+        <fitField id="99" displayInActivityLaps="true" sortOrder="29" precision="2" dataLabel="@Strings.ConnectShiftDuration" unitLabel="@Strings.ConnectMinutesUnit" />
     </fitContributions>
 </resources>

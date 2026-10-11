@@ -17,7 +17,9 @@ class ShadowFitWriter {
         if (mAllocated) { return true; }
         if (mSession == null || !(mSession has :createField)) { return false; }
         try {
-            if (!addField(51, "manual_boundary_ms", FitContributor.DATA_TYPE_UINT32, FitContributor.MESG_TYPE_LAP, "ms") ||
+            if (!addField(44, "motion_mg", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_RECORD, "mg") ||
+                !addField(45, "rotation_dps", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_RECORD, "deg_s") ||
+                !addField(51, "manual_boundary_ms", FitContributor.DATA_TYPE_UINT32, FitContributor.MESG_TYPE_LAP, "ms") ||
                 !addField(52, "manual_boundary_state", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_LAP, "enum") ||
                 !addField(55, "auto_boundary_ms", FitContributor.DATA_TYPE_UINT32, FitContributor.MESG_TYPE_LAP, "ms") ||
                 !addField(56, "auto_boundary_state", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_LAP, "enum") ||
@@ -46,7 +48,9 @@ class ShadowFitWriter {
                 !addField(95, "shift_average_heart_rate", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_LAP, "bpm") ||
                 !addField(96, "detected_push_count", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_SESSION, "pushes") ||
                 !addField(97, "estimated_distance_m", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_SESSION, "m") ||
-                !addField(98, "average_shift_minutes", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_SESSION, "min")) { return false; }
+                !addField(98, "average_shift_minutes", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_SESSION, "min") ||
+                !addField(99, "shift_duration_minutes", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_LAP, "min") ||
+                !addField(100, "raw_push_candidate_count_total", FitContributor.DATA_TYPE_UINT32, FitContributor.MESG_TYPE_RECORD, "candidates")) { return false; }
             mFields[73].setData(8);
             clearLapMetrics();
             mAllocated = true;
@@ -64,25 +68,36 @@ class ShadowFitWriter {
     function writeSecond(feature, proposal, manualState, eventBits, sampleSeq, sampleAtMs, pushSnapshot) as Lang.Boolean {
         if (!mAllocated) { return false; }
         try {
+            if (feature != null && feature.hasKey(:valid) && feature[:valid]) {
+                mFields[44].setData(uint16OrMissing(feature[:motionMg]));
+                mFields[45].setData(uint16OrMissing(feature[:rotationDps]));
+            } else {
+                mFields[44].setData(65535);
+                mFields[45].setData(65535);
+            }
             if (pushSnapshot != null) {
                 mFields[62].setData(uint32(pushSnapshot[:totalPushes]));
                 mFields[63].setData(uint32(pushSnapshot[:totalDistanceCm]));
+                mFields[100].setData(pushSnapshot.hasKey(:rawCandidateCountTotal) ?
+                    uint32(pushSnapshot[:rawCandidateCountTotal]) : 4294967295l);
             }
             return true;
         } catch (ex) { return false; }
     }
 
     function writeManualBoundary(elapsedMs, state, pushSummary) as Lang.Boolean {
-        return writeLap(elapsedMs, state, pushSummary, null, null, null);
+        return writeLap(elapsedMs, state, pushSummary, null, null, null, null);
     }
 
     function writeShiftLap(summary, pushSummary) as Lang.Boolean {
         if (summary == null) { return false; }
         return writeLap(summary[:endedAtMs], :bench, pushSummary,
-            summary[:heartRateDrop30], summary[:heartRateDrop60], summary[:averageHeartRate]);
+            summary[:heartRateDrop30], summary[:heartRateDrop60],
+            summary[:averageHeartRate], summary[:durationMs]);
     }
 
-    private function writeLap(elapsedMs, state, pushSummary, drop30, drop60, averageHeartRate) as Lang.Boolean {
+    private function writeLap(elapsedMs, state, pushSummary, drop30, drop60,
+                              averageHeartRate, durationMs) as Lang.Boolean {
         if (!mAllocated || elapsedMs == null || elapsedMs < 0 || elapsedMs > 2147483647) { return false; }
         try {
             mFields[51].setData(elapsedMs);
@@ -97,6 +112,7 @@ class ShadowFitWriter {
             mFields[93].setData(sint16OrMissing(drop30));
             mFields[94].setData(sint16OrMissing(drop60));
             mFields[95].setData(uint8OrMissing(averageHeartRate));
+            mFields[99].setData(millisecondsMinutesOrMissing(durationMs));
             var added = mSession.addLap();
             mFields[51].setData(0); mFields[52].setData(0); clearLapMetrics();
             return added;
@@ -192,6 +208,7 @@ class ShadowFitWriter {
         mFields[71].setData(65535); mFields[72].setData(255);
         mFields[93].setData(32767); mFields[94].setData(32767);
         mFields[95].setData(255);
+        mFields[99].setData(Math.sqrt(-1.0).toFloat());
     }
     private function stateCode(state) as Lang.Number {
         if (state == :on_ice) { return 1; }

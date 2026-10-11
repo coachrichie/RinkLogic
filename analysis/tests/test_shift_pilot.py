@@ -26,6 +26,27 @@ class PilotReportTests(unittest.TestCase):
         self.assertEqual(report["push_metrics"]["total_pushes"], 14)
         self.assertEqual(report["push_metrics"]["estimated_distance_cm"], 22000)
 
+    def test_schema_eight_preserves_shift_duration_range_and_raw_candidates(self):
+        report = normalize_messages([
+            {"type": "session", "total_elapsed_time": 420,
+             "detected_push_count": 18},
+            {"type": "record", "summary_schema_version": 8,
+             "raw_push_candidate_count_total": 27},
+            {"type": "lap", "manual_boundary_ms": 30000,
+             "manual_boundary_state": 2, "shift_duration_minutes": 0.5},
+            {"type": "lap", "manual_boundary_ms": 330000,
+             "manual_boundary_state": 2, "shift_duration_minutes": 5.0},
+            {"type": "lap", "manual_boundary_ms": 420000,
+             "manual_boundary_state": 2, "shift_duration_minutes": 1.5},
+        ])
+        metrics = report["push_metrics"]
+        self.assertEqual(metrics["raw_candidate_count_total"], 27)
+        self.assertEqual(metrics["shift_duration_seconds"], {
+            "shortest": 30.0, "longest": 300.0, "median": 90.0})
+        self.assertEqual(
+            [shift["duration_seconds"] for shift in metrics["manual_shifts"]],
+            [30.0, 300.0, 90.0])
+
     def test_schema_four_with_or_without_summary_fields_remains_readable(self):
         for extra in ({}, {"shift_count": 4, "time_on_ice": 120,
                            "bench_time": 80, "average_shift_duration": 30,

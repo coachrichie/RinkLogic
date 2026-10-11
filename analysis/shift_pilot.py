@@ -67,6 +67,8 @@ PILOT_FIELD_NAMES = {
     96: "detected_push_count",
     97: "estimated_distance_m",
     98: "average_shift_minutes",
+    99: "shift_duration_minutes",
+    100: "raw_push_candidate_count_total",
 }
 STATE_NAMES = {1: "ice", 2: "bench"}
 
@@ -111,7 +113,9 @@ def _valid_uint(value, invalid):
 def _push_metrics(session, records, messages, schema_version):
     empty = {"total_pushes": None, "estimated_distance_cm": None,
              "short_pushes": None, "coverage_percent": None,
-             "cadence_latest_per_min": None, "manual_shifts": []}
+             "cadence_latest_per_min": None,
+             "raw_candidate_count_total": None,
+             "shift_duration_seconds": None, "manual_shifts": []}
     if schema_version < 6:
         return empty
     manual_shifts = []
@@ -120,8 +124,16 @@ def _push_metrics(session, records, messages, schema_version):
             continue
         if lap.get("manual_boundary_ms") is None:
             continue
+        duration_seconds = None
+        try:
+            duration_minutes = float(lap.get("shift_duration_minutes"))
+            if math.isfinite(duration_minutes) and duration_minutes >= 0:
+                duration_seconds = duration_minutes * 60
+        except (TypeError, ValueError):
+            pass
         manual_shifts.append({
             "at_ms": int(lap["manual_boundary_ms"]),
+            "duration_seconds": duration_seconds,
             "pushes": _valid_uint(lap.get("shift_push_count"), 65535),
             "estimated_distance_cm": _valid_uint(
                 lap.get("shift_estimated_distance_cm"), 4294967295),
@@ -147,12 +159,23 @@ def _push_metrics(session, records, messages, schema_version):
             distance_cm = None
     if distance_cm is None:
         distance_cm = latest_record.get("estimated_distance_cm_total")
+    raw_candidates = _valid_uint(
+        latest_record.get("raw_push_candidate_count_total"), 4294967295)
+    durations = [shift["duration_seconds"] for shift in manual_shifts
+                 if shift["duration_seconds"] is not None]
+    duration_stats = None
+    if durations:
+        duration_stats = {"shortest": min(durations),
+                          "longest": max(durations),
+                          "median": median(durations)}
     return {
         "total_pushes": _valid_uint(total_pushes, 4294967295),
         "estimated_distance_cm": _valid_uint(distance_cm, 4294967295),
         "short_pushes": _valid_uint(session.get("short_push_count_total"), 4294967295),
         "coverage_percent": _valid_uint(session.get("motion_coverage_percent"), 255),
         "cadence_latest_per_min": cadence,
+        "raw_candidate_count_total": raw_candidates,
+        "shift_duration_seconds": duration_stats,
         "manual_shifts": manual_shifts,
     }
 

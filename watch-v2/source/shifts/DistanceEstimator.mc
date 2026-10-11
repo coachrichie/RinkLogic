@@ -21,6 +21,7 @@ class DistanceEstimator {
     private var mLastShiftPartial = false;
     private var mTotalPushes = 0;
     private var mTotalDistanceCm = 0;
+    private var mRawCandidateCountTotal = 0;
     private var mShortPushesTotal = 0;
     private var mTotalIceMs = 0;
     private var mTotalValidMs = 0;
@@ -94,6 +95,11 @@ class DistanceEstimator {
             mShiftHadGap = true;
             mMotionProfile = :unconfirmed;
             clearCadence();
+        }
+        if (result.hasKey(:candidateCountTotal) &&
+            result[:candidateCountTotal] != null &&
+            result[:candidateCountTotal] >= mRawCandidateCountTotal) {
+            mRawCandidateCountTotal = result[:candidateCountTotal];
         }
         if (!result[:sensorValid]) { return; }
         if (result.hasKey(:timebase)) {
@@ -191,6 +197,7 @@ class DistanceEstimator {
             :lastShiftDistanceCm=>mLastShiftDistanceCm,
             :totalPushes=>mTotalPushes,
             :totalDistanceCm=>mTotalDistanceCm,
+            :rawCandidateCountTotal=>mRawCandidateCountTotal,
             :distanceModelSource=>mDistanceModelSource,
             :cadencePerMin=>cadence(atMs),
             :shortPushesTotal=>mShortPushesTotal,
@@ -211,6 +218,7 @@ class DistanceEstimator {
         }
         return {:totalPushes=>mTotalPushes,
             :totalDistanceCm=>mTotalDistanceCm,
+            :rawCandidateCountTotal=>mRawCandidateCountTotal,
             :distanceModelSource=>mDistanceModelSource,
             :shortPushesTotal=>mShortPushesTotal,
             :coveragePercent=>percentage(valid, ice),

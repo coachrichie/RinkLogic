@@ -17,6 +17,16 @@ der interne Konfigurations-Einschub vor Aufnahmestart ist ausschließlich für
 Tests und Validierung bestimmt. Es gibt keine Laufzeitwahl für Eis/Inline und
 keine automatische Aktivierung aus einem persönlichen Kalibrierungsbericht.
 
+Der experimentelle Test-Build wird ausdrücklich so erzeugt:
+
+```powershell
+.\scripts\watch-v2-build.ps1 -Device venu2plus -DistanceModel ProfileHeight
+```
+
+Er schreibt `watch-v2/bin/venu2plus/RinkLogic-profile-test.prg`. Ohne
+`-DistanceModel ProfileHeight` entsteht weiterhin der feste Release-Build;
+die beiden Artefakte dürfen beim Hardwaretest nicht verwechselt werden.
+
 Bei einer gültigen Garmin-Profilhöhe von einschließlich 80–250 cm gilt:
 
 ```text
@@ -135,10 +145,11 @@ Venu 2 Plus und die oben definierte Populationserhebung stehen noch aus.
 ## Implementierungsprüfung vom 2026-10-10
 
 - Connect IQ SDK **9.2.0**, Ziel **Venu 2 Plus** (`venu2plus`): vollständige
-  Simulator-Suite **172/172 bestanden, 0 fehlgeschlagen, 0 Fehler**.
+  Simulator-Suite in beiden Buildvarianten **174/174 bestanden,
+  0 fehlgeschlagen, 0 Fehler**.
 - Normaler App-Build für `venu2plus`: **BUILD SUCCESSFUL**, Exitcode 0.
-- Der geprüfte, eingecheckte `DistanceModelConfig.mode()` gibt weiterhin
-  `:fixed` zurück. Es wurde kein Profil-Build für eine Genauigkeitsmessung
-  freigegeben. Simulator-Erfolg belegt Implementierungsverhalten, **nicht**
+- Der normale, eingecheckte Build gibt weiterhin `:fixed` zurück. Der
+  Profilmodus ist nur im expliziten `ProfileHeight`-Testartefakt aktiv.
+  Simulator-Erfolg belegt Implementierungsverhalten, **nicht**
   Distanzgenauigkeit. Hardwareprüfung und die Spielergruppen-Auswertung auf
   Eis, Inline und kombiniert bleiben offen.

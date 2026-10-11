@@ -47,6 +47,7 @@
     <string id="ConnectTimeOnIce">Time on Ice</string>
     <string id="ConnectBenchTime">Bankzeit</string>
     <string id="ConnectAverageShift">Ø Shift-Dauer</string>
+    <string id="ConnectShiftDuration">Shift-Dauer</string>
     <string id="ConnectAverageShiftHeartRate">Ø Herzfrequenz / Shift</string>
     <string id="ConnectSecondsUnit">s</string>
     <string id="ConnectBpmUnit">bpm</string>

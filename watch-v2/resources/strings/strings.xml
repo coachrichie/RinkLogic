@@ -47,6 +47,7 @@
     <string id="ConnectTimeOnIce">Time on Ice</string>
     <string id="ConnectBenchTime">Bench Time</string>
     <string id="ConnectAverageShift">Avg Shift Duration</string>
+    <string id="ConnectShiftDuration">Shift Duration</string>
     <string id="ConnectAverageShiftHeartRate">Avg Heart Rate / Shift</string>
     <string id="ConnectSecondsUnit">s</string>
     <string id="ConnectBpmUnit">bpm</string>

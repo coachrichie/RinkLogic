@@ -1,20 +1,20 @@
 # ShiftSense Hockey FIT-Schema
 
-Registry-Version: **8**. Die kanonische, maschinenlesbare Registry liegt in `shared/schema/hockey-fit-schema.json`. Die frühere Watch schreibt weiterhin ihre eigene Schema-Version mit IDs 1–34. Die Watch-V2-Testversion legt genau 30 Felder an und kennzeichnet Schema 8 in Record-ID 73. Ältere V2-FITs mit Schema 4–7 bleiben lesbar; frühere IDs werden nicht umgedeutet.
+Registry-Version: **8**. Die kanonische, maschinenlesbare Registry liegt in `shared/schema/hockey-fit-schema.json`. Die frühere Watch schreibt weiterhin ihre eigene Schema-Version mit IDs 1–34. Die Watch-V2-Testversion legt genau 34 Felder an und kennzeichnet Schema 8 in Record-ID 73. Ältere V2-FITs mit Schema 4–7 bleiben lesbar; frühere IDs werden nicht umgedeutet.
 
 ## Kompatibilitätsvertrag
 
-- IDs `1..98` sind appweit eindeutig. Die Bedeutung, Einheit und Breite vergebener IDs bleiben unverändert; Schema 8 verwendet für neue Inhalte ausschließlich IDs 96–98.
+- IDs `1..100` sind appweit eindeutig. Die Bedeutung, Einheit und Breite vergebener IDs bleiben unverändert; Schema 8 verwendet für neue Inhalte ausschließlich IDs 96–100.
 - Neue optionale Felder erhalten ausschließlich neue IDs. Ein Parser muss unbekannte IDs ignorieren und die frühere Version an Sitzungsfeld 24, die V2-Pilotversion an Sitzungsfeld 50 erkennen.
-- Pro V2-`record` werden 9 Byte eigener Nutzdaten geschrieben. Die Session-Zusammenfassung benötigt 31 Byte in 16 Feldern.
+- Pro V2-`record` werden 17 Byte eigener Nutzdaten geschrieben. Die Session-Zusammenfassung benötigt 31 Byte in 16 Feldern.
 - Numerische Entwicklerfelder werden als unskalierte Integer mit der dokumentierten Einheit abgelegt. `au_x100` bedeutet Wert geteilt durch 100, `ratio_x1000` Wert geteilt durch 1000.
 - Die erste Gerätewelle verwendet einen vorzeichenbehafteten 32-Bit-`Number`-Wert. `uint32`-Felder akzeptieren deshalb sicher nur `0..2147483647`; größere Werte müssen vom Aufrufer skaliert oder aufgeteilt werden, statt zu überlaufen.
 
 ## Garmin-Connect-Metadaten
 
-`watch/resources/fitfields.xml` enthält die auf der ersten Gerätewelle physisch geschriebenen IDs `1..34` als globale Garmin-Connect-`fitContributions`. Die SDK-Regel erlaubt keine sprachspezifische Überschreibung dieser Definitionen. Ihre `dataLabel`- und `unitLabel`-Verweise zeigen deshalb auf die parallelen englischen und deutschen String-Ressourcen; die angezeigten Bezeichnungen werden mit der App-Sprache lokalisiert.
+`watch-v2/resources/fitfields.xml` enthält die in diesem Build für Garmin Connect sichtbaren Beiträge als globale `fitContributions`. Die SDK-Regel erlaubt keine sprachspezifische Überschreibung dieser Definitionen. Ihre `dataLabel`- und `unitLabel`-Verweise zeigen deshalb auf die parallelen englischen und deutschen String-Ressourcen; die angezeigten Bezeichnungen werden mit der App-Sprache lokalisiert.
 
-Die Venu 2 Plus beendet eine Session im Simulator mit einem nicht abfangbaren Systemfehler, sobald ein 17. Session-Developer-Feld angelegt wird, auch wenn die dokumentierte 32-Byte-Grenze eingehalten ist. Schema 8 verwendet deshalb genau 16 Session-Felder und 30 Felder insgesamt. Die internen Shadow-Record-Felder 43–49, 53–54 und 64, die alten Session-Felder 57–61 und 67–70 sowie 77, 87–88 und 90–92 werden in diesem Build nicht angelegt. Die Simulator-Allokation ist geprüft; die physische Uhr und Garmin Connect müssen getrennt abgenommen werden.
+Die Venu 2 Plus beendet eine Session im Simulator mit einem nicht abfangbaren Systemfehler, sobald ein 17. Session-Developer-Feld angelegt wird, auch wenn die dokumentierte 32-Byte-Grenze eingehalten ist. Schema 8 verwendet deshalb genau 16 Session-Felder und 34 Felder insgesamt. Die Diagnose-Record-Felder 44–45 sind wieder aktiv; 43, 46–50, 53–54 und 64, die alten Session-Felder 57–61 und 67–70 sowie 77, 87–88 und 90–92 werden in diesem Build nicht angelegt. Die Simulator-Allokation ist geprüft; die physische Uhr und Garmin Connect müssen getrennt abgenommen werden.
 
 Nur numerisch sinnvoll darstellbare Felder sind als Diagramme oder Detailwerte freigegeben: Bewegungsintensität, geschätzte Distanz, Anschubfrequenz, Gleit-/Anschubverhältnis und Impact als Charts; Wechseldauer, Konfidenz und Intensität in Runden; Shiftzahl, Eis-/Bankzeit und Distanz in der Zusammenfassung. Rohcodes, Schema-Versionen und Bitmasken bleiben für den Parser erhalten, ohne die Garmin-Connect-Oberfläche mit unübersetzten Codes zu überladen.
 
@@ -26,15 +26,15 @@ Nur numerisch sinnvoll darstellbare Felder sind als Diagramme oder Detailwerte f
 | 16–23 | `lap` | Marker an jeder Shift-/Bankgrenze. Der `timestamp_ms` ist die Uhrzeit relativ zum Beginn der Session in Millisekunden. |
 | 24–34 | `session` | Auf der Venu 2 Plus persistierte Zusammenfassung mit Schemaversion, Modus, Shifts, Spiel-/Bankzeit, Distanz, Qualität, Kalibrierung sowie Hits, Pässen und Schüssen. |
 | 35–42 | `session` | Reservierte HR-Zusammenfassung: Stichproben, Erholung und Zeit in HR-Zonen 0–5; auf der Venu 2 Plus derzeit nicht als FIT-Feld angelegt. |
-| 43–50 | historisch | V2-Pilotfelder; in Schema 7 nicht allokiert. |
+| 43–50 | `record`/historisch | IDs 44–45 schreiben Bewegungsintensität (`mg`) und Rotation (`deg/s`); die übrigen IDs dieser Gruppe werden in Schema 8 nicht allokiert. |
 | 51–52 | `lap` | Exakter manueller Grenzmarker: Millisekunden seit Aufzeichnungsbeginn und Zustand. |
-| 53–54 | historisch | V2-Pilotfelder; in Schema 7 nicht allokiert. |
+| 53–54 | historisch | V2-Pilotfelder; in Schema 8 nicht allokiert. |
 | 55–56 | `lap` | Automatischer Grenzvorschlag mit geschätztem Bewegungsbeginn in Millisekunden und Zustand. |
-| 57–61 | historisch | Frühere Session-Zusammenfassung; in Schema 7 nicht allokiert und nicht umgedeutet. |
+| 57–61 | historisch | Frühere Session-Zusammenfassung; in Schema 8 nicht allokiert und nicht umgedeutet. |
 | 62–63 | `record` | Kumulierte Anschübe und geschätzte Distanz (cm). |
-| 64 | historisch | Anschubkadenz; in Schema 7 nicht allokiert. |
+| 64 | historisch | Anschubkadenz; in Schema 8 nicht allokiert. |
 | 65–66 | `lap` | Anschübe und geschätzte Distanz (cm) des beendeten manuellen Shifts. |
-| 67–70 | historisch | Frühere Bewegungszusammenfassung; in Schema 7 nicht allokiert und nicht umgedeutet. |
+| 67–70 | historisch | Frühere Bewegungszusammenfassung; in Schema 8 nicht allokiert und nicht umgedeutet. |
 | 71–72 | `lap` | Kurze Anschübe und Sensorabdeckung (%) des beendeten manuellen Shifts. |
 | 73 | `record` | Schema-Version 8 (`uint8`, 1 Byte). |
 | 74 | `session` | Anzahl Shifts (`uint8`, ungültig `255`). |
@@ -53,12 +53,14 @@ Nur numerisch sinnvoll darstellbare Felder sind als Diagramme oder Detailwerte f
 | 96 | `session` | Erkannte Anschübe (`uint16`, ungültig `65535`). Diese experimentelle Detektion kann Anschübe überzählen. |
 | 97 | `session` | Geschätzte Distanz in Metern (`float32`); kein GPS-Messwert. |
 | 98 | `session` | Durchschnittliche Shiftdauer in Dezimalminuten (`float32`, Einheit `min`). |
+| 99 | `lap` | Dauer des beendeten manuellen Shifts in Dezimalminuten (`float32`). Daraus leitet der lokale Parser kürzesten, längsten und Median-Shift ohne 254-s-Grenze ab. |
+| 100 | `record` | Kumulierte rohe Anschubkandidaten vor Rhythmusfilter (`uint32`). Feld 96 bleibt die Zahl akzeptierter Anschübe. |
 
-Watch V2 legt in Schema 8 genau 30 Entwicklerfelder an. Die automatische Erkennung bleibt im Pilot **nicht autoritativ**; sie verändert weder Shiftzahl noch Time on Ice. Manuelle Grenzen stehen in Lap-Feldern 51–52, automatische Vorschläge in 55–56. Die Shiftwerte 65/66/71/72 und 93–95 gehören nur zu einem manuellen Ende (`manual_boundary_state=2`). Die Lap wird bis zu 65 Sekunden zurückgehalten, damit der HF-Abfall nach 30 und 60 Sekunden ergänzt werden kann; ein neuer Shift oder das Speichern beendet die Wartezeit mit ungültigen Werten für noch fehlende Ziele. Alle Lap-Werte werden danach zurückgesetzt. Ein beim Speichern offener Shift erhält vor `Session.stop()` genau eine manuelle Schluss-Lap. Record-Summen sind kumuliert, sodass ausgelassene Sekunden die Endsumme nicht zerstören.
+Watch V2 legt in Schema 8 genau 34 Entwicklerfelder an. Die automatische Erkennung bleibt im Pilot **nicht autoritativ**; sie verändert weder Shiftzahl noch Time on Ice. Manuelle Grenzen stehen in Lap-Feldern 51–52, automatische Vorschläge in 55–56. Die Shiftwerte 65/66/71/72, 93–95 und 99 gehören nur zu einem manuellen Ende (`manual_boundary_state=2`). Die Lap wird bis zu 65 Sekunden zurückgehalten, damit der HF-Abfall nach 30 und 60 Sekunden ergänzt werden kann; ein neuer Shift oder das Speichern beendet die Wartezeit mit ungültigen Werten für noch fehlende Ziele. Alle Lap-Werte werden danach zurückgesetzt. Ein beim Speichern offener Shift erhält vor `Session.stop()` genau eine manuelle Schluss-Lap. Record-Summen sind kumuliert, sodass ausgelassene Sekunden die Endsumme nicht zerstören.
 
 Die 31 Session-Bytes setzen sich zusammen aus: Shiftzahl 1, Eis-/Bankzeit 4, mittlere Shift-HF 1, fünf Zonen 10, Zeit >90 % 2, Work/Rest 1, Shift-Dichte 1, Median-Shift 1, erkannte Anschübe 2, geschätzte Distanz 4 und mittlere Shiftdauer in Minuten 4. Werte außerhalb des darstellbaren Bereichs werden als ungültig geschrieben und niemals geklemmt. Die fünf obersten Connect-Werte sind Shifts, mittlere Shiftdauer (min), mittlere Shift-HF, erkannte Anschübe und geschätzte Distanz (m). Feld 95 zeigt zusätzlich die Durchschnitts-HF für jeden Shift in Garmin Connect.
 
-Die Distanz ist eine heuristische **Schätzung**, keine native GPS- oder Garmin-Distanz. Schema 8 wendet vorläufig den persönlichen Korrekturfaktor `220 / 292,5 ≈ 0,752` aus dem Test vom 10.10.2026 auf die bisherige Schätzung an. Die Referenzwerte dieses Tests waren angenähert; dies ist daher keine wissenschaftlich validierte Kalibrierung und muss mit exakter Strecken- oder Video-Referenz erneut geprüft werden. Auch die Anschuberkennung ist experimentell und kann insbesondere bei Stickhandling überzählen. Zentimeterfelder sind Integer; `≈` steht in den lokalisierten Garmin-Connect-Labels. `motion_coverage_percent=255` und `shift_motion_coverage_percent=255` bedeuten unbekannte Abdeckung, nicht 255 %. Fehlende uint16-Anschub- und Kadenzwerte verwenden den FIT-Invalidwert `65535`; fehlende uint32-Summen oder -Distanzen verwenden `4294967295`. Die Garmin-Simulator-API akzeptiert diesen uint32-Invalidwert als Monkey-C-`Long`. Gültige 32-Bit-Werte werden bei 2147483647 begrenzt, um auf diesem Gerät keinen Überlauf zu erzeugen. Ein Shift ohne einziges gültiges Bewegungssample liefert ungültige statt scheinbar gemessener Nullwerte. Sensorlücken behalten die letzte kumulierte Summe bei. Eine hohe Sensorabdeckung beweist noch keine Distanzgenauigkeit.
+Die Distanz ist eine heuristische **Schätzung**, keine native GPS- oder Garmin-Distanz. Der normale Schema-8-Build behält das feste Modell mit 125 cm für die ersten vier Anschübe eines Bursts und 225 cm für spätere Rhythmusanschübe. Die angenäherte Einzeltest-Relation `220 / 292,5 ≈ 0,752` wird ausdrücklich nicht als Produktionsfaktor verwendet. Ein separat gebautes `profile_height`-Testartefakt darf das begrenzte Höhenmodell erproben; es ändert den Release-Default nicht. Auch die Anschuberkennung ist experimentell und kann insbesondere bei Stickhandling überzählen. Zentimeterfelder sind Integer; `≈` steht in den lokalisierten Garmin-Connect-Labels. `motion_coverage_percent=255` und `shift_motion_coverage_percent=255` bedeuten unbekannte Abdeckung, nicht 255 %. Fehlende uint16-Anschub- und Kadenzwerte verwenden den FIT-Invalidwert `65535`; fehlende uint32-Summen, -Distanzen oder -Kandidaten verwenden `4294967295`. Die Garmin-Simulator-API akzeptiert diesen uint32-Invalidwert als Monkey-C-`Long`. Gültige 32-Bit-Werte werden bei 2147483647 begrenzt, um auf diesem Gerät keinen Überlauf zu erzeugen. Ein Shift ohne einziges gültiges Bewegungssample liefert ungültige statt scheinbar gemessener Nullwerte. Sensorlücken behalten die letzte kumulierte Summe bei. Eine hohe Sensorabdeckung beweist noch keine Distanzgenauigkeit.
 
 ## Codes und Qualität
 

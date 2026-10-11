@@ -12,6 +12,7 @@ class PushDetector {
     private var mPendingStartsBurst = false;
     private var mNextStartsBurst = true;
     private var mAboveThreshold = false;
+    private var mCandidateCountTotal = 0;
 
     function initialize() { reset(); }
 
@@ -19,6 +20,7 @@ class PushDetector {
         mLastRawTime = null;
         mLastSampleAt = null;
         mLastActiveAt = null;
+        mCandidateCountTotal = 0;
         clearRhythm();
     }
 
@@ -36,7 +38,8 @@ class PushDetector {
         clearRhythm();
         return {:events=>[], :validMs=>0, :sensorValid=>false,
             :gap=>gap, :atMs=>atMs, :observedIntervals=>[],
-            :profile=>:unconfirmed, :timebase=>:unavailable};
+            :profile=>:unconfirmed, :timebase=>:unavailable,
+            :candidateCountTotal=>mCandidateCountTotal};
     }
 
     function push(batch as Lang.Dictionary or Null,
@@ -139,7 +142,8 @@ class PushDetector {
                 :sensorValid=>true, :gap=>gap, :atMs=>callbackElapsedMs,
                 :observedIntervals=>observedIntervals,
                 :profile=>profile(events),
-                :timebase=>estimated ? :estimated : :measured};
+                :timebase=>estimated ? :estimated : :measured,
+                :candidateCountTotal=>mCandidateCountTotal};
         } catch (ex) { return invalid(true, callbackElapsedMs); }
     }
 
@@ -170,6 +174,7 @@ class PushDetector {
     }
 
     private function acceptCandidate(atMs, events) as Void {
+        mCandidateCountTotal += 1;
         mLastCandidateAt = atMs;
         if (mPendingAt != null) {
             var previous = mPendingSecondAt == null ? mPendingAt : mPendingSecondAt;
