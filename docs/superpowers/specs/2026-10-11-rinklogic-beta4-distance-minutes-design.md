@@ -95,6 +95,25 @@ zusätzliches Session-Feld. Der Median steht über Feld 109 direkt zur Verfügun
 
 ## Distanzmodell der Test-Beta
 
+### Evidenzgrenze und Begriffe
+
+Die Konstruktion folgt der am 11. Oktober 2026 aktualisierten
+`profile-distance`-Referenz des Hockey-Evidence-Skills. Die dort geprüfte
+Literatur liefert keine validierte Gleichung, die Körpergröße oder Gewicht in
+Meter pro vom Handgelenk erkanntem Anschub umrechnet. Die App trennt daher
+ausdrücklich:
+
+- Schrittlänge zwischen wechselnden Skates,
+- Gleitlänge in einer definierten Gleitphase,
+- Same-Skate-Stride zwischen zwei Aufsätzen desselben Skates,
+- Trajektorie eines körpernahen Sensors und
+- die von RinkLogic einem erkannten Handgelenkereignis zugewiesene Distanz.
+
+Diese Größen sind nicht austauschbar. Insbesondere darf der in einer Studie
+mit Skate-, Unterschenkel- und Becken-IMUs berichtete Fehler nicht auf eine
+Garmin-Uhr am Handgelenk übertragen werden. Körpergröße ist nur ein praktischer
+Proxy für Beinlänge. Gewicht und BMI bleiben ohne Distanzmultiplikator.
+
 ### Rechenweg
 
 Die Beta verwendet genau eine Distanzberechnung als Quelle für Uhranzeige,
@@ -103,21 +122,27 @@ Anschub gilt:
 
 ```text
 height_factor = clamp(0.94, 1.06, 1 + (height_cm - 180) / 360)
-test_factor   = 220 / 292.5
-start_cm      = round(125 * height_factor * test_factor)
-rhythm_cm     = round(225 * height_factor * test_factor)
+baseline_start_cm  = round_half_up(125 * height_factor)
+baseline_rhythm_cm = round_half_up(225 * height_factor)
+personal_test_factor = 220 / 292.5
+start_cm      = round_half_up(baseline_start_cm * personal_test_factor)
+rhythm_cm     = round_half_up(baseline_rhythm_cm * personal_test_factor)
 ```
 
 Die ersten vier Anschübe eines erkannten Bursts verwenden `start_cm`, spätere
 Rhythmusanschübe `rhythm_cm`. Der Größenfaktor wird nur für endliche
-Körpergrößen von 80 bis 250 cm verwendet. Fehlt eine gültige Größe, verwendet
-die Beta denselben Testfaktor mit dem neutralen Größenfaktor `1.0`.
+Körpergrößen von 80 bis 250 cm verwendet. Positive Werte werden mit
+`floor(value + 0.5)` gerundet. Fehlt eine gültige Größe, liefert die
+evidenzinformierte Basisschicht exakt den Fixed-Fallback 125/225 cm; erst die
+davon getrennte lokale Kalibrierung wendet den persönlichen Testfaktor an.
 
 Der Faktor `220 / 292,5 ≈ 0,752` stammt aus einer einzelnen näherungsweisen
-Testrelation. Er ist ein freier Beta-Parameter, keine Literaturkonstante. Die
-Grundstruktur aus Start- und Rhythmusanschüben sowie der eng begrenzte
-Größenfaktor bilden das experimentelle, evidenzinformierte App-Modell. Gewicht
-und BMI gehen nicht in die Schätzung ein.
+Testrelation. Er ist eine lokale persönliche Known-Distance-Kalibrierung für
+dieses Testartefakt, keine Literaturkonstante und kein Faktor für andere
+Nutzer. Die Grundstruktur aus Start- und Rhythmusanschüben sowie der eng
+begrenzte Größenfaktor bilden die davon getrennte, experimentelle
+evidenzinformierte Basisschicht. Gewicht und BMI gehen nicht in die Schätzung
+ein. Die Beta aktiviert oder verändert die Kalibrierung nicht automatisch.
 
 ### Isolation und Kennzeichnung
 
@@ -130,7 +155,9 @@ Jede Nutzeranzeige verwendet `≈` oder eine gleichwertige lokalisierte
 Kennzeichnung und spricht von „geschätzter Distanz“. Es gibt keine
 Umbenennung in „Distanz“ ohne diesen Hinweis. Die aktive Modellquelle wird im
 Speicher bis zum Sessionende gesperrt, damit ein laufendes Training nicht mit
-unterschiedlichen Faktoren berechnet wird.
+unterschiedlichen Faktoren berechnet wird. Basismodellquelle und lokale
+Kalibrierquelle bleiben als getrennte In-Memory-Provenienz erhalten; sie
+beanspruchen wegen der Feldgrenze kein zusätzliches FIT-Feld.
 
 ### Gemeinsamer Datenfluss
 
@@ -160,8 +187,9 @@ markieren die betroffene Shift-Abdeckung als unvollständig.
   Anzeige in Minuten umgerechnet.
 - Schema-9-Felder verwenden neue IDs und dürfen nie mit alten IDs
   zusammengeführt oder als Sekunden interpretiert werden.
-- Ungültige Körpergröße führt zum neutralen kalibrierten Beta-Fallback, nicht
-  zum unkalibrierten Release-Modell.
+- Ungültige Körpergröße führt nicht zu einer erfundenen Profilableitung:
+  zunächst gelten exakt 125/225 cm in der
+  Basisschicht, danach der separat ausgewiesene persönliche Testfaktor.
 - Ein Allokationsfehler verhindert den Aufzeichnungsstart mit bestehender
   Fehleranzeige; es wird keine teilweise interpretierbare Session gespeichert.
 
@@ -173,8 +201,9 @@ Implementierungscommit erzeugt werden:
 1. Alle bestehenden Monkey-C-Simulator- und Python-Tests bestehen für den
    normalen Build und die Testvarianten.
 2. Neue Tests decken den Faktor `220/292.5`, gültige Grenzwerte des
-   Größenfaktors, ungültige Profilwerte, Modell-Locking und die unveränderten
-   Release-Konstanten ab.
+   Größenfaktors, positive Half-up-Rundung, den exakten Fixed-Fallback,
+   ungültige Profilwerte, getrennte Modell-/Kalibrierprovenienz,
+   Modell-Locking und die unveränderten Release-Konstanten ab.
 3. Mapping-Tests belegen, dass Live-, Shift-, Record-, Lap- und Session-Werte
    aus derselben Distanzquelle stammen.
 4. Schema-Tests belegen 34 aktive Felder, exakt 16 Session-Felder, eindeutige
@@ -209,6 +238,18 @@ Ein einzelner erfolgreicher Test validiert die Bedienung und die technische
 Durchgängigkeit, nicht die Distanzgenauigkeit. Die reale 22-m-Strecke,
 Bedingung ohne beziehungsweise mit Stickhandling, Markerqualität,
 Anschubanzahl und Uhrschätzung werden pro Wiederholung getrennt protokolliert.
+
+Eine spätere Freigabe des Größenmodells als Release-Standard setzt eine vorab
+eingefrorene Pipeline und einen held-out, nach Spielern gruppierten Vergleich
+für Eis, Inline und beide Oberflächen zusammen voraus. Pro Oberfläche werden
+mindestens zwölf Spieler mit je drei geraden 20–30-m-Läufen und einer
+hockeyähnlichen Sequenz benötigt. Das Profilmodell muss die MAE gegenüber dem
+Fixed-Modell um mindestens 5 % senken. Bei 10.000 gepaarten
+Player-Level-Bootstrap-Wiederholungen mit Seed `20261010` muss das
+95-%-Intervall von `MAE_fixed - MAE_profile` vollständig über null liegen;
+der absolute Bias darf sich höchstens um 1 m und 2 Prozentpunkte
+verschlechtern. Diese Schwelle ist ein App-Freigabekriterium, keine aus der
+Literatur abgeleitete biologische Konstante.
 
 ## Freigabekriterien
 
