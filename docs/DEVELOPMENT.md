@@ -201,15 +201,16 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
 
 - Quellcommit des Binärstands: `a401b682a80b66c34ac752dfe099f47639da9f1b`;
   Ziel `venu2plus`; Connect IQ SDK und Compiler 9.2.0. Alle drei getrennten
-  Modi Fixed, ProfileHeight und CalibratedProfile wurden signiert gebaut.
+  Modi Fixed, ProfileHeight und CalibratedProfile wurden gebaut und geprüft.
 - Fixed-PRG `ShiftSenseV2.prg`: 414.764 Byte, SHA-256
   `D35F69D7E750C08C0CD5130C57FDB11BF2CF9FE075C4D038A5B73EE53D947FDB`.
   ProfileHeight-PRG: 414.764 Byte, SHA-256
   `8DD68E8B027BDD330C7CE37FE66D7565EDA24F261645BCBBC85E9CDE29E03C6F`.
 - Beta-PRG `RinkLogic-calibrated-profile-test.prg`: 414.780 Byte, SHA-256
-  `2F55A3262B1E8657018310D024DD318893D2BE2EE212DF039239A895F9BD2748`.
-  Exportpaket `RinkLogic-0.2.0-beta.4.iq`: 218.815 Byte, SHA-256
-  `6BAAB0BE0EBF3EB7FD765C03A40A3955B2D293B7598ECEF5773602DA63A0F054`.
+  `F98D6DE36E43555B52FCE3ACBB902E6015DFF87BC327674FF694E217CD611931`.
+  Das mit demselben zurückbehaltenen Entwicklerschlüsselpaar wie Beta 3
+  signierte Exportpaket `RinkLogic-0.2.0-beta.4.iq`: 218.821 Byte, SHA-256
+  `F6D221CEF2E69C1CCAB370744B6AB3FDBC4428CA44734B61A36AAF2CC9B29A43`.
 - Nur der Beta-4-Modus wendet nach der evidenzbegrenzten, half-up gerundeten
   Höhenbaseline den lokalen persönlichen Faktor `220/292,5` mit zweiter
   Half-up-Rundung an. Fixed und ProfileHeight bleiben isoliert. Es gibt keine
@@ -218,6 +219,8 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
   neuen IDs 101–109 speichern Zeitwerte als Float-Minuten. Der Parser bleibt
   zu Schema 4–8 kompatibel; alle Uhr-Zeitwerte erscheinen in Minuten.
 - Binärdateien und IQ-Paket liegen ausschließlich im ignorierten Buildordner
-  und werden nicht committed. Physische Installation, Start/Shift/Speichern,
+  und werden nicht committed. Garmin akzeptierte am 12. Oktober 2026 App-ID,
+  Signatur und Version; der Beta-Eintrag steht als `0.2.0-beta.4` (Internal 4)
+  auf `App pending`. Physische Installation, Start/Shift/Speichern,
   Garmin-Connect-Synchronisierung und ein reales Schema-9-FIT sind weiterhin
   offene Hardware-Nachweise und dürfen nicht aus dem Build abgeleitet werden.

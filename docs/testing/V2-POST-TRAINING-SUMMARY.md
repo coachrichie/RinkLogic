@@ -30,10 +30,12 @@ bleibt als historischer Nachweis erhalten.
 
 - Quellcommit: `a401b682a80b66c34ac752dfe099f47639da9f1b`
 - PRG: 414.780 Byte, SHA-256
-  `2F55A3262B1E8657018310D024DD318893D2BE2EE212DF039239A895F9BD2748`
-- IQ: 218.815 Byte, SHA-256
-  `6BAAB0BE0EBF3EB7FD765C03A40A3955B2D293B7598ECEF5773602DA63A0F054`
+  `F98D6DE36E43555B52FCE3ACBB902E6015DFF87BC327674FF694E217CD611931`
+- IQ: 218.821 Byte, SHA-256
+  `F6D221CEF2E69C1CCAB370744B6AB3FDBC4428CA44734B61A36AAF2CC9B29A43`
 - SDK 9.2.0, Gerät `venu2plus`, Distanzmodus `CalibratedProfile`
+- Garmin Developer Center: Signatur und Manifest am 12. Oktober 2026
+  verifiziert; Beta `0.2.0-beta.4` (Internal 4) steht auf `App pending`.
 
 - Datei: `watch-v2/bin/venu2plus/ShiftSenseV2.prg`
 - Quellstand: `c5d30c1`
