@@ -24,15 +24,15 @@ gespeicherten Trainings- und FIT-Felder.
 
 Für den nächsten Lauf wird ausschließlich der isolierte Kandidat
 `RinkLogic-0.2.0-beta.4.iq` beziehungsweise dessen
-`RinkLogic-calibrated-profile-test.prg` verwendet. Commit, Größe und Hash werden
-nach dem signierten Build in `docs/DEVELOPMENT.md` festgehalten. Der folgende
-Beta-3-Block bleibt als historischer Nachweis erhalten.
+`RinkLogic-calibrated-profile-test.prg` verwendet. Commit, Größe und Hash sind
+auch in `docs/DEVELOPMENT.md` festgehalten. Der danach folgende Beta-3-Block
+bleibt als historischer Nachweis erhalten.
 
-- Quellcommit: `05f826cf1eb0ad86c932507a9412599bc67ee24e`
+- Quellcommit: `a401b682a80b66c34ac752dfe099f47639da9f1b`
 - PRG: 414.780 Byte, SHA-256
-  `F98D6DE36E43555B52FCE3ACBB902E6015DFF87BC327674FF694E217CD611931`
-- IQ: 218.810 Byte, SHA-256
-  `BFCDEC338E1DF52E6C905A55406D093B755337C75E218FA7DFF204A0924BD30B`
+  `2F55A3262B1E8657018310D024DD318893D2BE2EE212DF039239A895F9BD2748`
+- IQ: 218.815 Byte, SHA-256
+  `6BAAB0BE0EBF3EB7FD765C03A40A3955B2D293B7598ECEF5773602DA63A0F054`
 - SDK 9.2.0, Gerät `venu2plus`, Distanzmodus `CalibratedProfile`
 
 - Datei: `watch-v2/bin/venu2plus/ShiftSenseV2.prg`

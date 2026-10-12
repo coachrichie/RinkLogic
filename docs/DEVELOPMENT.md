@@ -199,17 +199,17 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
 
 ## 2026-10-11 – Beta 4 mit Minutenfeldern und persönlicher Distanzschicht
 
-- Quellcommit des Binärstands: `05f826cf1eb0ad86c932507a9412599bc67ee24e`;
+- Quellcommit des Binärstands: `a401b682a80b66c34ac752dfe099f47639da9f1b`;
   Ziel `venu2plus`; Connect IQ SDK und Compiler 9.2.0. Alle drei getrennten
   Modi Fixed, ProfileHeight und CalibratedProfile wurden signiert gebaut.
 - Fixed-PRG `ShiftSenseV2.prg`: 414.764 Byte, SHA-256
-  `51EDAA46DF656BB24322A09478EDC0D83FE99A76663CE99EF2E7F86B9370C3F5`.
+  `D35F69D7E750C08C0CD5130C57FDB11BF2CF9FE075C4D038A5B73EE53D947FDB`.
   ProfileHeight-PRG: 414.764 Byte, SHA-256
-  `F9A455640B09D425C0BD1EBEDD26AFA7F40F6697A067A1AF7FD8A4E2A6940FB2`.
+  `8DD68E8B027BDD330C7CE37FE66D7565EDA24F261645BCBBC85E9CDE29E03C6F`.
 - Beta-PRG `RinkLogic-calibrated-profile-test.prg`: 414.780 Byte, SHA-256
-  `F98D6DE36E43555B52FCE3ACBB902E6015DFF87BC327674FF694E217CD611931`.
-  Exportpaket `RinkLogic-0.2.0-beta.4.iq`: 218.810 Byte, SHA-256
-  `BFCDEC338E1DF52E6C905A55406D093B755337C75E218FA7DFF204A0924BD30B`.
+  `2F55A3262B1E8657018310D024DD318893D2BE2EE212DF039239A895F9BD2748`.
+  Exportpaket `RinkLogic-0.2.0-beta.4.iq`: 218.815 Byte, SHA-256
+  `6BAAB0BE0EBF3EB7FD765C03A40A3955B2D293B7598ECEF5773602DA63A0F054`.
 - Nur der Beta-4-Modus wendet nach der evidenzbegrenzten, half-up gerundeten
   Höhenbaseline den lokalen persönlichen Faktor `220/292,5` mit zweiter
   Half-up-Rundung an. Fixed und ProfileHeight bleiben isoliert. Es gibt keine
