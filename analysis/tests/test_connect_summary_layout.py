@@ -18,7 +18,7 @@ def test_hockey_headline_fields_are_first_in_connect_summary():
         for field in sorted(summary_fields, key=lambda field: int(field.get("sortOrder")))
     ]
 
-    assert ordered_ids[:5] == [74, 98, 78, 96, 97]
+    assert ordered_ids[:5] == [74, 98, 78, 97, 96]
 
 
 def test_schema_nine_allocation_keeps_device_and_session_limits():

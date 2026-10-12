@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class WatchV2BuildConfigurationTests(unittest.TestCase):
-    def describe(self, model, export=False):
+    def describe(self, model, export=False, unit_test=False):
         shell = shutil.which("pwsh") or shutil.which("powershell")
         self.assertIsNotNone(shell)
         args = [
@@ -20,6 +20,8 @@ class WatchV2BuildConfigurationTests(unittest.TestCase):
         ]
         if export:
             args.append("-ExportPackage")
+        if unit_test:
+            args.append("-UnitTest")
         return subprocess.run(
             args,
             cwd=ROOT,
@@ -56,6 +58,16 @@ class WatchV2BuildConfigurationTests(unittest.TestCase):
         config = json.loads(result.stdout)
         self.assertTrue(config["exportPackage"])
         self.assertEqual(config["artifact"], "RinkLogic-0.2.0-beta.4.iq")
+
+    def test_export_rejects_non_calibrated_modes(self):
+        for model in ["Fixed", "ProfileHeight"]:
+            with self.subTest(model=model):
+                result = self.describe(model, export=True)
+                self.assertNotEqual(result.returncode, 0)
+
+    def test_export_rejects_unit_test_combination(self):
+        result = self.describe("CalibratedProfile", export=True, unit_test=True)
+        self.assertNotEqual(result.returncode, 0)
 
     def test_unsupported_distance_model_is_rejected(self):
         result = self.describe("Unsupported")

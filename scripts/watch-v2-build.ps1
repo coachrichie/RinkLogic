@@ -27,6 +27,14 @@ $artifact = if ($ExportPackage -and $DistanceModel -eq "CalibratedProfile") {
     "ShiftSenseV2.prg"
 }
 
+if ($ExportPackage -and $DistanceModel -ne "CalibratedProfile") {
+    throw "ExportPackage is only supported with DistanceModel CalibratedProfile."
+}
+
+if ($ExportPackage -and $UnitTest) {
+    throw "ExportPackage cannot be combined with UnitTest."
+}
+
 if ($DescribeConfiguration) {
     [ordered]@{
         distanceModel = $DistanceModel
