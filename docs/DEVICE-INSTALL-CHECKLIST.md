@@ -1,5 +1,26 @@
 # ShiftSense Hockey – kurzer Gerätetest
 
+## RinkLogic 0.2.0-beta.4 – morgiger Smoke-Test
+
+1. Den Hash von `watch-v2/bin/venu2plus/RinkLogic-calibrated-profile-test.prg`
+   gegen `docs/DEVELOPMENT.md` prüfen und genau diese Datei installieren.
+2. App öffnen: kein `IQ!`; plausible HR; einen manuellen Shift starten und
+   beenden. Gesamt-/Eis-/Bankzeit müssen in `min`, Shiftzeiten mit zwei
+   Dezimalstellen erscheinen.
+3. Bewegungsseite prüfen: aktuelle beziehungsweise letzte Shift-Distanz sowie
+   Gesamtdistanz erscheinen mit `≈`. Fehlende Bewegung bleibt `--`, nicht null.
+4. Speichern, alle drei Schlussseiten öffnen, Aktivität auf Uhr und Telefon
+   öffnen und synchronisieren.
+5. Im Connect-IQ-Abschnitt die ersten Werte Shifts, Ø Shiftdauer, Ø Shift-HF,
+   Anschübe und geschätzte Distanz prüfen; außerdem Minutenfelder, Record-Kurve,
+   Lap-Distanz und Session-Distanz kontrollieren.
+6. Original-FIT nur lokal sichern, CRC und Schema-9-Marker prüfen. Bei `IQ!`,
+   Speicherfehler oder fehlenden Pflichtfeldern auf Beta 3 zurückrollen.
+
+Der Smoke-Test prüft technische Durchgängigkeit, nicht die Genauigkeit der
+22-m-Distanzschätzung. Es gibt in Beta 4 kein GPS, keinen Upload und kein
+globales Modell oder Training.
+
 ## Installationsdatei
 
 Die signierte Venu-2-Plus-Datei liegt nach dem Build hier:

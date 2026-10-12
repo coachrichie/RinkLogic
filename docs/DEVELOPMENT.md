@@ -196,3 +196,28 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
 - Die private Connect-IQ-Beta `0.1.0-beta.3` wurde auf der Venu 2 Plus physisch geprüft: Start, manuelle Shifts, Live-Herzfrequenz, Shift-Dauer, durchschnittliche Shift-Herzfrequenz, Speichern und alle drei Abschlussseiten wurden bestätigt. Das belegt die Bedien- und Anzeigefolge, **nicht** die Genauigkeit automatischer Shifts oder geschätzter Bewegung/Distanzen.
 - Garmin Connect Mobile zeigte die benutzerdefinierten Hockeyfelder im eigenen Connect-IQ-Aktivitätsabschnitt; Shiftanzahl, durchschnittliche Shift-Dauer und durchschnittliche Shift-Herzfrequenz standen zuerst. Die nativen Garmin-Overview-Karten lassen sich durch Connect IQ nicht mit Shift-Feldern ersetzen. Ein reales, ausschließlich privat ausgewertetes Schema-7-FIT bestand die CRC- und Entwicklerfeldprüfung. Die aktive HR-Quelle wurde dadurch nicht als Polar H10 verifiziert.
 - [RinkLogic](https://github.com/coachrichie/RinkLogic) wurde als öffentliches Open-Source-Repository mit **neuer, sauberer Git-Historie** veröffentlicht; die private Entwicklungshistorie blieb privat. Der am 10. Oktober verifizierte öffentliche `main`-Commit ist `cf0655746f0f146b67114b328fc5f239eec32397`. Software steht unter Apache-2.0, originale Dokumentation und projekt-eigene Assets unter CC BY 4.0. Roh-FIT-Dateien, persönliche Gesundheitsdaten, Schlüssel und generierte Garmin-Pakete wurden nicht veröffentlicht.
+
+## 2026-10-11 – Beta 4 mit Minutenfeldern und persönlicher Distanzschicht
+
+- Quellcommit des Binärstands: `05f826cf1eb0ad86c932507a9412599bc67ee24e`;
+  Ziel `venu2plus`; Connect IQ SDK und Compiler 9.2.0. Alle drei getrennten
+  Modi Fixed, ProfileHeight und CalibratedProfile wurden signiert gebaut.
+- Fixed-PRG `ShiftSenseV2.prg`: 414.764 Byte, SHA-256
+  `51EDAA46DF656BB24322A09478EDC0D83FE99A76663CE99EF2E7F86B9370C3F5`.
+  ProfileHeight-PRG: 414.764 Byte, SHA-256
+  `F9A455640B09D425C0BD1EBEDD26AFA7F40F6697A067A1AF7FD8A4E2A6940FB2`.
+- Beta-PRG `RinkLogic-calibrated-profile-test.prg`: 414.780 Byte, SHA-256
+  `F98D6DE36E43555B52FCE3ACBB902E6015DFF87BC327674FF694E217CD611931`.
+  Exportpaket `RinkLogic-0.2.0-beta.4.iq`: 218.810 Byte, SHA-256
+  `BFCDEC338E1DF52E6C905A55406D093B755337C75E218FA7DFF204A0924BD30B`.
+- Nur der Beta-4-Modus wendet nach der evidenzbegrenzten, half-up gerundeten
+  Höhenbaseline den lokalen persönlichen Faktor `220/292,5` mit zweiter
+  Half-up-Rundung an. Fixed und ProfileHeight bleiben isoliert. Es gibt keine
+  automatische Kalibrierung, kein GPS, keinen Upload und kein globales Modell.
+- Schema 9 hält 34 aktive Entwicklerfelder und 16 Session-Felder ein. Die
+  neuen IDs 101–109 speichern Zeitwerte als Float-Minuten. Der Parser bleibt
+  zu Schema 4–8 kompatibel; alle Uhr-Zeitwerte erscheinen in Minuten.
+- Binärdateien und IQ-Paket liegen ausschließlich im ignorierten Buildordner
+  und werden nicht committed. Physische Installation, Start/Shift/Speichern,
+  Garmin-Connect-Synchronisierung und ein reales Schema-9-FIT sind weiterhin
+  offene Hardware-Nachweise und dürfen nicht aus dem Build abgeleitet werden.

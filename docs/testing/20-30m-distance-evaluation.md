@@ -1,6 +1,6 @@
 # 20–30-m-Bewegungs- und Distanztest
 
-Stand: 2026-10-06
+Stand: 2026-10-11
 
 Zweck: lokale Validierung der heuristischen Anschub-/Distanzschätzung von ShiftSense auf der Venu 2 Plus.
 
@@ -15,6 +15,13 @@ der normale Build bleibt bis zu deren Erfüllung bei `:fixed`.
 
 Die Uhr liefert hier **keine GPS-Distanz**. `estimated_distance_cm` ist ein experimenteller Modellwert aus Bewegungsmerkmalen und Anschüben. Eine hohe Sensorabdeckung beweist keine hohe Distanzgenauigkeit. Die Ergebnisse gelten zunächst nur für die getestete Person, Uhrposition und Bewegungsart.
 
+Die Beta `0.2.0-beta.4` verwendet als dokumentierte Ausgangsbasis die bereits
+vorliegende persönliche Testrelation `220/292,5`. Sie wird als zweite, lokale
+Schicht nach dem evidenzbegrenzten Höhenmodell angewandt. Sie ist keine
+Populationsaussage und wird weder automatisch aus neuen Läufen geschrieben
+noch für andere Nutzer aktiviert. Für diesen Test gibt es kein GPS, keinen
+Upload und kein globales Training.
+
 ## Ablauf vor dem Training
 
 1. Eine gerade, klar markierte Strecke von mindestens 20 m und höchstens 30 m auswählen und mit Maßband oder Hallenmarkierung bestimmen.
@@ -24,7 +31,10 @@ Die Uhr liefert hier **keine GPS-Distanz**. `estimated_distance_cm` ist ein expe
 5. Für **jede** Wiederholung die untere Taste am Start drücken (Shift starten) und am Ende erneut (Shift beenden). Zwischen den Wiederholungen kurz auf die Bank zurückkehren. Die Reihenfolge der vollständigen manuellen Shifts muss der Reihenfolge im CSV-Protokoll entsprechen.
 6. Bewegungsform und Bedingung je Versuch notieren: `A: normales Skating ohne Puck` oder `B: Puck und Stickhandling`, zusätzlich `Antritt`, `Gleitphase` oder `Richtungswechsel`. Für die erste Kalibrierung möglichst gerade Antritte priorisieren.
 7. Anschübe möglichst unabhängig zählen (zweite Person oder Video). Wenn das nicht möglich ist, `reference_pushes` leer lassen. Die Uhranzeige darf nicht als Referenzzählung verwendet werden.
-8. Aufnahme mit der oberen Taste stoppen und speichern. Original-FIT anschließend lokal unter `analysis/private/` ablegen.
+8. Während jedes Shifts die geschätzte Shift-Distanz und nach dem Shift die
+   fortlaufende Gesamtdistanz mit `≈` notieren. Aufnahme mit der oberen Taste
+   stoppen und speichern. Original-FIT anschließend lokal unter
+   `analysis/private/` ablegen und niemals committen.
 
 ## Protokollvorlage
 
