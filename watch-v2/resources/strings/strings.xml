@@ -58,6 +58,7 @@
     <string id="ConnectShiftPushCount">Shift pushes</string>
     <string id="ConnectShiftEstimatedDistance">Shift distance ≈</string>
     <string id="ConnectPhase">Phase</string>
+    <string id="ConnectPhaseUnit"></string>
     <string id="ConnectOnIce">On-Ice</string>
     <string id="ConnectBench">Bench</string>
     <string id="ConnectMotionCoverage">Motion coverage</string>

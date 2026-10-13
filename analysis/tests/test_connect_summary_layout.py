@@ -138,11 +138,12 @@ def test_schema_ten_contributions_are_localized_and_keep_lap_duration():
     assert int(contributions[111].get("precision")) >= 1
     assert contributions[112].get("displayInActivityLaps") == "true"
     assert contributions[112].get("dataLabel") == "@Strings.ConnectPhase"
+    assert contributions[112].get("unitLabel") == "@Strings.ConnectPhaseUnit"
 
     label_ids = {
         contributions[field_id].get("dataLabel").split(".")[-1]
         for field_id in minute_ids
-    } | {"ConnectMinutesUnit", "ConnectMetresUnit", "ConnectEstimatedDistance", "ConnectPhase", "ConnectOnIce", "ConnectBench"}
+    } | {"ConnectMinutesUnit", "ConnectMetresUnit", "ConnectEstimatedDistance", "ConnectPhase", "ConnectPhaseUnit", "ConnectOnIce", "ConnectBench"}
     for relative in [
         Path("watch-v2/resources/strings/strings.xml"),
         Path("watch-v2/resources-deu/strings/strings.xml"),
@@ -152,6 +153,7 @@ def test_schema_ten_contributions_are_localized_and_keep_lap_duration():
         assert localized["ConnectMinutesUnit"] == "min"
         assert localized["ConnectMetresUnit"] == "m"
         assert localized["ConnectPhase"] == "Phase"
+        assert localized["ConnectPhaseUnit"] == ""
         assert localized["ConnectOnIce"] == "On-Ice"
         assert localized["ConnectBench"] == "Bench"
         assert "≈" in localized["ConnectEstimatedDistance"]
