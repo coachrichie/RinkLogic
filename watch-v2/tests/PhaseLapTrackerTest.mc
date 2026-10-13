@@ -99,3 +99,68 @@ function duplicateOrBackwardTimestampDoesNotCreateLap(logger as Test.Logger) as 
     return validStart[:phase] == :bench && validStart[:startedAtMs] == 3000 &&
         validStart[:endedAtMs] == 5000 && validStart[:durationMs] == 2000;
 }
+
+(:test)
+function laterDuplicateStartWhileOnIceKeepsOriginalInterval(logger as Test.Logger) as Lang.Boolean {
+    var tracker = new PhaseLapTracker();
+    tracker.initialize();
+    tracker.startShift(1000);
+    var duplicateStart = tracker.startShift(2500);
+    var originalInterval = tracker.endShift(4000);
+
+    if (duplicateStart != null || originalInterval == null) { return false; }
+    return originalInterval[:phase] == :on_ice &&
+        originalInterval[:startedAtMs] == 1000 &&
+        originalInterval[:endedAtMs] == 4000 &&
+        originalInterval[:durationMs] == 3000;
+}
+
+(:test)
+function laterDuplicateEndWhileBenchKeepsOriginalInterval(logger as Test.Logger) as Lang.Boolean {
+    var tracker = new PhaseLapTracker();
+    tracker.initialize();
+    tracker.startShift(1000);
+    tracker.endShift(3000);
+    var duplicateEnd = tracker.endShift(5000);
+    var originalInterval = tracker.startShift(7000);
+
+    if (duplicateEnd != null || originalInterval == null) { return false; }
+    return originalInterval[:phase] == :bench &&
+        originalInterval[:startedAtMs] == 3000 &&
+        originalInterval[:endedAtMs] == 7000 &&
+        originalInterval[:durationMs] == 4000;
+}
+
+(:test)
+function backwardStartFromBenchKeepsBenchInterval(logger as Test.Logger) as Lang.Boolean {
+    var tracker = new PhaseLapTracker();
+    tracker.initialize();
+    tracker.startShift(1000);
+    tracker.endShift(3000);
+    var backwardStart = tracker.startShift(2500);
+    var benchInterval = tracker.startShift(5000);
+
+    if (backwardStart != null || benchInterval == null) { return false; }
+    return benchInterval[:phase] == :bench &&
+        benchInterval[:startedAtMs] == 3000 &&
+        benchInterval[:endedAtMs] == 5000 &&
+        benchInterval[:durationMs] == 2000;
+}
+
+(:test)
+function transitionsAfterFinishDoNotCreateIntervals(logger as Test.Logger) as Lang.Boolean {
+    var tracker = new PhaseLapTracker();
+    tracker.initialize();
+    tracker.startShift(1000);
+    var finalInterval = tracker.finish(3000);
+    var lateStart = tracker.startShift(4000);
+    var lateEnd = tracker.endShift(5000);
+    var repeatedFinish = tracker.finish(6000);
+
+    if (finalInterval == null || lateStart != null || lateEnd != null ||
+            repeatedFinish != null) { return false; }
+    return finalInterval[:phase] == :on_ice &&
+        finalInterval[:startedAtMs] == 1000 &&
+        finalInterval[:endedAtMs] == 3000 &&
+        finalInterval[:durationMs] == 2000;
+}
