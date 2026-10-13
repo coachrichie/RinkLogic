@@ -4,6 +4,14 @@ Stand: 11. Oktober 2026. Zielgerät: Garmin Venu 2 Plus. Dieses Protokoll trennt
 automatisierte Nachweise, beobachtete Beta-Ergebnisse und weiterhin nicht
 protokollierte Detailprüfungen.
 
+## Korrigierte Distanzreferenz vom 13. Oktober
+
+Der aufgezeichnete Streckentest wird mit einer Referenz von **20 m je
+Wiederholung (2.000 cm im Kalibrierungsmanifest)** ausgewertet. Die ältere
+22-m-Beispielangabe im Distanzprotokoll ist damit ersetzt. Diese
+Dokumentations- und Testkorrektur ändert keine App-Konstanten oder den
+persönlichen Faktor und aktiviert keine Kalibrierung automatisch.
+
 ## Testidentität
 
 - Datum/Uhrzeit: ____________________

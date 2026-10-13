@@ -61,6 +61,16 @@ class CalibrationReportTests(unittest.TestCase):
         self.assertEqual(stick["valid_repetitions"], 1)
         self.assertAlmostEqual(stick["median_distance_error_m"], 2.0)
 
+    def test_twenty_metre_reference_error_uses_two_thousand_centimetres(self):
+        manifest = read_calibration_manifest(self.manifest([self.row(1, distance=2000)]))
+        result = build_calibration_report_from_report(normalized_report([
+            {"at_ms": 1000, "pushes": 10, "estimated_distance_cm": 2150,
+             "coverage_percent": 90},
+        ]), manifest)
+        trial = result["trials"][0]
+        self.assertAlmostEqual(trial["reference_distance_m"], 20.0)
+        self.assertAlmostEqual(trial["distance_error_m"], 1.5)
+
     def test_unknown_distance_is_invalid_not_zero(self):
         path = self.manifest([self.row(1, distance=2500)])
         result = build_calibration_report_from_report(

@@ -72,6 +72,15 @@ Zusammengefasst werden Median, Mittelwert, Minimum/Maximum und 95%-Perzentil des
 - Inline und Eis werden getrennt zusammengefasst; Bedingung A und B werden getrennt ausgewertet. Antritt und Gleitphase werden nicht ungeprüft zu einer gemeinsamen Kalibrierung vermischt.
 - Die aktuellen Modellannahmen (kurze Antritte etwa 1,25 m, spätere Anschübe etwa 2,25 m) sind Startwerte, keine wissenschaftlich bestätigten individuellen Parameter.
 
+## Korrigierte Referenz vom 13. Oktober 2026
+
+Der am 13. Oktober 2026 aufgezeichnete Referenzlauf hatte pro Wiederholung
+eine unabhängig bestimmte Strecke von **20 m (2.000 cm)**. Im lokalen
+Kalibrierungsmanifest muss daher `reference_distance_cm=2000` stehen. Die
+Uhrschätzung bleibt ein separater Messwert; diese Korrektur ändert weder
+Modellparameter noch den persönlichen Testfaktor und aktiviert keine
+automatische Kalibrierung.
+
 ## Lokale Auswertung nach dem Test
 
 Im Projektordner ausführen:
@@ -92,11 +101,11 @@ Für die Distanzkalibrierung zuerst den Sitzungsbeginn aus genau dieser FIT-Date
 python -c "from analysis.shift_pilot import load_pilot_fit; print(load_pilot_fit('analysis/private/<datei>.fit')['session_start'])"
 ```
 
-Die ausgegebene Zeit als `session_id` in jeder Zeile des lokalen CSV-Protokolls verwenden. Die Spalte `reference_pushes` bleibt vorhanden, ihr Wert darf aber leer sein. `repetition` zählt die **manuellen Shifts in dieser Aufnahme** ab 1, auch wenn ein Versuch als `uncertain` ausgeschlossen werden muss. Beispiel für einen 22-m-Versuch ohne unabhängige Anschubzählung:
+Die ausgegebene Zeit als `session_id` in jeder Zeile des lokalen CSV-Protokolls verwenden. Die Spalte `reference_pushes` bleibt vorhanden, ihr Wert darf aber leer sein. `repetition` zählt die **manuellen Shifts in dieser Aufnahme** ab 1, auch wenn ein Versuch als `uncertain` ausgeschlossen werden muss. Beispiel für einen 20-m-Versuch ohne unabhängige Anschubzählung:
 
 ```csv
 session_id,repetition,sport,condition,reference_distance_cm,reference_pushes,marker_status
-2026-10-10 10:30:00+00:00,1,inline,skate_only,2200,,valid
+2026-10-13 10:30:00+00:00,1,inline,skate_only,2000,,valid
 ```
 
 Dann den Vergleich lokal starten:
