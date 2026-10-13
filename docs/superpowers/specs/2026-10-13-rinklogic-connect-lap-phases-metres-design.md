@@ -11,8 +11,9 @@ FIT-Dateien umzudeuten:
 2. Geschätzte Distanz wird in den Connect-IQ-Charts und der Lap-Tabelle in
    Metern statt Zentimetern angezeigt.
 3. Die geschätzte Gesamtdistanz bleibt im Connect-IQ-Aktivitätsabschnitt
-   sichtbar und wird nicht fälschlich als Bestandteil der nativen Garmin-
-   Overview versprochen.
+   sichtbar. Zusätzlich wird Feld 97 testweise über `nativeNum=9` dem nativen
+   Sessionfeld `total_distance` zugeordnet; erst der Hardware-/Connect-Test
+   entscheidet, ob Garmin diese Zuordnung in der nativen Overview verwendet.
 4. Der aufgezeichnete Referenzlauf wird mit 20 m je Wiederholung ausgewertet.
 
 Die Änderung bleibt experimentell. Sie validiert weder die Distanzgenauigkeit
@@ -20,11 +21,14 @@ noch eine biologische Distanz-pro-Anschub-Gleichung.
 
 ## Plattformgrenze
 
-Connect-IQ-Developer-Felder können Garmins native Overview-Karten für Distanz,
-Geschwindigkeit oder Höhenmeter nicht ersetzen. RinkLogic zeigt die geschätzte
-Gesamtdistanz deshalb im separaten Connect-IQ-Zusammenfassungsbereich. Ein
-fehlender Wert in der nativen Overview ist keine durch das FIT-Contribution-
-Schema behebbaren Darstellungslücke.
+Connect-IQ-Contribution-Layouts können Garmins native Overview-Karten für
+Distanz, Geschwindigkeit oder Höhenmeter nicht frei gestalten. RinkLogic zeigt
+die geschätzte Gesamtdistanz deshalb weiterhin verlässlich im separaten
+Connect-IQ-Zusammenfassungsbereich. Feld 97 wird jedoch experimentell über
+`nativeNum=9` als Äquivalent zum nativen Sessionfeld `total_distance`
+gekennzeichnet. Ob Garmin Connect daraus tatsächlich eine native Distanzkarte
+befüllt und mit welcher Einheit oder Dezimaldarstellung, liegt bei Garmin und
+muss auf Uhr und Telefon geprüft werden.
 
 ## Semantisches Lap-Modell
 
@@ -184,8 +188,9 @@ Die Änderung ist abnahmefähig, wenn:
 - On-Ice- und Bench-Dauern plausibel in Minuten erscheinen,
 - Chart, On-Ice-Laps und Connect-IQ-Summary Distanz in Metern darstellen,
 - Record-, Lap- und Session-Distanz aus demselben Schätzpfad stammen,
-- die native Garmin-Overview nicht als RinkLogic-Ausgabefläche dokumentiert
-  oder beworben wird,
+- die native Garmin-Overview-Zuordnung als experimentell dokumentiert und auf
+  Uhr sowie Telefon geprüft wird, ohne eine von Garmin nicht bestätigte
+  Darstellung zu versprechen,
 - der 20-m-Test als korrigierte Referenz geführt wird, ohne automatische
   Kalibrierungsaktivierung,
 - und Beta 4 bis zum bestandenen Hardware-/Connect-Test als Rückfallversion

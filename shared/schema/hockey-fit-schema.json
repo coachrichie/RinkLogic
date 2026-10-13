@@ -103,7 +103,7 @@
     {"id":94,"key":"heartRateRecovery60","name":"heart_rate_drop_60","scope":"lap","type":"sint16","unit":"bpm","bytes":2},
     {"id":95,"key":"shiftAverageHeartRate","name":"shift_average_heart_rate","scope":"lap","type":"uint8","unit":"bpm","bytes":1},
     {"id":96,"key":"summaryDetectedPushCount","name":"detected_push_count","scope":"session","type":"uint16","unit":"pushes","bytes":2},
-    {"id":97,"key":"summaryEstimatedDistanceMeters","name":"estimated_distance_m","scope":"session","type":"float32","unit":"m","bytes":4},
+    {"id":97,"key":"summaryEstimatedDistanceMeters","name":"estimated_distance_m","scope":"session","type":"float32","unit":"m","bytes":4,"nativeNum":9},
     {"id":98,"key":"summaryAverageShiftMinutes","name":"average_shift_minutes","scope":"session","type":"float32","unit":"min","bytes":4},
     {"id":99,"key":"shiftDurationMinutes","name":"shift_duration_minutes","scope":"lap","type":"float32","unit":"min","bytes":4},
     {"id":100,"key":"rawPushCandidateCountTotal","name":"raw_push_candidate_count_total","scope":"record","type":"uint32","unit":"candidates","bytes":4},

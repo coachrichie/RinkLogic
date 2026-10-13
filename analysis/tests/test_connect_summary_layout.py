@@ -64,6 +64,10 @@ def test_schema_nine_allocation_keeps_device_and_session_limits():
     assert fields[86]["name"] == "shift_density_per_hour"
     assert fields[93]["name"] == "heart_rate_drop_30"
     assert fields[94]["name"] == "heart_rate_drop_60"
+    assert fields[97]["scope"] == "session"
+    assert fields[97]["type"] == "float32"
+    assert fields[97]["unit"] == "m"
+    assert fields[97]["nativeNum"] == 9
     assert fields[99]["scope"] == "lap"
     assert fields[99]["type"] == "float32"
     assert fields[100]["scope"] == "record"

@@ -22,6 +22,7 @@ class ShadowSessionFake extends RecordingSessionFake {
     var fieldTypes = {};
     var fieldScopes = {};
     var fieldUnits = {};
+    var fieldNativeNums = {};
     var fields = {};
     var laps = 0;
     var lapSnapshots = [];
@@ -34,6 +35,8 @@ class ShadowSessionFake extends RecordingSessionFake {
         fieldTypes[id] = type;
         fieldScopes[id] = options[:mesgType];
         fieldUnits[id] = options[:units];
+        fieldNativeNums[id] = options.hasKey(:nativeNum) ?
+            options[:nativeNum] : null;
         var field = new ShadowFieldFake();
         fields[id] = field;
         return field;
@@ -345,6 +348,24 @@ function activitySummaryWritesHockeyMetricsBeforeSave(logger as Test.Logger) as 
         session.fields[108].lastValue == 0.2 && session.fields[85].lastValue == 5 &&
         session.fields[86].lastValue == 36 &&
         session.fields[109].lastValue > 0.516 && session.fields[109].lastValue < 0.517;
+}
+
+(:test)
+function estimatedDistanceMapsToNativeSessionTotalDistanceAtCentimetrePrecision(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    var writer = new ShadowFitWriter(session);
+    if (!writer.allocate() || !writer.writeActivitySummary({
+        :shiftCount=>1,
+        :timeOnIceMs=>60000, :benchTimeMs=>0,
+        :averageShiftMs=>60000, :averageShiftHeartRate=>150,
+        :zoneSeconds=>[0, 0, 0, 60, 0], :overNinetySeconds=>0,
+        :workRestTenths=>10, :shiftDensityPerHour=>60,
+        :medianShiftMs=>60000, :detectedPushes=>9,
+        :estimatedDistanceCm=>12345
+    })) { return false; }
+    return session.fieldScopes[97] == FitContributor.MESG_TYPE_SESSION &&
+        session.fieldNativeNums[97] == 9 &&
+        session.fields[97].lastValue == 123.45;
 }
 
 (:test)

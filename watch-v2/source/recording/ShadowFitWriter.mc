@@ -38,7 +38,7 @@ class ShadowFitWriter {
                 !addField(94, "heart_rate_drop_60", FitContributor.DATA_TYPE_SINT16, FitContributor.MESG_TYPE_LAP, "bpm") ||
                 !addField(95, "shift_average_heart_rate", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_LAP, "bpm") ||
                 !addField(96, "detected_push_count", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_SESSION, "pushes") ||
-                !addField(97, "estimated_distance_m", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_SESSION, "m") ||
+                !addNativeField(97, "estimated_distance_m", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_SESSION, "m", 9) ||
                 !addField(98, "average_shift_minutes", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_SESSION, "min") ||
                 !addField(99, "shift_duration_minutes", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_LAP, "min") ||
                 !addField(100, "raw_push_candidate_count_total", FitContributor.DATA_TYPE_UINT32, FitContributor.MESG_TYPE_RECORD, "candidates") ||
@@ -60,6 +60,15 @@ class ShadowFitWriter {
 
     private function addField(id, name, type, messageType, unit) as Lang.Boolean {
         var field = mSession.createField(name, id, type, {:mesgType=>messageType, :units=>unit});
+        if (field == null) { return false; }
+        mFields[id] = field;
+        return true;
+    }
+
+    private function addNativeField(id, name, type, messageType, unit,
+                                    nativeNum) as Lang.Boolean {
+        var field = mSession.createField(name, id, type,
+            {:mesgType=>messageType, :units=>unit, :nativeNum=>nativeNum});
         if (field == null) { return false; }
         mFields[id] = field;
         return true;
