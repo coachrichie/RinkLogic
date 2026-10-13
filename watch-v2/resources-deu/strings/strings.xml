@@ -57,6 +57,9 @@
     <string id="ConnectPushCadence">Anschubkadenz</string>
     <string id="ConnectShiftPushCount">Anschübe pro Shift</string>
     <string id="ConnectShiftEstimatedDistance">Shift-Distanz ≈</string>
+    <string id="ConnectPhase">Phase</string>
+    <string id="ConnectOnIce">On-Ice</string>
+    <string id="ConnectBench">Bench</string>
     <string id="ConnectMotionCoverage">Bewegungsabdeckung</string>
     <string id="ConnectShortPushCount">Kurze Anschübe</string>
     <string id="ConnectShiftShortPushCount">Kurze Anschübe pro Shift</string>
