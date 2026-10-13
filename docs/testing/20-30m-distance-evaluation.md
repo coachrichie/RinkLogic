@@ -1,6 +1,6 @@
 # 20–30-m-Bewegungs- und Distanztest
 
-Stand: 2026-10-11
+Stand: 2026-10-13
 
 Zweck: lokale Validierung der heuristischen Anschub-/Distanzschätzung von ShiftSense auf der Venu 2 Plus.
 

@@ -1,6 +1,6 @@
 # V2-Testprotokoll: Trainingszusammenfassung und Garmin Connect
 
-Stand: 11. Oktober 2026. Zielgerät: Garmin Venu 2 Plus. Dieses Protokoll trennt
+Stand: 13. Oktober 2026. Zielgerät: Garmin Venu 2 Plus. Dieses Protokoll trennt
 automatisierte Nachweise, beobachtete Beta-Ergebnisse und weiterhin nicht
 protokollierte Detailprüfungen.
 
