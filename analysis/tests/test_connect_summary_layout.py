@@ -63,10 +63,22 @@ def test_schema_ten_allocation_keeps_device_and_session_limits():
         assert fields[field_id]["unit"] == "min"
     assert fields[85]["name"] == "work_rest_ratio_tenths"
     assert fields[86]["name"] == "shift_density_per_hour"
-    assert fields[93]["name"] == "heart_rate_drop_30"
-    assert fields[94]["name"] == "heart_rate_drop_60"
-    for field_id in [63, 66, 93, 94]:
-        assert fields[field_id]["status"] == "retired_after_schema_9"
+    historical_contracts = {
+        63: {"id": 63, "key": "estimatedDistanceCmTotal", "name": "estimated_distance_cm_total",
+             "scope": "record", "type": "uint32", "unit": "cm", "bytes": 4,
+             "status": "retired_after_schema_9"},
+        66: {"id": 66, "key": "shiftEstimatedDistanceCm", "name": "shift_estimated_distance_cm",
+             "scope": "lap", "type": "uint32", "unit": "cm", "bytes": 4,
+             "status": "retired_after_schema_9"},
+        93: {"id": 93, "key": "heartRateRecovery30", "name": "heart_rate_drop_30",
+             "scope": "lap", "type": "sint16", "unit": "bpm", "bytes": 2,
+             "status": "retired_after_schema_9"},
+        94: {"id": 94, "key": "heartRateRecovery60", "name": "heart_rate_drop_60",
+             "scope": "lap", "type": "sint16", "unit": "bpm", "bytes": 2,
+             "status": "retired_after_schema_9"},
+    }
+    for field_id, expected in historical_contracts.items():
+        assert fields[field_id] == expected
         assert field_id not in active_ids
     assert fields[97]["scope"] == "session"
     assert fields[97]["type"] == "float32"
