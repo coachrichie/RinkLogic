@@ -7,6 +7,91 @@ from analysis.shift_pilot import load_pilot_fit, normalize_messages, score_bound
 
 
 class PilotReportTests(unittest.TestCase):
+    def test_schema_ten_reads_record_lap_and_session_metres(self):
+        report = normalize_messages([
+            {"type": "session", "total_elapsed_time": 90,
+             "estimated_distance_m": 20.25},
+            {"type": "record", "summary_schema_version": 10,
+             "estimated_distance_m_total": 20.25},
+            {"type": "lap", "phase": "On-Ice",
+             "shift_duration_minutes": 0.5,
+             "shift_estimated_distance_m": 7.14},
+        ])
+
+        self.assertEqual(report["schema_version"], 10)
+        self.assertEqual(report["push_metrics"]["estimated_distance_m"], 20.25)
+        self.assertEqual(report["records"][0]["estimated_distance_m_total"], 20.25)
+        self.assertEqual(report["phase_intervals"][0], {
+            "phase": "On-Ice", "duration_minutes": 0.5,
+            "estimated_distance_m": 7.14})
+
+    def test_schema_ten_preserves_on_ice_bench_order(self):
+        report = normalize_messages([
+            {"type": "session", "total_elapsed_time": 150},
+            {"type": "record", "summary_schema_version": 10,
+             "estimated_distance_m_total": 18.0},
+            {"type": "lap", "phase": "On-Ice",
+             "shift_duration_minutes": 0.5,
+             "shift_estimated_distance_m": 8.0},
+            {"type": "lap", "phase": "Bench",
+             "shift_duration_minutes": 1.0},
+            {"type": "lap", "phase": "On-Ice",
+             "shift_duration_minutes": 1.0,
+             "shift_estimated_distance_m": 10.0},
+        ])
+
+        self.assertEqual(
+            [interval["phase"] for interval in report["phase_intervals"]],
+            ["On-Ice", "Bench", "On-Ice"])
+        self.assertEqual(
+            [interval["duration_minutes"] for interval in report["phase_intervals"]],
+            [0.5, 1.0, 1.0])
+
+    def test_schema_ten_bench_optional_values_remain_missing(self):
+        report = normalize_messages([
+            {"type": "session"},
+            {"type": "record", "summary_schema_version": 10},
+            {"type": "lap", "phase": "Bench",
+             "shift_duration_minutes": 1.25},
+        ])
+
+        self.assertEqual(report["phase_intervals"], [{
+            "phase": "Bench", "duration_minutes": 1.25,
+            "estimated_distance_m": None}])
+
+    def test_schema_nine_centimetres_still_normalize_to_metres(self):
+        report = normalize_messages([
+            {"type": "session", "estimated_distance_cm_total": 4250},
+            {"type": "record", "summary_schema_version": 9},
+            {"type": "lap", "manual_boundary_ms": 30000,
+             "manual_boundary_state": 2, "shift_duration_minutes": 0.5,
+             "shift_estimated_distance_cm": 714},
+        ])
+
+        self.assertEqual(report["push_metrics"]["estimated_distance_m"], 42.5)
+        self.assertEqual(
+            report["push_metrics"]["manual_shifts"][0]["estimated_distance_m"],
+            7.14)
+
+    def test_schema_four_through_eight_remain_readable(self):
+        for schema in range(4, 9):
+            messages = [{"type": "session", "estimated_distance_cm_total": 125}]
+            if schema <= 6:
+                messages[0]["shadow_schema_version"] = schema
+            else:
+                messages.append(
+                    {"type": "record", "summary_schema_version": schema})
+
+            with self.subTest(schema=schema):
+                report = normalize_messages(messages)
+                self.assertEqual(report["schema_version"], schema)
+                if schema < 6:
+                    self.assertIsNone(
+                        report["push_metrics"]["estimated_distance_m"])
+                else:
+                    self.assertEqual(
+                        report["push_metrics"]["estimated_distance_m"], 1.25)
+
     def test_schema_nine_preserves_raw_minutes_and_derives_lap_statistics(self):
         report = normalize_messages([
             {"type": "session", "total_elapsed_time": 180,
