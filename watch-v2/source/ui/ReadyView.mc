@@ -27,11 +27,6 @@ class ReadyView extends WatchUi.View {
         mTarget.requestStart();
     }
 
-    function requestCalibration() as Void {
-        onHide();
-        mTarget.requestCalibration();
-    }
-
     function onShow() as Void {
         mHeartRateAt = null;
         mHeartRateSourceStarted = mHeartRateSource.start(method(:onHeartRate));
@@ -123,10 +118,6 @@ class ReadyView extends WatchUi.View {
         dc.drawText(centerX, height * 85 / 100 + 20, Graphics.FONT_SMALL,
             WatchUi.loadResource(Rez.Strings.ReadyStart),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.setColor(0xB6C6D8, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 77 / 100, Graphics.FONT_XTINY,
-            WatchUi.loadResource(Rez.Strings.CalibrationAction),
-            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 }
 
@@ -149,12 +140,6 @@ class ReadyInputDelegate extends WatchUi.InputDelegate {
         var settings = Toybox.System.getDeviceSettings();
         var centerX = settings.screenWidth / 2;
         var startY = settings.screenHeight * 85 / 100;
-        var calibrationY = settings.screenHeight * 77 / 100;
-        if (coordinates[0] >= centerX - 100 && coordinates[0] <= centerX + 100 &&
-            coordinates[1] >= calibrationY - 18 && coordinates[1] <= calibrationY + 18) {
-            mView.requestCalibration();
-            return true;
-        }
         if (coordinates[0] < centerX - 76 || coordinates[0] > centerX + 76 ||
             coordinates[1] < startY || coordinates[1] > startY + 40) { return false; }
         mView.requestStart();

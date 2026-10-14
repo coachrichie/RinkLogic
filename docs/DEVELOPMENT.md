@@ -224,3 +224,24 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
   auf `App pending`. Physische Installation, Start/Shift/Speichern,
   Garmin-Connect-Synchronisierung und ein reales Schema-9-FIT sind weiterhin
   offene Hardware-Nachweise und dürfen nicht aus dem Build abgeleitet werden.
+
+## 2026-10-13 – Ready-Seite ohne Kalibrierungsaktion
+
+- Der normale Ready-Bildschirm zeigt keine Aktion `KALIBRIERUNG` mehr; auch
+  das bisher unsichtbar überlappende Touchziel wurde entfernt. Die technische
+  Kalibrierungsimplementierung bleibt bis zum späteren Entwurf eines eigenen
+  Moduls ohne Einstieg auf der Startseite.
+- Im Testbuild bleibt die Vorab-Aufzeichnung verbindlich: vor jedem Training
+  mindestens fünf bekannte Distanzen ohne sowie fünf mit Stickhandling, über
+  den normalen Start- und Shift-Ablauf.
+- Der Garmin-HR-Kanal liefert Pulsdaten, aber keine verifizierbare Angabe, ob
+  sie vom optischen Uhrsensor oder einem externen Sensor stammen. Registrierte
+  externe Sensoren belegen nur Pairing, nicht die aktive Quelle. Die Ready-Seite
+  bleibt deshalb ehrlich bei `QUELLE UNBEKANNT`; `UHR`/`EXTERN` erfordert einen
+  späteren app-eigenen ANT/BLE-HR-Datenpfad.
+- Die vollständige Venu-2-Plus-Simulatorsuite bestand sowohl im Fixed- als
+  auch im CalibratedProfile-Modus mit jeweils **180/180** Tests. Beide
+  signierten Builds waren erfolgreich. Fixed: 414.588 Byte, SHA-256
+  `35259F4965BDF4CDCFF80B92FC1953693CB39C0B0AD6F063204EC364545190CA`;
+  CalibratedProfile: 414.620 Byte, SHA-256
+  `F311C876C026891CFB4B205DB5D92678BB6F6EDDDC5E4B977B55B7AA8B3F557C`.

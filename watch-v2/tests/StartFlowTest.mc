@@ -316,7 +316,7 @@ function readyStatusAreaTapDoesNotStartRecording(logger as Test.Logger) as Lang.
     var delegate = new ReadyInputDelegate(new ReadyView(target,
         new ReadyStatusSourceFake(), new HeartRateSourceFake(), new ClockFake()));
     delegate.onTap(new OutsideReadyTapEventFake());
-    return target.requests == 0;
+    return target.requests == 0 && target.calibrationRequests == 0;
 }
 
 (:test)

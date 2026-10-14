@@ -83,6 +83,15 @@ PRG SHA-256: `4870122398861D0AE38EDF704A93C59F828E7C5739C9F8E3EE270FDFE52CF552`
 - Testfolge auf der Venu 2 Plus: H10 angelegt und in Garmins Sensor-Menue verbunden, App starten, Telefon- und Herzfarbe beobachten, H10-Hinweis lesen, Start druecken, Dialog bestaetigen, Live-HR/Zone pruefen, Shift per unterer Taste starten/beenden, per oberer Taste speichern. Danach denselben Startbildschirm ohne H10 testen; Herz darf nicht allein wegen des gespeicherten Pairings als H10-Nachweis interpretiert werden.
 
 Nachtrag vom 23.09.2026: Die vorstehenden H10-Ready-Anzeigen wurden nach dem Hardwaretest entfernt. Die aktuelle Ready-Ansicht zeigt bei frischen HR-Werten ein blaues Herz und stets `QUELLE UNBEKANNT`; gruen bleibt allein dem bestaetigten Telefonstatus vorbehalten. Nach `Start recording?` muss unmittelbar das Live-UI mit laufender Dauer erscheinen. Diese konkrete Venu-2-Plus-Abnahme steht fuer den korrigierten Build noch aus.
+
+Nachtrag vom 13.10.2026: Der Eintrag `KALIBRIERUNG` und sein Touchziel werden
+aus dem normalen Ready-Bildschirm entfernt. Der Distanztest des Testbuilds
+läuft weiterhin als normale Testaufzeichnung mit mindestens fünf Distanzen
+ohne und mindestens fünf Distanzen mit Stickhandling vor jedem Training. Eine
+echte Kalibrierung folgt später als eigenständiges Modul. Connect IQ liefert
+dem bestehenden Garmin-HR-Kanal nur den Pulswert, nicht die aktive Herkunft;
+darum bleibt `QUELLE UNBEKANNT` korrekt. Eine belastbare Anzeige `UHR` oder
+`EXTERN` benötigt einen gesonderten, von der App verwalteten ANT/BLE-HR-Kanal.
 - Simulator: 59 von 59 V2-Tests bestanden, darunter Status- und Startflaechen-Grenzfaelle. Release-PRG: SHA-256 `ED2F1227332B86A2BD0519D3D30DBFF57BA735C21DC153B3F9CE919D35BDDA55`.
 - Diese PRG wurde auf die per USB erkannte `Venu 2 Plus` nach `Internal Storage/GARMIN/APPS/ShiftSenseV2.prg` kopiert. Windows zeigte dort `313 KB` und `23.09.2026 21:29`. Die MTP-Ansicht erlaubt keine bytegenaue Ruecklesepruefung. Sicheres Trennen und Hardware-Sichttest stehen noch aus.
 
