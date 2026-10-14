@@ -267,3 +267,31 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
 - Die bestätigte Beta 4 bleibt Rollback. Ein Schema-10-Kandidat wird erst nach
   vollständiger kombinierter Code-, Simulator-, Policy-, Lizenz- und
   Paketprüfung installiert; Build-Hashes folgen erst aus diesem Lauf.
+
+### Verifizierter lokaler Schema-10-Kandidat
+
+- Binärquellstand: `ece54a0d273e569c43b80b30eaedb62bd25afb13`;
+  Connect IQ SDK/Compiler 9.2.0; Zielgerät `venu2plus`. Der integrierte
+  UI-Stand `dace6ed` ist darin enthalten.
+- Normaler Fixed-Build `watch-v2/bin/venu2plus/ShiftSenseV2.prg`:
+  418.716 Byte, SHA-256
+  `6E444B7A33FD811847C7EE8AB5349A6A9E9656AEB6036EB9C1D9FC9FCFE55CF8`.
+- Isolierter CalibratedProfile-Testbuild
+  `watch-v2/bin/venu2plus/RinkLogic-calibrated-profile-test.prg`:
+  418.668 Byte, SHA-256
+  `976C1D324862D3641F49F31B0096A015187798AECC83951853C78145C4720E10`.
+- Lokal signiertes, nicht hochgeladenes Exportpaket
+  `watch-v2/bin/venu2plus/RinkLogic-0.2.0-beta.4.iq`: 221.884 Byte,
+  SHA-256
+  `F74EC8CCEE19E16FD9FE84FB61C3A5FD9A7D439D0CDAD181CC8158614C9E08D5`.
+  Die Signatur verwendet das ursprüngliche, außerhalb des Repositorys
+  aufbewahrte Entwicklerschlüsselpaar.
+- Automatisiert bestanden: 206/206 Venu-2-Plus-Simulatortests; 45/45
+  Python-Tests plus 13 Subtests; Repository-Policy; Release-Audit nach
+  vorübergehendem Auslagern ausschließlich ignorierter Kandidatenartefakte;
+  REUSE 3.3; `git diff --check`.
+- Die lokale Paketierung bestätigt weder Installation noch Garmin-Connect-
+  Darstellung. Sichtbarkeit von `On-Ice`/`Bench`, Minuten- und Meterwerten,
+  gültige CRC und exakte Felddefinitionen bleiben bis zum physischen Lauf nach
+  `docs/testing/V2-POST-TRAINING-SUMMARY.md` ausdrücklich unbestätigt. Es fand
+  kein Upload und keine Änderung im Garmin Developer Center statt.
