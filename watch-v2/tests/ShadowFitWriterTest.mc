@@ -350,9 +350,10 @@ function failedSecondShiftEstimateCannotReusePreviousLap(logger as Test.Logger) 
     clock.now = 4000;
     if (!coordinator.toggleShift()) { return false; }
     if (!coordinator.stopAndSave()) { return false; }
-    return factory.session.lapSnapshots.size() == 2 &&
+    return factory.session.lapSnapshots.size() == 3 &&
         factory.session.lapSnapshots[0][:pushes] == 1 &&
-        factory.session.lapSnapshots[1][:pushes] == 65535;
+        factory.session.lapSnapshots[1][:phase].equals("Bench") &&
+        factory.session.lapSnapshots[2][:pushes] == 65535;
 }
 
 (:test)
@@ -438,6 +439,97 @@ function openShiftPushSummaryIsLappedBeforeSessionStop(logger as Test.Logger) as
         factory.session.fields[96].lastValue == 1 &&
         factory.session.fields[97].lastValue > 1.24 &&
         factory.session.fields[97].lastValue < 1.26;
+}
+
+(:test)
+function manualTogglesWriteAlternatingOnIceAndBenchLaps(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    if (!coordinator.start() || !coordinator.toggleShift() ||
+        factory.session.laps != 0) { return false; }
+    clock.now = 10000;
+    if (!coordinator.toggleShift() || factory.session.laps != 1) { return false; }
+    clock.now = 20000;
+    if (!coordinator.toggleShift() || factory.session.laps != 2) { return false; }
+    clock.now = 30000;
+    if (!coordinator.toggleShift() || factory.session.laps != 3) { return false; }
+    return factory.session.lapSnapshots[0][:phase].equals("On-Ice") &&
+        factory.session.lapSnapshots[1][:phase].equals("Bench") &&
+        factory.session.lapSnapshots[2][:phase].equals("On-Ice");
+}
+
+(:test)
+function saveOnIceClosesOneOnIceLap(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    clock.now = 12000;
+    return coordinator.stopAndSave() && factory.session.laps == 1 &&
+        factory.session.lapSnapshots[0][:phase].equals("On-Ice");
+}
+
+(:test)
+function saveOnBenchClosesOneBenchLap(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    clock.now = 10000;
+    if (!coordinator.toggleShift() || factory.session.laps != 1) { return false; }
+    clock.now = 18000;
+    return coordinator.stopAndSave() && factory.session.laps == 2 &&
+        factory.session.lapSnapshots[1][:phase].equals("Bench");
+}
+
+(:test)
+function saveBeforeFirstShiftWritesNoPhaseLap(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var coordinator = new RecordingCoordinator(recorder, new ClockFake());
+    return coordinator.start() && coordinator.stopAndSave() &&
+        factory.session.laps == 0;
+}
+
+(:test)
+function missingMotionAndHeartRateKeepPhaseAndDuration(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    clock.now = 61000;
+    if (!coordinator.stopAndSave() || factory.session.laps != 1) { return false; }
+    var lap = factory.session.lapSnapshots[0];
+    return lap[:phase].equals("On-Ice") && lap[:durationMinutes] == 1.0 &&
+        lap[:averageHeartRate] == 255 && lap[:pushes] == 65535 &&
+        lap[:distanceMetres] != lap[:distanceMetres];
+}
+
+(:test)
+function recoveryDeadlinesNeverCreateAdditionalLaps(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    clock.now = 10000;
+    if (!coordinator.toggleShift() || factory.session.laps != 1) { return false; }
+    clock.now = 75000;
+    coordinator.onHeartRate({:heartRate=>120});
+    if (factory.session.laps != 1) { return false; }
+    return coordinator.stopAndSave() && factory.session.laps == 2 &&
+        factory.session.lapSnapshots[1][:phase].equals("Bench");
 }
 
 (:test)
@@ -575,7 +667,7 @@ function summaryOverflowUsesMissingInsteadOfClamping(logger as Test.Logger) as L
 }
 
 (:test)
-function manualShiftLapWaitsForRecoveryAndWritesOnce(logger as Test.Logger) as Lang.Boolean {
+function manualShiftLapWritesImmediatelyWithoutRecoveryDuplicate(logger as Test.Logger) as Lang.Boolean {
     var factory = new ShadowRecordingFactoryFake();
     var recorder = new SessionRecorder(factory);
     recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
@@ -583,15 +675,17 @@ function manualShiftLapWaitsForRecoveryAndWritesOnce(logger as Test.Logger) as L
     var coordinator = new RecordingCoordinator(recorder, clock);
     if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
     clock.now = 11000;
-    if (!coordinator.toggleShift() || factory.session.laps != 0) { return false; }
+    if (!coordinator.toggleShift() || factory.session.laps != 1 ||
+        !factory.session.lapSnapshots[0][:phase].equals("On-Ice")) { return false; }
     clock.now = 76000;
     if (!coordinator.stopAndSave()) { return false; }
-    return factory.session.laps == 1 && factory.session.stopLapCount == 1 &&
-        factory.session.lastBoundaryMs == 10000;
+    return factory.session.laps == 2 && factory.session.stopLapCount == 2 &&
+        factory.session.lapSnapshots[1][:phase].equals("Bench") &&
+        factory.session.lastBoundaryMs == 75000;
 }
 
 (:test)
-function saveRetryNeverDuplicatesDelayedShiftLap(logger as Test.Logger) as Lang.Boolean {
+function saveRetryNeverDuplicatesFinalPhaseLap(logger as Test.Logger) as Lang.Boolean {
     var factory = new ShadowRecordingFactoryFake();
     factory.session.saveResult = false;
     var recorder = new SessionRecorder(factory);
