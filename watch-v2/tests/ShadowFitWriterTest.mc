@@ -644,6 +644,37 @@ function transitionalShiftLapWritesOnIceWithoutRecoveryFields(logger as Test.Log
 }
 
 (:test)
+function transitionalShiftLapWithoutValidMotionWritesInvalidMetrics(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    if (!recorder.start() || !recorder.writeShiftLap(
+        {:endedAtMs=>12000, :durationMs=>10000, :averageHeartRate=>181},
+        {:hasValidMotion=>false, :pushes=>0, :distanceCm=>0,
+            :shortPushes=>0, :coveragePercent=>0})) { return false; }
+    var lap = factory.session.lapSnapshots[0];
+    return lap[:phase].equals("On-Ice") &&
+        lap[:averageHeartRate] == 181 &&
+        lap[:pushes] == 65535 &&
+        lap[:distanceMetres] != lap[:distanceMetres] &&
+        lap[:shortPushes] == 65535 && lap[:coverage] == 255;
+}
+
+(:test)
+function transitionalShiftLapPreservesShortPushesWithValidMotion(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    if (!recorder.start() || !recorder.writeShiftLap(
+        {:endedAtMs=>12000, :durationMs=>10000, :averageHeartRate=>181},
+        {:hasValidMotion=>true, :pushes=>6, :distanceCm=>950,
+            :shortPushes=>4, :coveragePercent=>80})) { return false; }
+    var lap = factory.session.lapSnapshots[0];
+    return lap[:pushes] == 6 && lap[:distanceMetres] == 9.5 &&
+        lap[:shortPushes] == 4 && lap[:coverage] == 80;
+}
+
+(:test)
 function summaryOverflowUsesMissingInsteadOfClamping(logger as Test.Logger) as Lang.Boolean {
     var session = new ShadowSessionFake();
     var writer = new ShadowFitWriter(session);

@@ -123,13 +123,17 @@ class ShadowFitWriter {
     function writeShiftLap(summary, pushSummary) as Lang.Boolean {
         if (summary == null) { return false; }
         var metrics = {
-            :pushes=>null, :distanceCm=>null, :coveragePercent=>null,
+            :pushes=>null, :distanceCm=>null, :shortPushes=>null,
+            :coveragePercent=>null,
             :averageHeartRate=>summary.hasKey(:averageHeartRate) ?
                 summary[:averageHeartRate] : null
         };
-        if (pushSummary != null) {
+        if (pushSummary != null && pushSummary.hasKey(:hasValidMotion) &&
+            pushSummary[:hasValidMotion] == true) {
             metrics[:pushes] = pushSummary.hasKey(:pushes) ? pushSummary[:pushes] : null;
             metrics[:distanceCm] = pushSummary.hasKey(:distanceCm) ? pushSummary[:distanceCm] : null;
+            metrics[:shortPushes] = pushSummary.hasKey(:shortPushes) ?
+                pushSummary[:shortPushes] : null;
             metrics[:coveragePercent] = pushSummary.hasKey(:coveragePercent) ?
                 pushSummary[:coveragePercent] : null;
         }
