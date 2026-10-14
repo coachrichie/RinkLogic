@@ -245,3 +245,25 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
   `35259F4965BDF4CDCFF80B92FC1953693CB39C0B0AD6F063204EC364545190CA`;
   CalibratedProfile: 414.620 Byte, SHA-256
   `F311C876C026891CFB4B205DB5D92678BB6F6EDDDC5E4B977B55B7AA8B3F557C`.
+
+## 2026-10-14 – Schema-10-Abnahme für Phasen und Meter vorbereitet
+
+- Schema 10 schreibt jede manuell abgegrenzte Phase unmittelbar als eigene
+  Runde: zuerst `On-Ice`, danach streng abwechselnd `Bench` und `On-Ice`. Vor
+  dem ersten Shift entsteht keine künstliche Bankrunde; Speichern schließt die
+  laufende Phase genau einmal.
+- Neue Entwicklerfelder sind Record-ID 110 für die kumulierte Distanz in
+  Metern, Lap-ID 111 für die On-Ice-Distanz in Metern und Lap-ID 112 für den
+  Text `On-Ice` oder `Bench`. Die alten cm- und Recovery-IDs 63, 66, 93 und 94
+  bleiben historisch dokumentiert, werden aber nicht mehr aktiv allokiert.
+- Alle Phasendauern werden in Minuten geprüft. Bei fehlender Bewegung oder HF
+  bleiben optionale On-Ice-Werte ungültig; Bench erhält grundsätzlich keine
+  erfundene Distanz oder Shiftmetrik. Der lokale Parser liest Schema 4–10 und
+  normalisiert alte Zentimeterwerte nur für die Ausgabe in Meter.
+- Das Hardwareprotokoll prüft die 20-m-Referenz, gültige FIT-CRC, exakte
+  Felddefinitionen, Phasenreihenfolge und einen synchronisierten Garmin-
+  Connect-Rundlauf. Die nativen Garmin-Overview-Karten sind Garmin-gesteuert
+  und ausdrücklich kein Akzeptanzkriterium für Entwicklerfelder.
+- Die bestätigte Beta 4 bleibt Rollback. Ein Schema-10-Kandidat wird erst nach
+  vollständiger kombinierter Code-, Simulator-, Policy-, Lizenz- und
+  Paketprüfung installiert; Build-Hashes folgen erst aus diesem Lauf.

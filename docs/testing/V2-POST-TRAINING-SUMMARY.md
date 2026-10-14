@@ -30,27 +30,18 @@ gespeicherten Trainings- und FIT-Felder.
 
 ## Testbuild
 
-Für den nächsten Lauf wird ausschließlich der isolierte Kandidat
-`RinkLogic-0.2.0-beta.4.iq` beziehungsweise dessen
-`RinkLogic-calibrated-profile-test.prg` verwendet. Commit, Größe und Hash sind
-auch in `docs/DEVELOPMENT.md` festgehalten. Der danach folgende Beta-3-Block
-bleibt als historischer Nachweis erhalten.
+Der nächste Lauf verwendet den noch zu paketierenden Schema-10-Kandidaten.
+Commit, Dateiname, Größe und SHA-256 werden erst nach der vollständigen
+Endprüfung hier und in `docs/DEVELOPMENT.md` eingetragen. Die bestätigte
+Beta 4 bleibt unangetastet als Rollback; ihr signiertes IQ-Paket wird nicht
+überschrieben oder erneut veröffentlicht.
 
-- Quellcommit: `a401b682a80b66c34ac752dfe099f47639da9f1b`
-- PRG: 414.780 Byte, SHA-256
-  `F98D6DE36E43555B52FCE3ACBB902E6015DFF87BC327674FF694E217CD611931`
-- IQ: 218.821 Byte, SHA-256
-  `F6D221CEF2E69C1CCAB370744B6AB3FDBC4428CA44734B61A36AAF2CC9B29A43`
-- SDK 9.2.0, Gerät `venu2plus`, Distanzmodus `CalibratedProfile`
-- Garmin Developer Center: Signatur und Manifest am 12. Oktober 2026
-  verifiziert; Beta `0.2.0-beta.4` (Internal 4) steht auf `App pending`.
-
-- Datei: `watch-v2/bin/venu2plus/ShiftSenseV2.prg`
-- Quellstand: `c5d30c1`
-- Größe: 406.844 Byte
-- SHA-256: `779584297394367405FDF5CEE600D004ED12583638EF8E5B533568C71B903F9C`
-- Geräteprofil: `venu2plus`
-- Automatisiert: 163/163 Connect-IQ-Simulatortests bestanden
+- Schema-10-Quellcommit: ____________________
+- PRG-Datei, Größe und SHA-256: ____________________
+- IQ-Datei, Größe und SHA-256: ____________________
+- SDK 9.2.0, Gerät `venu2plus`
+- Distanzmodus: ____________________
+- Automatisierte Prüfergebnisse: ____________________
 
 ## Beobachtete Beta-Abnahme
 
@@ -84,15 +75,14 @@ vollständiger formaler Lauf A oder B interpretiert werden.
 - [ ] Persönliches HFmax und die Garmin-HF-Zonen sind plausibel eingestellt.
 - [ ] Brustgurt oder optischer Sensor liefert vor dem Start einen plausiblen Puls.
 
-## Lauf A: fünf Shifts mit Recovery
+## Lauf A: fünf Shifts mit semantischen Phasen
 
 1. Aufnahme starten und etwa 30 Sekunden auf der Bank warten.
 2. Fünf manuelle Shifts mit der unteren Taste markieren. Ziel: jeweils 30–60
    Sekunden Eiszeit und dazwischen mindestens 30 Sekunden Bankzeit.
-3. Nach mindestens einem Shift 65 Sekunden bis zum nächsten Shift warten. Damit
-   sind sowohl das 30- als auch das 60-Sekunden-Recovery-Fenster vollständig.
-4. Nach dem fünften Shift mindestens 65 Sekunden warten und dann mit der oberen
-   Taste speichern.
+3. Nach dem fünften Shift mindestens 30 Sekunden auf der Bank bleiben und dann
+   mit der oberen Taste speichern. Dadurch wird auch die letzte Bankphase
+   abgeschlossen.
 
 ### Direkt auf der Uhr
 
@@ -147,22 +137,26 @@ In der Aktivitätszusammenfassung werden erwartet:
 - [ ] Die Top 3 beziehungsweise intensivsten Shifts sind intern nach gültigem
       Durchschnittspuls ermittelt. Eine eigene Garmin-Connect-Anzeige wird nur
       als bestanden markiert, wenn tatsächlich ein geeignetes Feld sichtbar ist.
+- [ ] Die nativen Garmin-Overview-Karten werden nur beobachtet. Ein Ersatz von
+      Distanz, Geschwindigkeit oder Anstieg durch Connect-IQ-Entwicklerfelder
+      ist **nicht** Teil dieser Abnahme.
 
 In der Runden-/Lap-Tabelle werden erwartet:
 
-- [ ] Genau fünf manuelle Shift-Runden, ohne doppelte Schlussrunde.
-- [ ] Ø HF pro Shift. Die drei höchsten gültigen Werte sind die intensivsten
-      Shifts dieser Testversion.
-- [ ] HF-Abfall nach 30 und 60 Sekunden für die ausreichend langen Bankphasen.
-- [ ] Fehlende Recovery-Fenster bleiben leer/ungültig und werden nicht als null ausgegeben.
-- [ ] Negative Recovery-Werte bleiben als negative bpm sichtbar, falls der Puls
-      am Zielzeitpunkt höher als am Shiftende war.
-- [ ] Feld 66 zeigt die geschätzte Distanz jedes beendeten Shifts; Feld 99 die
-      Dauer in Minuten.
-- [ ] Die Record-Kurve aus Feld 63, die Lap-Distanz aus Feld 66 und die
-      Session-Distanz aus Feld 97 stimmen mit demselben Uhr-Datenfluss überein.
+- [ ] Es gibt vor dem ersten Shift keine künstliche `Bench`-Runde.
+- [ ] Die Phasen wechseln streng `On-Ice`, `Bench`, `On-Ice`, `Bench` und so
+      weiter; bei diesem Ablauf entstehen beim Speichern genau zehn Phasenrunden.
+- [ ] Jede Phase zeigt ihre Dauer in Minuten. On-Ice-Runden zeigen zusätzlich
+      die geschätzte Distanz in Metern und – bei ausreichenden Daten – Ø HF.
+- [ ] Bench-Runden enthalten keine erfundene Distanz, Shift-HF, Anschubzahl
+      oder Bewegungsabdeckung; nicht verfügbare Werte bleiben leer/ungültig.
+- [ ] Record-Feld 110 (Meterkurve), On-Ice-Lap-Feld 111 (Meter) und das
+      bestehende Session-Feld 97 (Meter) stimmen mit demselben Uhr-Datenfluss
+      überein. Feld 112 zeigt exakt `On-Ice` oder `Bench`.
+- [ ] Die letzte Phase erscheint nach Speichern genau einmal; ein Speicher-Retry
+      erzeugt keine zusätzliche Schlussrunde.
 
-Screenshot-/Notizreferenzen für Summary, Laps und Recovery: ____________________
+Screenshot-/Notizreferenzen für Summary und Phasen-Laps: ____________________
 
 ## Lauf B: fehlende oder lückenhafte HR-Daten
 
@@ -172,7 +166,7 @@ Screenshot-/Notizreferenzen für Summary, Laps und Recovery: ___________________
 
 - [ ] Aufnahme, manuelle Shift-Taste und Speichern funktionieren weiterhin.
 - [ ] Anzahl Shifts, Eiszeit und Bankzeit bleiben vorhanden.
-- [ ] Nicht berechenbare Puls-, Zonen-, Top-Shift- und Recovery-Werte erscheinen
+- [ ] Nicht berechenbare Puls-, Zonen- und Top-Shift-Werte erscheinen
       als `--`, leer oder ungültig – niemals als erfundene Null.
 - [ ] Kein `IQ!` und keine verlorene Standard-Garmin-Aktivität.
 
@@ -182,13 +176,18 @@ Die Aktivität aus Garmin Connect als Original-FIT exportieren und mit den
 manuell notierten Zeiten vergleichen.
 
 - [ ] FIT-Datei lässt sich mit gültiger CRC dekodieren.
-- [ ] Schema-9-Marker ID 73 kommt in Record-Nachrichten vor.
+- [ ] Schema-10-Marker ID 73 kommt in Record-Nachrichten vor.
 - [ ] Aktive Session-IDs sind exakt `74,78,85,86,96,97,98,101–109`.
 - [ ] IDs 101–109 sind Float-Minuten; alte Sekunden-IDs 75/76/79–84/89 sind
       nicht aktiv allokiert.
-- [ ] Lap-IDs 93–95 gehören jeweils zur richtigen manuellen Shift-Grenze.
-- [ ] ID 95 entspricht dem Ø Puls des jeweiligen Shifts; IDs 93/94 entsprechen
-      `Puls am Shiftende minus Puls nach 30/60 Sekunden`.
+- [ ] IDs 63, 66, 93 und 94 bleiben historisch registriert, sind in Schema 10
+      aber nicht aktiv allokiert oder umgedeutet.
+- [ ] ID 110 ist `record`/`float32`/`m`, ID 111 ist `lap`/`float32`/`m` und
+      ID 112 ist `lap`/`string[8]` mit `On-Ice` oder `Bench`.
+- [ ] On-Ice-Laps können ID 95 als Ø Shift-HF enthalten; Bench-Laps lassen
+      diesen und alle anderen optionalen Shiftwerte FIT-invalid.
+- [ ] Die 20-m-Referenzzeilen sind im lokalen Kalibrierungsmanifest jeweils als
+      `2.000 cm` hinterlegt; 22-m-Altwerte werden nicht verwendet.
 - [ ] Die Garmin-Connect-Anzeige stimmt mit den dekodierten FIT-Werten überein.
 - [ ] Die Original-FIT-Datei bleibt ausschließlich lokal; CRC ist gültig.
 
@@ -208,8 +207,9 @@ Darstellung in Garmin Connect.
 
 ## Abbruch und Rollback
 
-Bei `IQ!`, fehlgeschlagenem Speichern, nicht öffnbarer Aktivität oder fehlenden
-Pflichtfeldern wird der Beta-4-Test abgebrochen. Diagnose-Logs und Original-FIT
-bleiben lokal, anschließend wird die zuletzt bestätigte Beta 3 installiert.
-Simulatorerfolg darf keinen dieser Hardware-/Connect-Punkte automatisch
-abhaken.
+Bei `IQ!`, fehlgeschlagenem Speichern, nicht öffnbarer Aktivität, falscher
+Phasenfolge, doppelter Schlussrunde, Zentimeter-/Meterfehler oder fehlenden
+Schema-10-Pflichtfeldern wird der Test abgebrochen. Diagnose-Logs und
+Original-FIT bleiben lokal; anschließend wird die zuletzt bestätigte Beta 4
+installiert. Simulatorerfolg darf keinen dieser Hardware-/Connect-Punkte
+automatisch abhaken.
