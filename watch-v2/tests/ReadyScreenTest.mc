@@ -44,11 +44,13 @@ function readyRendersHockeyAssetsAndStartAction(logger as Test.Logger) as Lang.B
     ready.onUpdate(dc);
     var hasReady = false;
     var hasStart = false;
+    var hasCalibration = false;
     for (var i = 0; i < dc.texts.size(); i += 1) {
         if (dc.texts[i].equals("READY")) { hasReady = true; }
         if (dc.texts[i].equals("START")) { hasStart = true; }
+        if (dc.texts[i].equals("CALIBRATION")) { hasCalibration = true; }
     }
-    return dc.bitmapCount == 2 && hasReady && hasStart;
+    return dc.bitmapCount == 2 && hasReady && hasStart && !hasCalibration;
 }
 
 (:test)
@@ -134,14 +136,4 @@ function readyStartReleasesSensorBeforeOpeningConfirmation(logger as Test.Logger
     ready.onShow();
     ready.requestStart();
     return target.requests == 1 && hr.stopCalls == 1;
-}
-
-(:test)
-function readyCalibrationActionReleasesSensor(logger as Test.Logger) as Lang.Boolean {
-    var hr = new HeartRateSourceFake();
-    var target = new ReadyStartTargetFake();
-    var ready = new ReadyView(target, new ReadyStatusSourceFake(), hr, new ClockFake());
-    ready.onShow();
-    ready.requestCalibration();
-    return target.calibrationRequests == 1 && hr.stopCalls == 1;
 }
