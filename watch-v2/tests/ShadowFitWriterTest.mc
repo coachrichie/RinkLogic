@@ -22,6 +22,7 @@ class ShadowSessionFake extends RecordingSessionFake {
     var fieldTypes = {};
     var fieldScopes = {};
     var fieldUnits = {};
+    var fieldNativeNums = {};
     var fields = {};
     var laps = 0;
     var lapSnapshots = [];
@@ -34,6 +35,8 @@ class ShadowSessionFake extends RecordingSessionFake {
         fieldTypes[id] = type;
         fieldScopes[id] = options[:mesgType];
         fieldUnits[id] = options[:units];
+        fieldNativeNums[id] = options.hasKey(:nativeNum) ?
+            options[:nativeNum] : null;
         var field = new ShadowFieldFake();
         fields[id] = field;
         return field;
@@ -63,7 +66,7 @@ class ShadowSessionFake extends RecordingSessionFake {
 class FailingPushShadowSessionFake extends ShadowSessionFake {
     function createField(name, id, type, options) {
         var field = ShadowSessionFake.createField(name, id, type, options);
-        if (id == 75) {
+        if (id == 101) {
             field = new ThrowingPushFieldFake();
             fields[id] = field;
         }
@@ -104,21 +107,22 @@ function distanceModelSourceDoesNotCreateFitField(logger as Test.Logger) as Lang
     var session = new ShadowSessionFake();
     var writer = new ShadowFitWriter(session);
     var expectedIds = [44, 45, 51, 52, 55, 56, 62, 63, 65, 66, 71, 72,
-        73, 74, 75, 76, 78, 79, 80, 81, 82, 83, 84, 85, 86, 89,
-        93, 94, 95, 96, 97, 98, 99, 100];
+        73, 74, 78, 85, 86, 93, 94, 95, 96, 97, 98, 99, 100,
+        101, 102, 103, 104, 105, 106, 107, 108, 109];
     var expectedNames = ["motion_mg", "rotation_dps",
         "manual_boundary_ms", "manual_boundary_state",
         "auto_boundary_ms", "auto_boundary_state", "push_count_total",
         "estimated_distance_cm_total", "shift_push_count", "shift_estimated_distance_cm",
         "shift_short_push_count", "shift_motion_coverage_percent", "summary_schema_version",
-        "shift_count", "time_on_ice", "bench_time", "average_shift_heart_rate",
-        "heart_rate_zone_1_time", "heart_rate_zone_2_time",
-        "heart_rate_zone_3_time", "heart_rate_zone_4_time", "heart_rate_zone_5_time",
-        "time_above_90_percent_hrmax", "work_rest_ratio_tenths", "shift_density_per_hour",
-        "median_shift_duration", "heart_rate_drop_30", "heart_rate_drop_60",
+        "shift_count", "average_shift_heart_rate", "work_rest_ratio_tenths",
+        "shift_density_per_hour", "heart_rate_drop_30", "heart_rate_drop_60",
         "shift_average_heart_rate", "detected_push_count", "estimated_distance_m",
         "average_shift_minutes", "shift_duration_minutes",
-        "raw_push_candidate_count_total"];
+        "raw_push_candidate_count_total", "time_on_ice_minutes",
+        "bench_time_minutes", "heart_rate_zone_1_minutes",
+        "heart_rate_zone_2_minutes", "heart_rate_zone_3_minutes",
+        "heart_rate_zone_4_minutes", "heart_rate_zone_5_minutes",
+        "time_above_90_percent_hrmax_minutes", "median_shift_minutes"];
     if (!writer.allocate() || !writer.writeSecond(null, null, :on_ice,
         0, 1, 1000, {:totalPushes=>2, :totalDistanceCm=>264,
             :cadencePerMin=>12, :distanceModelSource=>:profile_height}) ||
@@ -135,8 +139,8 @@ function shadowWriterUsesOnlyNewStableFieldIds(logger as Test.Logger) as Lang.Bo
     var session = new ShadowSessionFake();
     var writer = new ShadowFitWriter(session);
     var expected = [44, 45, 51, 52, 55, 56, 62, 63, 65, 66, 71, 72,
-        73, 74, 75, 76, 78, 79, 80, 81, 82, 83, 84, 85, 86,
-        89, 93, 94, 95, 96, 97, 98, 99, 100];
+        73, 74, 78, 85, 86, 93, 94, 95, 96, 97, 98, 99, 100,
+        101, 102, 103, 104, 105, 106, 107, 108, 109];
     if (!writer.allocate() || session.fieldIds.size() != 34) { return false; }
     for (var i = 0; i < expected.size(); i += 1) {
         if (session.fieldIds[i] != expected[i]) { return false; }
@@ -149,7 +153,7 @@ function shadowWriterUsesOnlyNewStableFieldIds(logger as Test.Logger) as Lang.Bo
         session.fieldNames[100].equals("raw_push_candidate_count_total") &&
         session.fieldTypes[62] == FitContributor.DATA_TYPE_UINT32 &&
         session.fieldTypes[74] == FitContributor.DATA_TYPE_UINT8 &&
-        session.fieldTypes[75] == FitContributor.DATA_TYPE_UINT16 &&
+        session.fieldTypes[101] == FitContributor.DATA_TYPE_FLOAT &&
         session.fieldTypes[96] == FitContributor.DATA_TYPE_UINT16 &&
         session.fieldTypes[97] == FitContributor.DATA_TYPE_FLOAT &&
         session.fieldTypes[98] == FitContributor.DATA_TYPE_FLOAT &&
@@ -157,16 +161,16 @@ function shadowWriterUsesOnlyNewStableFieldIds(logger as Test.Logger) as Lang.Bo
         session.fieldScopes[62] == FitContributor.MESG_TYPE_RECORD &&
         session.fieldScopes[65] == FitContributor.MESG_TYPE_LAP &&
         session.fieldScopes[73] == FitContributor.MESG_TYPE_RECORD &&
-        session.fieldScopes[84] == FitContributor.MESG_TYPE_SESSION &&
+        session.fieldScopes[108] == FitContributor.MESG_TYPE_SESSION &&
         session.fieldScopes[93] == FitContributor.MESG_TYPE_LAP &&
-        session.fields[73].lastValue == 8 &&
+        session.fields[73].lastValue == 9 &&
         writer.writeManualBoundary(12000, :on_ice, null) && session.laps == 1 &&
         session.lastBoundaryMs == 12000 && session.fields[51].lastValue == 0 &&
         session.fields[52].lastValue == 0;
 }
 
 (:test)
-function schemaEightWritesLosslessShiftDurationAndDiagnostics(logger as Test.Logger) as Lang.Boolean {
+function schemaNineWritesLosslessShiftDurationAndDiagnostics(logger as Test.Logger) as Lang.Boolean {
     var session = new ShadowSessionFake();
     var writer = new ShadowFitWriter(session);
     if (!writer.allocate() || session.fieldIds.size() != 34) { return false; }
@@ -199,7 +203,7 @@ function unknownCoverageUsesInvalidSentinelButKnownZeroIsZero(logger as Test.Log
         :medianShiftMs=>null, :topShiftHeartRates=>[]})) { return false; }
     if (session.fields[98].lastValue == session.fields[98].lastValue ||
         session.fields[78].lastValue != 255 ||
-        session.fields[79].lastValue != 65535) { return false; }
+        session.fields[103].lastValue == session.fields[103].lastValue) { return false; }
     if (!writer.writeManualBoundary(1000, :bench,
         {:pushes=>0, :distanceCm=>0, :shortPushes=>0,
             :coveragePercent=>0, :hasValidMotion=>false})) { return false; }
@@ -248,7 +252,7 @@ function unavailableSessionEstimateStaysUnknown(logger as Test.Logger) as Lang.B
     var distanceMetres = factory.session.fields[97].lastValue;
     return averageMinutes != averageMinutes && distanceMetres != distanceMetres &&
         factory.session.fields[78].lastValue == 255 &&
-        factory.session.fields[79].lastValue == 65535;
+        factory.session.fields[103].lastValue != factory.session.fields[103].lastValue;
 }
 
 (:test)
@@ -334,13 +338,61 @@ function activitySummaryWritesHockeyMetricsBeforeSave(logger as Test.Logger) as 
     })) { return false; }
     return session.fields.hasKey(96) && session.fields.hasKey(97) &&
         session.fields.hasKey(98) && session.fields[74].lastValue == 3 &&
-        session.fields[75].lastValue == 95 && session.fields[76].lastValue == 205 &&
+        session.fields[101].lastValue > 1.583 && session.fields[101].lastValue < 1.584 &&
+        session.fields[102].lastValue > 3.416 && session.fields[102].lastValue < 3.417 &&
         session.fields[98].lastValue > 0.527 && session.fields[98].lastValue < 0.529 &&
         session.fields[78].lastValue == 157 &&
         session.fields[96].lastValue == 146 && session.fields[97].lastValue == 220.0 &&
-        session.fields[79].lastValue == 11 && session.fields[83].lastValue == 55 &&
-        session.fields[84].lastValue == 12 && session.fields[85].lastValue == 5 &&
-        session.fields[86].lastValue == 36 && session.fields[89].lastValue == 31;
+        session.fields[103].lastValue > 0.183 && session.fields[103].lastValue < 0.184 &&
+        session.fields[107].lastValue > 0.916 && session.fields[107].lastValue < 0.917 &&
+        session.fields[108].lastValue == 0.2 && session.fields[85].lastValue == 5 &&
+        session.fields[86].lastValue == 36 &&
+        session.fields[109].lastValue > 0.516 && session.fields[109].lastValue < 0.517;
+}
+
+(:test)
+function estimatedDistanceMapsToNativeSessionTotalDistanceAtCentimetrePrecision(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    var writer = new ShadowFitWriter(session);
+    if (!writer.allocate() || !writer.writeActivitySummary({
+        :shiftCount=>1,
+        :timeOnIceMs=>60000, :benchTimeMs=>0,
+        :averageShiftMs=>60000, :averageShiftHeartRate=>150,
+        :zoneSeconds=>[0, 0, 0, 60, 0], :overNinetySeconds=>0,
+        :workRestTenths=>10, :shiftDensityPerHour=>60,
+        :medianShiftMs=>60000, :detectedPushes=>9,
+        :estimatedDistanceCm=>12345
+    })) { return false; }
+    return session.fieldScopes[97] == FitContributor.MESG_TYPE_SESSION &&
+        session.fieldNativeNums[97] == 9 &&
+        session.fields[97].lastValue == 123.45;
+}
+
+(:test)
+function schemaNineWritesMinuteSessionFields(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    var writer = new ShadowFitWriter(session);
+    if (!writer.allocate() || !writer.writeActivitySummary({
+        :shiftCount=>1, :timeOnIceMs=>95000, :benchTimeMs=>0,
+        :averageShiftMs=>95000, :averageShiftHeartRate=>150,
+        :zoneSeconds=>[0, 30, 60, 90, 120], :overNinetySeconds=>45,
+        :workRestTenths=>1, :shiftDensityPerHour=>1,
+        :medianShiftMs=>95000, :detectedPushes=>0,
+        :estimatedDistanceCm=>0
+    })) { return false; }
+    if (session.fields[73].lastValue != 9 ||
+        session.fields[101].lastValue < 1.583 || session.fields[101].lastValue > 1.584 ||
+        session.fields[102].lastValue != 0.0 ||
+        session.fields[103].lastValue != 0.0 ||
+        session.fields[104].lastValue != 0.5 ||
+        session.fields[105].lastValue != 1.0 ||
+        session.fields[108].lastValue != 0.75 ||
+        session.fields[109].lastValue < 1.583 || session.fields[109].lastValue > 1.584) {
+        return false;
+    }
+    return !session.fields.hasKey(75) && !session.fields.hasKey(76) &&
+        !session.fields.hasKey(79) && !session.fields.hasKey(84) &&
+        !session.fields.hasKey(89);
 }
 
 (:test)
@@ -361,8 +413,8 @@ function savedSummaryRejectsSparseShiftHeartRate(logger as Test.Logger) as Lang.
     clock.now = 91000;
     if (!coordinator.toggleShift() || !coordinator.stopAndSave()) { return false; }
     return factory.session.fields[74].lastValue == 2 &&
-        factory.session.fields[75].lastValue == 60 &&
-        factory.session.fields[76].lastValue == 30 &&
+        factory.session.fields[101].lastValue == 1.0 &&
+        factory.session.fields[102].lastValue == 0.5 &&
         factory.session.fields[98].lastValue == 0.5 &&
         factory.session.fields[78].lastValue == 255;
 }
@@ -398,12 +450,14 @@ function summaryOverflowUsesMissingInsteadOfClamping(logger as Test.Logger) as L
         :medianShiftMs=>1000, :topShiftHeartRates=>[255]
     })) { return false; }
     return session.fields[74].lastValue == 255 &&
-        session.fields[75].lastValue == 65535 &&
-        session.fields[76].lastValue == 65535 &&
+        session.fields[101].lastValue > 1092.24 &&
+        session.fields[101].lastValue < 1092.26 &&
+        session.fields[102].lastValue != session.fields[102].lastValue &&
         session.fields[98].lastValue > 1092.24 &&
         session.fields[98].lastValue < 1092.26 &&
         session.fields[78].lastValue == 255 &&
-        session.fields[79].lastValue == 65535;
+        session.fields[103].lastValue > 1092.24 &&
+        session.fields[103].lastValue < 1092.26;
 }
 
 (:test)

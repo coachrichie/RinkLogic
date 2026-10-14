@@ -19,7 +19,7 @@ function pushAt(atMs, startsBurst) as Lang.Dictionary {
 
 function runSixPushDistanceBurst(modelMode, heightCm) as Lang.Dictionary {
     var estimate = new DistanceEstimator();
-    estimate.configure(modelMode, heightCm);
+    estimate.configure(modelMode, heightCm, 1.0, :none);
     estimate.beginShift(0);
     var times = [100, 700, 1300, 1900, 2500, 3100];
     for (var i = 0; i < times.size(); i += 1) {
@@ -30,6 +30,69 @@ function runSixPushDistanceBurst(modelMode, heightCm) as Lang.Dictionary {
     var shift = estimate.endShift(3200);
     return {:shift=>shift, :snapshot=>snapshot,
         :summary=>estimate.sessionSummary()};
+}
+
+function runCalibratedSixPushDistanceBurst(heightCm) as Lang.Dictionary {
+    var estimate = new DistanceEstimator();
+    estimate.configure(:calibrated_profile_test, heightCm,
+        220.0 / 292.5, :local_known_distance);
+    estimate.beginShift(0);
+    var times = [100, 700, 1300, 1900, 2500, 3100];
+    for (var i = 0; i < times.size(); i += 1) {
+        estimate.observe(distanceResult(times[i],
+            [pushAt(times[i], i == 0)], times[i] - 100, true, false));
+    }
+    var snapshot = estimate.snapshot(3200);
+    var shift = estimate.endShift(3200);
+    return {:shift=>shift, :snapshot=>snapshot,
+        :summary=>estimate.sessionSummary()};
+}
+
+function hasCalibratedSources(result as Lang.Dictionary,
+    modelSource as Lang.Symbol) as Lang.Boolean {
+    return result[:shift][:distanceModelSource] == modelSource &&
+        result[:snapshot][:distanceModelSource] == modelSource &&
+        result[:summary][:distanceModelSource] == modelSource &&
+        result[:shift][:distanceCalibrationSource] == :local_known_distance &&
+        result[:snapshot][:distanceCalibrationSource] == :local_known_distance &&
+        result[:summary][:distanceCalibrationSource] == :local_known_distance;
+}
+
+(:test)
+function calibratedProfileAppliesHeightThenPersonalFactor(logger as Test.Logger) as Lang.Boolean {
+    var heights = [80, 180, 250];
+    var expected = [674, 714, 760];
+    for (var i = 0; i < heights.size(); i += 1) {
+        var result = runCalibratedSixPushDistanceBurst(heights[i]);
+        if (result[:shift][:distanceCm] != expected[i] ||
+            !hasCalibratedSources(result, :profile_height)) { return false; }
+    }
+    return true;
+}
+
+(:test)
+function calibratedProfileUsesExactFixedBaselineForInvalidHeight(logger as Test.Logger) as Lang.Boolean {
+    var heights = [null, Math.sqrt(-1), "180", 79, 251];
+    for (var i = 0; i < heights.size(); i += 1) {
+        var result = runCalibratedSixPushDistanceBurst(heights[i]);
+        if (result[:shift][:distanceCm] != 714 ||
+            !hasCalibratedSources(result, :default)) { return false; }
+    }
+    return true;
+}
+
+(:test)
+function calibratedProfileLocksBothProvenanceSources(logger as Test.Logger) as Lang.Boolean {
+    var estimate = new DistanceEstimator();
+    estimate.configure(:calibrated_profile_test, 180,
+        220.0 / 292.5, :local_known_distance);
+    estimate.configure(:profile_height, 250, 1.0, :none);
+    estimate.beginShift(0);
+    estimate.observe(distanceResult(100, [pushAt(100, true)], 0, true, false));
+    var shift = estimate.endShift(200);
+    return shift[:distanceCm] == 94 &&
+        shift[:distanceModelSource] == :profile_height &&
+        shift[:distanceCalibrationSource] == :local_known_distance;
 }
 
 function hasDistanceModelSource(result as Lang.Dictionary, source as Lang.Symbol) as Lang.Boolean {
@@ -66,8 +129,8 @@ function profileHeightModeFallsBackForInvalidHeight(logger as Test.Logger) as La
 (:test)
 function profileHeightModeFallsBackAndLocksForNanHeight(logger as Test.Logger) as Lang.Boolean {
     var estimate = new DistanceEstimator();
-    estimate.configure(:profile_height, Math.sqrt(-1));
-    estimate.configure(:profile_height, 200);
+    estimate.configure(:profile_height, Math.sqrt(-1), 1.0, :none);
+    estimate.configure(:profile_height, 200, 1.0, :none);
     estimate.beginShift(0);
     var times = [100, 700, 1300, 1900, 2500, 3100];
     for (var i = 0; i < times.size(); i += 1) {
@@ -99,8 +162,8 @@ function profileHeightModeUsesReferenceAndBoundedFactors(logger as Test.Logger) 
 (:test)
 function distanceModelConfigurationLocksForTheRecording(logger as Test.Logger) as Lang.Boolean {
     var configured = new DistanceEstimator();
-    configured.configure(:profile_height, 160);
-    configured.configure(:profile_height, 200);
+    configured.configure(:profile_height, 160, 1.0, :none);
+    configured.configure(:profile_height, 200, 1.0, :none);
     configured.beginShift(0);
     var times = [100, 700, 1300, 1900, 2500, 3100];
     for (var i = 0; i < times.size(); i += 1) {
@@ -122,7 +185,7 @@ function distanceModelConfigurationLocksForTheRecording(logger as Test.Logger) a
 
     var started = new DistanceEstimator();
     started.beginShift(0);
-    started.configure(:profile_height, 160);
+    started.configure(:profile_height, 160, 1.0, :none);
     started.observe(distanceResult(100, [pushAt(100, true)], 0, true, false));
     var startedLive = started.snapshot(100);
     var startedClosed = started.endShift(200);

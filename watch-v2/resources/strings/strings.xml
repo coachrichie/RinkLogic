@@ -6,7 +6,6 @@
     <string id="HrSignalStatus">HR SIGNAL</string>
     <string id="PulseSourceUnknown">SOURCE UNKNOWN</string>
     <string id="ReadyStart">START</string>
-    <string id="CalibrationAction">CALIBRATION</string>
     <string id="CalibrationTitle">CALIBRATION</string>
     <string id="CalibrationReady">READY · LOWER: START</string>
     <string id="CalibrationEnd">END MARK · LOWER: NEXT</string>

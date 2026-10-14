@@ -102,10 +102,22 @@ class ProfileSourceFake {
 
 class DistanceModelConfigFake {
     var selectedMode = :profile_height;
+    var selectedPersonalFactor = 1.0;
+    var selectedCalibrationSource = :none;
     var throwOnMode = false;
+    var throwOnPersonalFactor = false;
+    var throwOnCalibrationSource = false;
     function mode() as Lang.Symbol {
         if (throwOnMode) { throw new Lang.Exception(); }
         return selectedMode;
+    }
+    function personalCalibrationFactor() as Lang.Float {
+        if (throwOnPersonalFactor) { throw new Lang.Exception(); }
+        return selectedPersonalFactor;
+    }
+    function calibrationSource() as Lang.Symbol {
+        if (throwOnCalibrationSource) { throw new Lang.Exception(); }
+        return selectedCalibrationSource;
     }
 }
 
@@ -113,18 +125,75 @@ class DistanceEstimatorConfigSpy extends DistanceEstimator {
     var configureCalls = 0;
     var configuredMode = null;
     var configuredHeight = null;
+    var configuredPersonalFactor = null;
+    var configuredCalibrationSource = null;
     var calls = [];
-    function configure(modelMode, heightCm) as Void {
+    function configure(modelMode, heightCm, personalFactor,
+        calibrationSource) as Void {
         configureCalls += 1;
         configuredMode = modelMode;
         configuredHeight = heightCm;
+        configuredPersonalFactor = personalFactor;
+        configuredCalibrationSource = calibrationSource;
         calls.add(:configure);
-        DistanceEstimator.configure(modelMode, heightCm);
+        DistanceEstimator.configure(modelMode, heightCm, personalFactor,
+            calibrationSource);
     }
     function beginShift(atMs) as Void {
         calls.add(:beginShift);
         DistanceEstimator.beginShift(atMs);
     }
+}
+
+(:test)
+function coordinatorPassesCalibratedDistanceConfigBeforeStart(logger as Test.Logger) as Lang.Boolean {
+    var profile = new ProfileSourceFake();
+    profile.height = 180;
+    var config = new DistanceModelConfigFake();
+    config.selectedMode = :calibrated_profile_test;
+    config.selectedPersonalFactor = 220.0 / 292.5;
+    config.selectedCalibrationSource = :local_known_distance;
+    var coordinator = new RecordingCoordinator(
+        new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
+    var estimator = new DistanceEstimatorConfigSpy();
+    coordinator.setDistanceEstimator(estimator);
+    coordinator.setDataSources(profile, null);
+    if (!coordinator.setDistanceModelConfig(config) || !coordinator.start()) {
+        return false;
+    }
+    var data = coordinator.getDashboard();
+    return estimator.configureCalls == 1 &&
+        estimator.configuredMode == :calibrated_profile_test &&
+        estimator.configuredHeight == 180 &&
+        estimator.configuredPersonalFactor > 0.752 &&
+        estimator.configuredPersonalFactor < 0.753 &&
+        estimator.configuredCalibrationSource == :local_known_distance &&
+        data[:distanceModelSource] == :profile_height &&
+        data[:distanceCalibrationSource] == :local_known_distance;
+}
+
+(:test)
+function coordinatorFallsBackWhenCalibrationConfigThrows(logger as Test.Logger) as Lang.Boolean {
+    for (var caseIndex = 0; caseIndex < 2; caseIndex += 1) {
+        var config = new DistanceModelConfigFake();
+        config.selectedMode = :calibrated_profile_test;
+        config.throwOnPersonalFactor = caseIndex == 0;
+        config.throwOnCalibrationSource = caseIndex == 1;
+        var coordinator = new RecordingCoordinator(
+            new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
+        var estimator = new DistanceEstimatorConfigSpy();
+        coordinator.setDistanceEstimator(estimator);
+        if (!coordinator.setDistanceModelConfig(config) || !coordinator.start()) {
+            return false;
+        }
+        if (estimator.configureCalls != 1 ||
+            estimator.configuredPersonalFactor != 1.0 ||
+            estimator.configuredCalibrationSource != :none ||
+            coordinator.getDashboard()[:distanceCalibrationSource] != :none) {
+            return false;
+        }
+    }
+    return true;
 }
 
 class UnavailableDistanceProfileFake {
@@ -185,7 +254,10 @@ function coordinatorKeepsRecordingWhenDistanceProfileIsUnavailable(logger as Tes
         if (!coordinator.setDistanceModelConfig(config) || !coordinator.start()) { return false; }
         if (caseIndex < 2 && (estimator.configureCalls != 1 ||
             estimator.configuredHeight != null)) { return false; }
-        if (caseIndex == 3 && estimator.configureCalls != 0) { return false; }
+        if (caseIndex == 3 && (estimator.configureCalls != 1 ||
+            estimator.configuredMode != :fixed ||
+            estimator.configuredPersonalFactor != 1.0 ||
+            estimator.configuredCalibrationSource != :none)) { return false; }
         if (estimator.getModelSource() != :default || !coordinator.toggleShift() ||
             !coordinator.toggleShift() || coordinator.getState() != :recording ||
             factory.session.starts != 1 || !coordinator.stopAndSave()) { return false; }
@@ -205,6 +277,7 @@ function coordinatorDashboardReportsDistanceModelSourceInMemory(logger as Test.L
         !coordinator.start()) { return false; }
     var data = coordinator.getDashboard();
     return data.hasKey(:distanceModelSource) && data[:distanceModelSource] == :profile_height &&
+        data.hasKey(:distanceCalibrationSource) && data[:distanceCalibrationSource] == :none &&
         data[:shiftPushes] == null && data[:lastShiftPushes] == null &&
         data[:shiftDistanceCm] == null && data[:lastShiftDistanceCm] == null &&
         data[:totalPushes] == 0 && data[:totalDistanceCm] == 0 &&
@@ -243,7 +316,7 @@ function readyStatusAreaTapDoesNotStartRecording(logger as Test.Logger) as Lang.
     var delegate = new ReadyInputDelegate(new ReadyView(target,
         new ReadyStatusSourceFake(), new HeartRateSourceFake(), new ClockFake()));
     delegate.onTap(new OutsideReadyTapEventFake());
-    return target.requests == 0;
+    return target.requests == 0 && target.calibrationRequests == 0;
 }
 
 (:test)
@@ -599,7 +672,7 @@ function liveScreenFormatsAllSevenRequestedMetrics(logger as Test.Logger) as Lan
     if (initial[:lastShift] == null || initial[:averageShift] == null ||
         initial[:timeOnIce] == null || initial[:elapsed] == null) { return false; }
     if (!initial[:lastShift].equals("--") || !initial[:averageShift].equals("--") ||
-        !initial[:timeOnIce].equals("00:00") || !initial[:elapsed].equals("00:00")) { return false; }
+        !initial[:timeOnIce].equals("0.0 min") || !initial[:elapsed].equals("0.0 min")) { return false; }
     coordinator.onHeartRate({:heartRate=>150, :quality=>:active});
     if (!new LiveInputDelegate(live).onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC))) { return false; }
     clock.now = 31000;
@@ -610,9 +683,9 @@ function liveScreenFormatsAllSevenRequestedMetrics(logger as Test.Logger) as Lan
         values[:averageShift] == null || values[:timeOnIce] == null ||
         values[:elapsed] == null) { return false; }
     return values[:heartRate].equals("--") && values[:averageHeartRate].equals("150") &&
-        values[:shiftCount].equals("1") && values[:lastShift].equals("00:30") &&
-        values[:averageShift].equals("00:30") && values[:timeOnIce].equals("00:30") &&
-        values[:elapsed].equals("01:00");
+        values[:shiftCount].equals("1") && values[:lastShift].equals("0.50 min") &&
+        values[:averageShift].equals("0.50 min") && values[:timeOnIce].equals("0.5 min") &&
+        values[:elapsed].equals("1.0 min");
 }
 
 (:test)

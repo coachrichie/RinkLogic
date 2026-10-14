@@ -196,3 +196,52 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
 - Die private Connect-IQ-Beta `0.1.0-beta.3` wurde auf der Venu 2 Plus physisch geprüft: Start, manuelle Shifts, Live-Herzfrequenz, Shift-Dauer, durchschnittliche Shift-Herzfrequenz, Speichern und alle drei Abschlussseiten wurden bestätigt. Das belegt die Bedien- und Anzeigefolge, **nicht** die Genauigkeit automatischer Shifts oder geschätzter Bewegung/Distanzen.
 - Garmin Connect Mobile zeigte die benutzerdefinierten Hockeyfelder im eigenen Connect-IQ-Aktivitätsabschnitt; Shiftanzahl, durchschnittliche Shift-Dauer und durchschnittliche Shift-Herzfrequenz standen zuerst. Die nativen Garmin-Overview-Karten lassen sich durch Connect IQ nicht mit Shift-Feldern ersetzen. Ein reales, ausschließlich privat ausgewertetes Schema-7-FIT bestand die CRC- und Entwicklerfeldprüfung. Die aktive HR-Quelle wurde dadurch nicht als Polar H10 verifiziert.
 - [RinkLogic](https://github.com/coachrichie/RinkLogic) wurde als öffentliches Open-Source-Repository mit **neuer, sauberer Git-Historie** veröffentlicht; die private Entwicklungshistorie blieb privat. Der am 10. Oktober verifizierte öffentliche `main`-Commit ist `cf0655746f0f146b67114b328fc5f239eec32397`. Software steht unter Apache-2.0, originale Dokumentation und projekt-eigene Assets unter CC BY 4.0. Roh-FIT-Dateien, persönliche Gesundheitsdaten, Schlüssel und generierte Garmin-Pakete wurden nicht veröffentlicht.
+
+## 2026-10-11 – Beta 4 mit Minutenfeldern und persönlicher Distanzschicht
+
+- Quellcommit des Binärstands: `a401b682a80b66c34ac752dfe099f47639da9f1b`;
+  Ziel `venu2plus`; Connect IQ SDK und Compiler 9.2.0. Alle drei getrennten
+  Modi Fixed, ProfileHeight und CalibratedProfile wurden gebaut und geprüft.
+- Fixed-PRG `ShiftSenseV2.prg`: 414.764 Byte, SHA-256
+  `D35F69D7E750C08C0CD5130C57FDB11BF2CF9FE075C4D038A5B73EE53D947FDB`.
+  ProfileHeight-PRG: 414.764 Byte, SHA-256
+  `8DD68E8B027BDD330C7CE37FE66D7565EDA24F261645BCBBC85E9CDE29E03C6F`.
+- Beta-PRG `RinkLogic-calibrated-profile-test.prg`: 414.780 Byte, SHA-256
+  `F98D6DE36E43555B52FCE3ACBB902E6015DFF87BC327674FF694E217CD611931`.
+  Das mit demselben zurückbehaltenen Entwicklerschlüsselpaar wie Beta 3
+  signierte Exportpaket `RinkLogic-0.2.0-beta.4.iq`: 218.821 Byte, SHA-256
+  `F6D221CEF2E69C1CCAB370744B6AB3FDBC4428CA44734B61A36AAF2CC9B29A43`.
+- Nur der Beta-4-Modus wendet nach der evidenzbegrenzten, half-up gerundeten
+  Höhenbaseline den lokalen persönlichen Faktor `220/292,5` mit zweiter
+  Half-up-Rundung an. Fixed und ProfileHeight bleiben isoliert. Es gibt keine
+  automatische Kalibrierung, kein GPS, keinen Upload und kein globales Modell.
+- Schema 9 hält 34 aktive Entwicklerfelder und 16 Session-Felder ein. Die
+  neuen IDs 101–109 speichern Zeitwerte als Float-Minuten. Der Parser bleibt
+  zu Schema 4–8 kompatibel; alle Uhr-Zeitwerte erscheinen in Minuten.
+- Binärdateien und IQ-Paket liegen ausschließlich im ignorierten Buildordner
+  und werden nicht committed. Garmin akzeptierte am 12. Oktober 2026 App-ID,
+  Signatur und Version; der Beta-Eintrag steht als `0.2.0-beta.4` (Internal 4)
+  auf `App pending`. Physische Installation, Start/Shift/Speichern,
+  Garmin-Connect-Synchronisierung und ein reales Schema-9-FIT sind weiterhin
+  offene Hardware-Nachweise und dürfen nicht aus dem Build abgeleitet werden.
+
+## 2026-10-13 – Ready-Seite ohne Kalibrierungsaktion
+
+- Der normale Ready-Bildschirm zeigt keine Aktion `KALIBRIERUNG` mehr; auch
+  das bisher unsichtbar überlappende Touchziel wurde entfernt. Die technische
+  Kalibrierungsimplementierung bleibt bis zum späteren Entwurf eines eigenen
+  Moduls ohne Einstieg auf der Startseite.
+- Im Testbuild bleibt die Vorab-Aufzeichnung verbindlich: vor jedem Training
+  mindestens fünf bekannte Distanzen ohne sowie fünf mit Stickhandling, über
+  den normalen Start- und Shift-Ablauf.
+- Der Garmin-HR-Kanal liefert Pulsdaten, aber keine verifizierbare Angabe, ob
+  sie vom optischen Uhrsensor oder einem externen Sensor stammen. Registrierte
+  externe Sensoren belegen nur Pairing, nicht die aktive Quelle. Die Ready-Seite
+  bleibt deshalb ehrlich bei `QUELLE UNBEKANNT`; `UHR`/`EXTERN` erfordert einen
+  späteren app-eigenen ANT/BLE-HR-Datenpfad.
+- Die vollständige Venu-2-Plus-Simulatorsuite bestand sowohl im Fixed- als
+  auch im CalibratedProfile-Modus mit jeweils **180/180** Tests. Beide
+  signierten Builds waren erfolgreich. Fixed: 414.588 Byte, SHA-256
+  `35259F4965BDF4CDCFF80B92FC1953693CB39C0B0AD6F063204EC364545190CA`;
+  CalibratedProfile: 414.620 Byte, SHA-256
+  `F311C876C026891CFB4B205DB5D92678BB6F6EDDDC5E4B977B55B7AA8B3F557C`.

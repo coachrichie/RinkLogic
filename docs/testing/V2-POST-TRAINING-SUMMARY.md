@@ -1,8 +1,16 @@
 # V2-Testprotokoll: Trainingszusammenfassung und Garmin Connect
 
-Stand: 10. Oktober 2026. Zielgerät: Garmin Venu 2 Plus. Dieses Protokoll trennt
+Stand: 13. Oktober 2026. Zielgerät: Garmin Venu 2 Plus. Dieses Protokoll trennt
 automatisierte Nachweise, beobachtete Beta-Ergebnisse und weiterhin nicht
 protokollierte Detailprüfungen.
+
+## Korrigierte Distanzreferenz vom 13. Oktober
+
+Der aufgezeichnete Streckentest wird mit einer Referenz von **20 m je
+Wiederholung (2.000 cm im Kalibrierungsmanifest)** ausgewertet. Die ältere
+22-m-Beispielangabe im Distanzprotokoll ist damit ersetzt. Diese
+Dokumentations- und Testkorrektur ändert keine App-Konstanten oder den
+persönlichen Faktor und aktiviert keine Kalibrierung automatisch.
 
 ## Testidentität
 
@@ -21,6 +29,21 @@ Store App dient Installation und Verwaltung; sie ist nicht die Anzeige für die
 gespeicherten Trainings- und FIT-Felder.
 
 ## Testbuild
+
+Für den nächsten Lauf wird ausschließlich der isolierte Kandidat
+`RinkLogic-0.2.0-beta.4.iq` beziehungsweise dessen
+`RinkLogic-calibrated-profile-test.prg` verwendet. Commit, Größe und Hash sind
+auch in `docs/DEVELOPMENT.md` festgehalten. Der danach folgende Beta-3-Block
+bleibt als historischer Nachweis erhalten.
+
+- Quellcommit: `a401b682a80b66c34ac752dfe099f47639da9f1b`
+- PRG: 414.780 Byte, SHA-256
+  `F98D6DE36E43555B52FCE3ACBB902E6015DFF87BC327674FF694E217CD611931`
+- IQ: 218.821 Byte, SHA-256
+  `F6D221CEF2E69C1CCAB370744B6AB3FDBC4428CA44734B61A36AAF2CC9B29A43`
+- SDK 9.2.0, Gerät `venu2plus`, Distanzmodus `CalibratedProfile`
+- Garmin Developer Center: Signatur und Manifest am 12. Oktober 2026
+  verifiziert; Beta `0.2.0-beta.4` (Internal 4) steht auf `App pending`.
 
 - Datei: `watch-v2/bin/venu2plus/ShiftSenseV2.prg`
 - Quellstand: `c5d30c1`
@@ -80,6 +103,10 @@ links/rechts sowie Hoch-/Runter-/Bestätigungstaste wechseln die Seiten.
 - [ ] Seite 2: Anzahl Shifts = 5, Eiszeit, Bankzeit.
 - [ ] Seite 3: durchschnittlicher Shift, längster Shift, Ø Puls pro Shift.
 - [ ] Zeiten und Pulswerte sind plausibel; fehlende Werte erscheinen als `--`.
+- [ ] Sämtliche RinkLogic-Zeitwerte tragen `min`: Gesamt-/Eis-/Bankzeit mit
+      einer, Shift-Zeiten mit zwei Nachkommastellen.
+- [ ] Live-/letzte Shift-Distanz und Gesamtdistanz sind sichtbar und mit `≈`
+      als Schätzung gekennzeichnet.
 - [ ] Zurück beendet die App ohne erneutes Speichern oder `IQ!`.
 
 ### In Garmin Connect nach der Synchronisierung
@@ -113,6 +140,10 @@ In der Aktivitätszusammenfassung werden erwartet:
       `×0,1 Arbeit/Pause`.
 - [ ] Shift-Dichte in Shifts pro Stunde.
 - [ ] Kürzester, längster und Median-Shift.
+- [ ] Die ersten fünf Entwicklerwerte stehen in der Reihenfolge Anzahl Shifts,
+      Ø Shiftdauer, Ø Shift-HF, erkannte Anschübe, geschätzte Distanz.
+- [ ] Eis-/Bankzeit, HF-Zonen, Zeit über 90 % und Median tragen die Einheit
+      `min`; Distanz trägt `≈` und `m`.
 - [ ] Die Top 3 beziehungsweise intensivsten Shifts sind intern nach gültigem
       Durchschnittspuls ermittelt. Eine eigene Garmin-Connect-Anzeige wird nur
       als bestanden markiert, wenn tatsächlich ein geeignetes Feld sichtbar ist.
@@ -126,6 +157,10 @@ In der Runden-/Lap-Tabelle werden erwartet:
 - [ ] Fehlende Recovery-Fenster bleiben leer/ungültig und werden nicht als null ausgegeben.
 - [ ] Negative Recovery-Werte bleiben als negative bpm sichtbar, falls der Puls
       am Zielzeitpunkt höher als am Shiftende war.
+- [ ] Feld 66 zeigt die geschätzte Distanz jedes beendeten Shifts; Feld 99 die
+      Dauer in Minuten.
+- [ ] Die Record-Kurve aus Feld 63, die Lap-Distanz aus Feld 66 und die
+      Session-Distanz aus Feld 97 stimmen mit demselben Uhr-Datenfluss überein.
 
 Screenshot-/Notizreferenzen für Summary, Laps und Recovery: ____________________
 
@@ -147,12 +182,15 @@ Die Aktivität aus Garmin Connect als Original-FIT exportieren und mit den
 manuell notierten Zeiten vergleichen.
 
 - [ ] FIT-Datei lässt sich mit gültiger CRC dekodieren.
-- [ ] Schema-7-Marker ID 73 kommt in Record-Nachrichten vor.
-- [ ] Session-IDs 74–89 liegen in den dokumentierten Nachrichtentypen und Einheiten vor.
+- [ ] Schema-9-Marker ID 73 kommt in Record-Nachrichten vor.
+- [ ] Aktive Session-IDs sind exakt `74,78,85,86,96,97,98,101–109`.
+- [ ] IDs 101–109 sind Float-Minuten; alte Sekunden-IDs 75/76/79–84/89 sind
+      nicht aktiv allokiert.
 - [ ] Lap-IDs 93–95 gehören jeweils zur richtigen manuellen Shift-Grenze.
 - [ ] ID 95 entspricht dem Ø Puls des jeweiligen Shifts; IDs 93/94 entsprechen
       `Puls am Shiftende minus Puls nach 30/60 Sekunden`.
 - [ ] Die Garmin-Connect-Anzeige stimmt mit den dekodierten FIT-Werten überein.
+- [ ] Die Original-FIT-Datei bleibt ausschließlich lokal; CRC ist gültig.
 
 ## Abnahme
 
@@ -167,3 +205,11 @@ Noch nicht angekreuzte Punkte sind offen und dürfen nicht als bestanden gemelde
 werden. Die Simulator-Suite beweist Berechnung, Begrenzung, Speicherung und UI-
 Formatierung, ersetzt aber weder den physischen Uhrtest noch die serverseitige
 Darstellung in Garmin Connect.
+
+## Abbruch und Rollback
+
+Bei `IQ!`, fehlgeschlagenem Speichern, nicht öffnbarer Aktivität oder fehlenden
+Pflichtfeldern wird der Beta-4-Test abgebrochen. Diagnose-Logs und Original-FIT
+bleiben lokal, anschließend wird die zuletzt bestätigte Beta 3 installiert.
+Simulatorerfolg darf keinen dieser Hardware-/Connect-Punkte automatisch
+abhaken.

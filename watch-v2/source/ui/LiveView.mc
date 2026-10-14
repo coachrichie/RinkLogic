@@ -25,15 +25,7 @@ class LiveView extends WatchUi.View {
     function refresh() as Void { WatchUi.requestUpdate(); }
 
     function elapsedText() as Lang.String {
-        return formatDuration(mCoordinator.getElapsedMs());
-    }
-
-    private function formatDuration(milliseconds) as Lang.String {
-        if (milliseconds == null) { return "--"; }
-        var totalSeconds = milliseconds / 1000;
-        var minutes = totalSeconds / 60;
-        var seconds = totalSeconds % 60;
-        return minutes.format("%02d") + ":" + seconds.format("%02d");
+        return HockeyTimeFormatter.formatMinutes(mCoordinator.getElapsedMs(), 1);
     }
 
     function getDisplayValues() as Lang.Dictionary {
@@ -56,15 +48,15 @@ class LiveView extends WatchUi.View {
             :hrZone=>formatMetric(data[:hrZone]),
             :zoneText=>"ZONE " + formatMetric(data[:hrZone]),
             :shiftCount=>formatMetric(data[:shiftCount]),
-            :lastShift=>formatDuration(data[:lastShiftMs]),
-            :averageShift=>formatDuration(data[:averageShiftMs]),
-            :timeOnIce=>formatDuration(data[:timeOnIceMs]),
+            :lastShift=>HockeyTimeFormatter.formatMinutes(data[:lastShiftMs], 2),
+            :averageShift=>HockeyTimeFormatter.formatMinutes(data[:averageShiftMs], 2),
+            :timeOnIce=>HockeyTimeFormatter.formatMinutes(data[:timeOnIceMs], 1),
             :pushes=>formatMetric(shiftPushes),
             :cadence=>formatMetric(data[:cadencePerMin]),
             :shiftDistance=>formatDistance(shiftDistance, data[:timebase]),
             :totalDistance=>formatDistance(totalDistance, data[:totalTimebase]),
             :partial=>data[:partial] == true,
-            :elapsed=>formatDuration(data[:elapsedMs])
+            :elapsed=>HockeyTimeFormatter.formatMinutes(data[:elapsedMs], 1)
         };
     }
 
