@@ -13,8 +13,9 @@ class PilotReportTests(unittest.TestCase):
              "estimated_distance_m": 20.25},
             {"type": "record", "summary_schema_version": 10,
              "estimated_distance_m_total": 20.25},
-            {"type": "lap", "phase": "On-Ice",
-             "shift_duration_minutes": 0.5,
+            {"type": "lap", "manual_boundary_ms": 30000,
+             "manual_boundary_state": 1, "phase": "On-Ice",
+             "shift_duration_minutes": 0.5, "shift_push_count": 4,
              "shift_estimated_distance_m": 7.14},
         ])
 
@@ -24,18 +25,25 @@ class PilotReportTests(unittest.TestCase):
         self.assertEqual(report["phase_intervals"][0], {
             "phase": "On-Ice", "duration_minutes": 0.5,
             "estimated_distance_m": 7.14})
+        self.assertEqual(report["push_metrics"]["manual_shifts"][0]["pushes"], 4)
+        self.assertEqual(
+            report["push_metrics"]["manual_shifts"][0]["estimated_distance_m"],
+            7.14)
 
     def test_schema_ten_preserves_on_ice_bench_order(self):
         report = normalize_messages([
             {"type": "session", "total_elapsed_time": 150},
             {"type": "record", "summary_schema_version": 10,
              "estimated_distance_m_total": 18.0},
-            {"type": "lap", "phase": "On-Ice",
+            {"type": "lap", "manual_boundary_ms": 30000,
+             "manual_boundary_state": 1, "phase": "On-Ice",
              "shift_duration_minutes": 0.5,
              "shift_estimated_distance_m": 8.0},
-            {"type": "lap", "phase": "Bench",
+            {"type": "lap", "manual_boundary_ms": 90000,
+             "manual_boundary_state": 2, "phase": "Bench",
              "shift_duration_minutes": 1.0},
-            {"type": "lap", "phase": "On-Ice",
+            {"type": "lap", "manual_boundary_ms": 150000,
+             "manual_boundary_state": 1, "phase": "On-Ice",
              "shift_duration_minutes": 1.0,
              "shift_estimated_distance_m": 10.0},
         ])
@@ -46,18 +54,65 @@ class PilotReportTests(unittest.TestCase):
         self.assertEqual(
             [interval["duration_minutes"] for interval in report["phase_intervals"]],
             [0.5, 1.0, 1.0])
+        self.assertEqual(
+            [shift["duration_minutes"] for shift in report["push_metrics"]["manual_shifts"]],
+            [0.5, 1.0])
+        self.assertEqual(report["time_metrics_minutes"]["shortest_shift"], 0.5)
+        self.assertEqual(report["time_metrics_minutes"]["median_shift"], 0.75)
+        self.assertEqual(report["time_metrics_minutes"]["longest_shift"], 1.0)
 
     def test_schema_ten_bench_optional_values_remain_missing(self):
         report = normalize_messages([
             {"type": "session"},
             {"type": "record", "summary_schema_version": 10},
-            {"type": "lap", "phase": "Bench",
+            {"type": "lap", "manual_boundary_ms": 75000,
+             "manual_boundary_state": 2, "phase": "Bench",
              "shift_duration_minutes": 1.25},
         ])
 
         self.assertEqual(report["phase_intervals"], [{
             "phase": "Bench", "duration_minutes": 1.25,
             "estimated_distance_m": None}])
+        self.assertEqual(report["push_metrics"]["manual_shifts"], [])
+
+    def test_schema_ten_boundaries_mark_phase_entries_not_closed_laps(self):
+        report = normalize_messages([
+            {"type": "session", "total_elapsed_time": 120},
+            {"type": "record", "summary_schema_version": 10},
+            {"type": "lap", "auto_boundary_ms": 30000,
+             "auto_boundary_state": 1},
+            {"type": "lap", "manual_boundary_ms": 60000,
+             "manual_boundary_state": 1, "phase": "On-Ice",
+             "shift_duration_minutes": 0.5, "shift_push_count": 6,
+             "shift_estimated_distance_m": 7.14},
+            {"type": "lap", "auto_boundary_ms": 60000,
+             "auto_boundary_state": 2},
+            {"type": "lap", "manual_boundary_ms": 90000,
+             "manual_boundary_state": 2, "phase": "Bench",
+             "shift_duration_minutes": 0.5},
+            {"type": "lap", "auto_boundary_ms": 90000,
+             "auto_boundary_state": 1},
+            {"type": "lap", "manual_boundary_ms": 120000,
+             "manual_boundary_state": 1, "phase": "On-Ice",
+             "shift_duration_minutes": 0.5, "shift_push_count": 8,
+             "shift_estimated_distance_m": 9.25},
+        ])
+        self.assertEqual(report["manual_boundaries"], [
+            {"at_ms": 30000, "state": "ice"},
+            {"at_ms": 60000, "state": "bench"},
+            {"at_ms": 90000, "state": "ice"},
+        ])
+        self.assertEqual(
+            [shift["at_ms"] for shift in report["push_metrics"]["manual_shifts"]],
+            [60000, 120000])
+        self.assertEqual(
+            [shift["pushes"] for shift in report["push_metrics"]["manual_shifts"]],
+            [6, 8])
+        self.assertEqual(report["push_metrics"]["shift_duration_minutes"], {
+            "shortest": 0.5, "longest": 0.5, "median": 0.5})
+        self.assertEqual(score_boundaries(
+            report["manual_boundaries"], report["proposals"],
+            report["duration_ms"])["matched"], 3)
 
     def test_schema_nine_centimetres_still_normalize_to_metres(self):
         report = normalize_messages([
@@ -72,6 +127,28 @@ class PilotReportTests(unittest.TestCase):
         self.assertEqual(
             report["push_metrics"]["manual_shifts"][0]["estimated_distance_m"],
             7.14)
+
+    def test_schema_seven_through_nine_fall_back_to_session_metres(self):
+        for schema in (7, 8, 9):
+            with self.subTest(schema=schema):
+                report = normalize_messages([
+                    {"type": "session", "estimated_distance_m": 42.5},
+                    {"type": "record", "summary_schema_version": schema},
+                ])
+                self.assertIsNone(report["push_metrics"]["estimated_distance_cm"])
+                self.assertEqual(report["push_metrics"]["estimated_distance_m"], 42.5)
+
+    def test_historical_invalid_shift_centimetres_do_not_become_metres(self):
+        report = normalize_messages([
+            {"type": "session"},
+            {"type": "record", "summary_schema_version": 9},
+            {"type": "lap", "manual_boundary_ms": 30000,
+             "manual_boundary_state": 2, "shift_duration_minutes": 0.5,
+             "shift_estimated_distance_cm": 4294967295},
+        ])
+        shift = report["push_metrics"]["manual_shifts"][0]
+        self.assertIsNone(shift["estimated_distance_cm"])
+        self.assertIsNone(shift["estimated_distance_m"])
 
     def test_schema_four_through_eight_remain_readable(self):
         for schema in range(4, 9):

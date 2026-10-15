@@ -170,8 +170,8 @@ def _time_metrics(session, messages, schema_version):
     lap_minutes = [
         value for message in messages
         if message.get("type") == "lap"
-        and (message.get("manual_boundary_state") == 2
-             or (schema_version >= 10 and message.get("phase") == "On-Ice"))
+        and ((schema_version >= 10 and message.get("phase") == "On-Ice")
+             or (schema_version < 10 and message.get("manual_boundary_state") == 2))
         for value in [_finite_nonnegative(message.get("shift_duration_minutes"))]
         if value is not None
     ]
@@ -206,7 +206,12 @@ def _push_metrics(session, records, messages, schema_version):
         return empty
     manual_shifts = []
     for lap in messages:
-        if lap.get("type") != "lap" or lap.get("manual_boundary_state") != 2:
+        if lap.get("type") != "lap":
+            continue
+        if schema_version >= 10:
+            if lap.get("phase") != "On-Ice":
+                continue
+        elif lap.get("manual_boundary_state") != 2:
             continue
         if lap.get("manual_boundary_ms") is None:
             continue
@@ -217,18 +222,23 @@ def _push_metrics(session, records, messages, schema_version):
                 duration_seconds = duration_minutes * 60
         except (TypeError, ValueError):
             pass
+        shift_distance_cm = (_valid_uint(
+            lap.get("shift_estimated_distance_cm"), 4294967295)
+            if schema_version < 10 else None)
+        if schema_version >= 10:
+            shift_distance_m = _finite_nonnegative(
+                lap.get("shift_estimated_distance_m"))
+        else:
+            shift_distance_m = (shift_distance_cm / 100.0
+                                if shift_distance_cm is not None else None)
         manual_shifts.append({
             "at_ms": int(lap["manual_boundary_ms"]),
             "duration_seconds": duration_seconds,
             "duration_minutes": (
                 duration_seconds / 60 if duration_seconds is not None else None),
             "pushes": _valid_uint(lap.get("shift_push_count"), 65535),
-            "estimated_distance_cm": _valid_uint(
-                lap.get("shift_estimated_distance_cm"), 4294967295),
-            "estimated_distance_m": (
-                _finite_nonnegative(lap.get("shift_estimated_distance_cm"), 100.0)
-                if schema_version < 10 else
-                _finite_nonnegative(lap.get("shift_estimated_distance_m"))),
+            "estimated_distance_cm": shift_distance_cm,
+            "estimated_distance_m": shift_distance_m,
             "short_pushes": _valid_uint(lap.get("shift_short_push_count"), 65535),
             "coverage_percent": _valid_uint(
                 lap.get("shift_motion_coverage_percent"), 255),
@@ -253,7 +263,8 @@ def _push_metrics(session, records, messages, schema_version):
         if distance_cm is None:
             distance_cm = latest_record.get("estimated_distance_cm_total")
         distance_cm = _valid_uint(distance_cm, 4294967295)
-        distance_m = distance_cm / 100.0 if distance_cm is not None else None
+        distance_m = (distance_cm / 100.0 if distance_cm is not None else
+                      _finite_nonnegative(session.get("estimated_distance_m")))
     raw_candidates = _valid_uint(
         latest_record.get("raw_push_candidate_count_total"), 4294967295)
     durations = [shift["duration_seconds"] for shift in manual_shifts
@@ -300,6 +311,24 @@ def _phase_intervals(messages, schema_version):
             "estimated_distance_m": distance_m,
         })
     return intervals
+
+
+def _phase_entry_boundaries(messages):
+    """Use Schema 10 phase starts; its numeric state names the closed phase."""
+    boundaries = []
+    for lap in messages:
+        if lap.get("type") != "lap" or lap.get("phase") not in ("On-Ice", "Bench"):
+            continue
+        end_ms = lap.get("manual_boundary_ms")
+        duration_minutes = _finite_nonnegative(lap.get("shift_duration_minutes"))
+        if end_ms is None or duration_minutes is None:
+            continue
+        start_ms = round(int(end_ms) - duration_minutes * 60000)
+        if start_ms < 0:
+            continue
+        boundaries.append({"at_ms": start_ms,
+                           "state": "ice" if lap["phase"] == "On-Ice" else "bench"})
+    return sorted(boundaries, key=lambda item: item["at_ms"])
 
 
 def score_boundaries(references, proposals, duration_ms, tolerance_ms=10000):
@@ -379,14 +408,17 @@ def normalize_messages(messages):
                    and m.get("shadow_schema_version") == schema_version]
     else:
         records = [m for m in messages if m.get("type") == "record"]
-    boundaries = sorted(
-        ({"at_ms": int(m["manual_boundary_ms"]),
-          "state": STATE_NAMES[m["manual_boundary_state"]]}
-         for m in messages if m.get("type") == "lap"
-         and m.get("manual_boundary_state") in STATE_NAMES
-         and m.get("manual_boundary_ms") is not None),
-        key=lambda item: item["at_ms"],
-    )
+    if schema_version >= 10:
+        boundaries = _phase_entry_boundaries(messages)
+    else:
+        boundaries = sorted(
+            ({"at_ms": int(m["manual_boundary_ms"]),
+              "state": STATE_NAMES[m["manual_boundary_state"]]}
+             for m in messages if m.get("type") == "lap"
+             and m.get("manual_boundary_state") in STATE_NAMES
+             and m.get("manual_boundary_ms") is not None),
+            key=lambda item: item["at_ms"],
+        )
 
     proposals = sorted(
         ({"at_ms": int(m["auto_boundary_ms"]),
