@@ -246,7 +246,8 @@ function coordinatorKeepsRecordingWhenDistanceProfileIsUnavailable(logger as Tes
         var config = new DistanceModelConfigFake();
         config.throwOnMode = caseIndex == 3;
         var factory = new RecordingFactoryFake();
-        var coordinator = new RecordingCoordinator(new SessionRecorder(factory), new ClockFake());
+        var clock = new ClockFake();
+        var coordinator = new RecordingCoordinator(new SessionRecorder(factory), clock);
         var estimator = new DistanceEstimatorConfigSpy();
         coordinator.setDistanceEstimator(estimator);
         coordinator.setDataSources(profile, null);
@@ -258,8 +259,9 @@ function coordinatorKeepsRecordingWhenDistanceProfileIsUnavailable(logger as Tes
             estimator.configuredMode != :fixed ||
             estimator.configuredPersonalFactor != 1.0 ||
             estimator.configuredCalibrationSource != :none)) { return false; }
-        if (estimator.getModelSource() != :default || !coordinator.toggleShift() ||
-            !coordinator.toggleShift() || coordinator.getState() != :recording ||
+        if (estimator.getModelSource() != :default || !coordinator.toggleShift()) { return false; }
+        clock.now += 1;
+        if (!coordinator.toggleShift() || coordinator.getState() != :recording ||
             factory.session.starts != 1 || !coordinator.stopAndSave()) { return false; }
     }
     return true;
@@ -589,8 +591,9 @@ function liveDashboardUsesValidHrSamplesAndProfileMaximum(logger as Test.Logger)
 
 (:test)
 function shiftAverageUsesOnlyValidSamplesInsideManualShift(logger as Test.Logger) as Lang.Boolean {
+    var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
-        new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
+        new SessionRecorder(new RecordingFactoryFake()), clock);
     if (!coordinator.start()) { return false; }
     coordinator.onHeartRate({:heartRate=>80});
     if (coordinator.getDashboard()[:shiftAverageHeartRate] != null ||
@@ -598,19 +601,24 @@ function shiftAverageUsesOnlyValidSamplesInsideManualShift(logger as Test.Logger
     coordinator.onHeartRate({:heartRate=>100});
     coordinator.onHeartRate({:heartRate=>null});
     coordinator.onHeartRate({:heartRate=>140});
-    if (coordinator.getDashboard()[:shiftAverageHeartRate] != 120 ||
-        !coordinator.toggleShift()) { return false; }
+    if (coordinator.getDashboard()[:shiftAverageHeartRate] != 120) { return false; }
+    clock.now += 1;
+    if (!coordinator.toggleShift()) { return false; }
     coordinator.onHeartRate({:heartRate=>90});
     return coordinator.getDashboard()[:shiftAverageHeartRate] == 120;
 }
 
 (:test)
 function newShiftClearsOldAverageAndSaveFreezesOpenShiftAverage(logger as Test.Logger) as Lang.Boolean {
+    var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
-        new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
+        new SessionRecorder(new RecordingFactoryFake()), clock);
     if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
     coordinator.onHeartRate({:heartRate=>120});
-    if (!coordinator.toggleShift() || !coordinator.toggleShift()) { return false; }
+    clock.now += 1;
+    if (!coordinator.toggleShift()) { return false; }
+    clock.now += 1;
+    if (!coordinator.toggleShift()) { return false; }
     if (coordinator.getDashboard()[:shiftAverageHeartRate] != null) { return false; }
     coordinator.onHeartRate({:heartRate=>160});
     return coordinator.stopAndSave() &&
