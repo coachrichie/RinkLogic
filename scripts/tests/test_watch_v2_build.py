@@ -57,7 +57,7 @@ class WatchV2BuildConfigurationTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         config = json.loads(result.stdout)
         self.assertTrue(config["exportPackage"])
-        self.assertEqual(config["artifact"], "RinkLogic-0.2.0-beta.4.iq")
+        self.assertEqual(config["artifact"], "RinkLogic-0.2.0-beta.5.iq")
 
     def test_export_rejects_non_calibrated_modes(self):
         for model in ["Fixed", "ProfileHeight"]:

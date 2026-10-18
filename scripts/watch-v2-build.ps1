@@ -18,7 +18,7 @@ $jungle = switch ($DistanceModel) {
     default { "watch-v2/monkey.jungle" }
 }
 $artifact = if ($ExportPackage -and $DistanceModel -eq "CalibratedProfile") {
-    "RinkLogic-0.2.0-beta.4.iq"
+    "RinkLogic-0.2.0-beta.5.iq"
 } elseif ($DistanceModel -eq "ProfileHeight") {
     "RinkLogic-profile-test.prg"
 } elseif ($DistanceModel -eq "CalibratedProfile") {
