@@ -295,3 +295,36 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
   gültige CRC und exakte Felddefinitionen bleiben bis zum physischen Lauf nach
   `docs/testing/V2-POST-TRAINING-SUMMARY.md` ausdrücklich unbestätigt. Es fand
   kein Upload und keine Änderung im Garmin Developer Center statt.
+
+## 2026-10-18 – Beta-5-Testpaket nach finaler Phasenlap-Prüfung
+
+- Binärquellstand: `43fbc6804c8ad6b5f63bb61846b4cf2466ed0623`;
+  Connect IQ SDK/Compiler 9.2.0; Zielgerät `venu2plus`.
+- Automatische Shift-Vorschläge verändern weiterhin weder den manuellen
+  Shiftstatus noch die FIT-Runden. Gleiche oder rückwärts laufende manuelle
+  Zeitstempel werden abgewiesen, bevor einer der beiden Phasentracker seinen
+  Zustand ändert. Gültige kurze Anschübe bleiben in On-Ice-Runden erhalten.
+- Die Ready-Seite enthält keinen sichtbaren Kalibrierungseintrag. Ihr Delegate
+  akzeptiert nur ENTER beziehungsweise das abgegrenzte START-Touchziel und
+  leitet beide an die Aufzeichnungsbestätigung weiter; andere Touchbereiche
+  öffnen keine Kalibrierung. Die getrennten Kalibrierungsklassen bleiben ohne
+  Einstieg von der Ready-Seite im Quellbaum erhalten.
+- Normaler Fixed-Build `watch-v2/bin/venu2plus/ShiftSenseV2.prg`:
+  418.876 Byte, SHA-256
+  `F5314E7BAC0D32A5F53116D7C5E720FE0B221BB8A0D496AE5BE60A03ADF7F514`.
+- Isolierter CalibratedProfile-Testbuild
+  `watch-v2/bin/venu2plus/RinkLogic-calibrated-profile-test.prg`:
+  418.908 Byte, SHA-256
+  `A8D185B9412044B819F8687D6B14944DC92A37D741BE0B732EE07EDB1E99B34C`.
+- Neues lokal signiertes, nicht hochgeladenes Exportpaket
+  `watch-v2/bin/venu2plus/RinkLogic-0.2.0-beta.5.iq`: 222.140 Byte,
+  SHA-256
+  `A7A5431B4B720346D1D04A613E3DDBF1857BAE918CFDD545B30F8E4FE4370896`.
+  `RinkLogic-0.2.0-beta.4.iq` bleibt unverändert als Rollback erhalten.
+- Automatisiert bestanden: 210/210 Venu-2-Plus-Simulatortests; 73/73
+  Python-Tests plus 21 Subtests; Repository-Policy; Release-Audit nach
+  vorübergehendem Auslagern ausschließlich ignorierter Build- und
+  Planartefakte; REUSE 3.3; `git diff --check`. Der abschließende normale
+  Rebuild reproduzierte exakt den dokumentierten Fixed-Hash. Das Paket wurde
+  weder auf die Uhr installiert noch in das Garmin Developer Center
+  hochgeladen.
