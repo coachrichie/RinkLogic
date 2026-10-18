@@ -33,6 +33,7 @@ class RecordingCoordinator {
     private var mSessionSummary = null;
     private var mPendingPushSummaries;
     private var mPhaseLapTracker;
+    private var mLastManualToggleAt = null;
 
     function initialize(recorder, clock) {
         mRecorder = recorder;
@@ -107,6 +108,7 @@ class RecordingCoordinator {
         }
         mStartedAt = mClock.nowMs();
         mPhaseLapTracker = new PhaseLapTracker();
+        mLastManualToggleAt = null;
         mAnalytics.start(mStartedAt, mProfile);
         try { mPushDetector.reset(); } catch (ex) { }
         if (mMotionSource != null) {
@@ -157,7 +159,6 @@ class RecordingCoordinator {
             var proposal = mShiftInference.push(feature, getElapsedMs());
             if (proposal != null) {
                 mShiftLedger.noteProposal(proposal);
-                mRecorder.writeAutoBoundary(proposal[:atMs], proposal[:state]);
             }
             var snapshot = mShiftLedger.snapshot(mClock.nowMs());
             var manualState = snapshot[:onIce] ? :on_ice :
@@ -239,8 +240,11 @@ class RecordingCoordinator {
     function toggleShift() as Lang.Boolean {
         if (mRecorder.getState() != :recording) { return false; }
         var now = mClock.nowMs();
+        // Both trackers must accept the timestamp before either changes phase.
+        if (mLastManualToggleAt != null && now <= mLastManualToggleAt) { return false; }
         var event = mShiftLedger.manualToggle(now);
         if (event == null) { return false; }
+        mLastManualToggleAt = now;
         if (event[:state] == :on_ice) {
             var benchInterval = mPhaseLapTracker.startShift(now - mStartedAt);
             writeClosedPhase(benchInterval, null, null);
@@ -334,6 +338,8 @@ class RecordingCoordinator {
                     shiftSummary[:averageHeartRate] : null,
                 :pushes=>hasValidMotion && pushSummary.hasKey(:pushes) ?
                     pushSummary[:pushes] : null,
+                :shortPushes=>hasValidMotion && pushSummary.hasKey(:shortPushes) ?
+                    pushSummary[:shortPushes] : null,
                 :distanceCm=>hasValidMotion && pushSummary.hasKey(:distanceCm) ?
                     pushSummary[:distanceCm] : null,
                 :coveragePercent=>hasValidMotion &&
