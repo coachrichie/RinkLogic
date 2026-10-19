@@ -500,8 +500,11 @@ function coordinatorPhaseLapRetainsValidShortPushes(logger as Test.Logger) as La
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(recorder, clock);
     var estimator = new DistanceEstimator();
+    var config = new DistanceModelConfigFake();
+    config.selectedMode = :fixed;
     coordinator.setDistanceEstimator(estimator);
-    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    if (!coordinator.setDistanceModelConfig(config) || !coordinator.start() ||
+        !coordinator.toggleShift()) { return false; }
     var times = [100, 700, 1300, 1900, 2500, 3100];
     for (var i = 0; i < times.size(); i += 1) {
         estimator.observe(distanceResult(times[i],
