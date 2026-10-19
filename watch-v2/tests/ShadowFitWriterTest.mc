@@ -22,6 +22,8 @@ class ShadowSessionFake extends RecordingSessionFake {
     var fieldTypes = {};
     var fieldScopes = {};
     var fieldUnits = {};
+    var fieldNativeNums = {};
+    var fieldCounts = {};
     var fields = {};
     var laps = 0;
     var lapSnapshots = [];
@@ -34,6 +36,9 @@ class ShadowSessionFake extends RecordingSessionFake {
         fieldTypes[id] = type;
         fieldScopes[id] = options[:mesgType];
         fieldUnits[id] = options[:units];
+        fieldNativeNums[id] = options.hasKey(:nativeNum) ?
+            options[:nativeNum] : null;
+        fieldCounts[id] = options.hasKey(:count) ? options[:count] : null;
         var field = new ShadowFieldFake();
         fields[id] = field;
         return field;
@@ -46,6 +51,8 @@ class ShadowSessionFake extends RecordingSessionFake {
             :autoState=>fields.hasKey(56) ? fields[56].lastValue : null,
             :pushes=>fields.hasKey(65) ? fields[65].lastValue : null,
             :distance=>fields.hasKey(66) ? fields[66].lastValue : null,
+            :distanceMetres=>fields.hasKey(111) ? fields[111].lastValue : null,
+            :phase=>fields.hasKey(112) ? fields[112].lastValue : null,
             :shortPushes=>fields.hasKey(71) ? fields[71].lastValue : null,
             :coverage=>fields.hasKey(72) ? fields[72].lastValue : null,
             :drop30=>fields.hasKey(93) ? fields[93].lastValue : null,
@@ -60,10 +67,16 @@ class ShadowSessionFake extends RecordingSessionFake {
         return stopResult;
     }
 }
+class RejectingPhaseStringSessionFake extends ShadowSessionFake {
+    function createField(name, id, type, options) {
+        if (id == 112) { return null; }
+        return ShadowSessionFake.createField(name, id, type, options);
+    }
+}
 class FailingPushShadowSessionFake extends ShadowSessionFake {
     function createField(name, id, type, options) {
         var field = ShadowSessionFake.createField(name, id, type, options);
-        if (id == 75) {
+        if (id == 101) {
             field = new ThrowingPushFieldFake();
             fields[id] = field;
         }
@@ -100,44 +113,146 @@ class ShadowRecordingFactoryFake {
 }
 
 (:test)
+function schemaTenAllocatesMetreAndStringPhaseFieldsWithinLimit(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    if (!(new ShadowFitWriter(session)).allocate() ||
+        session.fieldIds.size() > 34 || session.fields[73].lastValue != 10) { return false; }
+    var sessionCount = 0;
+    for (var i = 0; i < session.fieldIds.size(); i += 1) {
+        if (session.fieldScopes[session.fieldIds[i]] == FitContributor.MESG_TYPE_SESSION) {
+            sessionCount += 1;
+        }
+    }
+    return sessionCount == 16 &&
+        !session.fields.hasKey(63) && !session.fields.hasKey(66) &&
+        !session.fields.hasKey(93) && !session.fields.hasKey(94) &&
+        session.fieldNames[110].equals("estimated_distance_m_total") &&
+        session.fieldTypes[110] == FitContributor.DATA_TYPE_FLOAT &&
+        session.fieldScopes[110] == FitContributor.MESG_TYPE_RECORD &&
+        session.fieldUnits[110].equals("m") &&
+        session.fieldNames[111].equals("shift_estimated_distance_m") &&
+        session.fieldTypes[111] == FitContributor.DATA_TYPE_FLOAT &&
+        session.fieldScopes[111] == FitContributor.MESG_TYPE_LAP &&
+        session.fieldUnits[111].equals("m") &&
+        session.fieldNames[112].equals("phase") &&
+        session.fieldTypes[112] == FitContributor.DATA_TYPE_STRING &&
+        session.fieldScopes[112] == FitContributor.MESG_TYPE_LAP &&
+        session.fieldCounts[112] == 8 &&
+        session.fieldNativeNums[97] == 9;
+}
+
+(:test)
+function recordDistanceWritesMetresInsteadOfCentimetres(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    var writer = new ShadowFitWriter(session);
+    return writer.allocate() && writer.writeSecond(null, null, :on_ice,
+        0, 1, 1000, {:totalPushes=>4, :totalDistanceCm=>22000}) &&
+        session.fields[110].lastValue == 220.0;
+}
+
+(:test)
+function onIceLapWritesPhaseDurationAndMetreDistance(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    var writer = new ShadowFitWriter(session);
+    if (!writer.allocate() || !writer.writePhaseLap({:phase=>:on_ice,
+        :startedAtMs=>1000, :endedAtMs=>121000, :durationMs=>120000},
+        {:averageHeartRate=>151, :pushes=>6, :distanceCm=>714,
+            :coveragePercent=>80})) { return false; }
+    var lap = session.lapSnapshots[0];
+    return session.laps == 1 && lap[:phase].equals("On-Ice") &&
+        lap[:durationMinutes] == 2.0 && lap[:distanceMetres] == 7.14 &&
+        lap[:pushes] == 6 && lap[:averageHeartRate] == 151 &&
+        lap[:coverage] == 80;
+}
+
+(:test)
+function benchLapWritesPhaseAndInvalidOptionalMetrics(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    var writer = new ShadowFitWriter(session);
+    if (!writer.allocate() || !writer.writePhaseLap({:phase=>:bench,
+        :startedAtMs=>1000, :endedAtMs=>61000, :durationMs=>60000}, null)) { return false; }
+    var lap = session.lapSnapshots[0];
+    return lap[:phase].equals("Bench") && lap[:durationMinutes] == 1.0 &&
+        lap[:pushes] == 65535 && lap[:averageHeartRate] == 255 &&
+        lap[:coverage] == 255 &&
+        lap[:distanceMetres] != lap[:distanceMetres];
+}
+
+(:test)
+function missingMotionWritesInvalidMetreDistance(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    var writer = new ShadowFitWriter(session);
+    if (!writer.allocate() || !writer.writePhaseLap({:phase=>:on_ice,
+        :startedAtMs=>1000, :endedAtMs=>61000, :durationMs=>60000},
+        {:averageHeartRate=>null, :pushes=>null, :distanceCm=>null,
+            :coveragePercent=>null})) { return false; }
+    var lap = session.lapSnapshots[0];
+    return lap[:phase].equals("On-Ice") && lap[:durationMinutes] == 1.0 &&
+        lap[:pushes] == 65535 && lap[:averageHeartRate] == 255 &&
+        lap[:distanceMetres] != lap[:distanceMetres];
+}
+
+(:test)
+function stringAllocationFailurePreventsPartialSchemaActivation(logger as Test.Logger) as Lang.Boolean {
+    var session = new RejectingPhaseStringSessionFake();
+    var writer = new ShadowFitWriter(session);
+    return !writer.allocate() && !session.fields.hasKey(73) &&
+        !writer.writeSecond(null, null, :on_ice, 0, 1, 1000,
+            {:totalPushes=>1, :totalDistanceCm=>100});
+}
+
+(:test)
+function sessionRecorderDelegatesImmediatePhaseLap(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    return recorder.start() && recorder.writePhaseLap({:phase=>:bench,
+        :startedAtMs=>1000, :endedAtMs=>61000, :durationMs=>60000}, null) &&
+        factory.session.laps == 1 &&
+        factory.session.lapSnapshots[0][:phase].equals("Bench");
+}
+
+(:test)
 function distanceModelSourceDoesNotCreateFitField(logger as Test.Logger) as Lang.Boolean {
     var session = new ShadowSessionFake();
     var writer = new ShadowFitWriter(session);
-    var expectedIds = [44, 45, 51, 52, 55, 56, 62, 63, 65, 66, 71, 72,
-        73, 74, 75, 76, 78, 79, 80, 81, 82, 83, 84, 85, 86, 89,
-        93, 94, 95, 96, 97, 98, 99, 100];
-    var expectedNames = ["motion_mg", "rotation_dps",
+    var expectedIds = [112, 44, 45, 51, 52, 55, 56, 62, 65, 71, 72,
+        73, 74, 78, 85, 86, 95, 96, 97, 98, 99, 100,
+        101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111];
+    var expectedNames = ["phase", "motion_mg", "rotation_dps",
         "manual_boundary_ms", "manual_boundary_state",
         "auto_boundary_ms", "auto_boundary_state", "push_count_total",
-        "estimated_distance_cm_total", "shift_push_count", "shift_estimated_distance_cm",
+        "shift_push_count",
         "shift_short_push_count", "shift_motion_coverage_percent", "summary_schema_version",
-        "shift_count", "time_on_ice", "bench_time", "average_shift_heart_rate",
-        "heart_rate_zone_1_time", "heart_rate_zone_2_time",
-        "heart_rate_zone_3_time", "heart_rate_zone_4_time", "heart_rate_zone_5_time",
-        "time_above_90_percent_hrmax", "work_rest_ratio_tenths", "shift_density_per_hour",
-        "median_shift_duration", "heart_rate_drop_30", "heart_rate_drop_60",
+        "shift_count", "average_shift_heart_rate", "work_rest_ratio_tenths",
+        "shift_density_per_hour",
         "shift_average_heart_rate", "detected_push_count", "estimated_distance_m",
         "average_shift_minutes", "shift_duration_minutes",
-        "raw_push_candidate_count_total"];
+        "raw_push_candidate_count_total", "time_on_ice_minutes",
+        "bench_time_minutes", "heart_rate_zone_1_minutes",
+        "heart_rate_zone_2_minutes", "heart_rate_zone_3_minutes",
+        "heart_rate_zone_4_minutes", "heart_rate_zone_5_minutes",
+        "time_above_90_percent_hrmax_minutes", "median_shift_minutes",
+        "estimated_distance_m_total", "shift_estimated_distance_m"];
     if (!writer.allocate() || !writer.writeSecond(null, null, :on_ice,
         0, 1, 1000, {:totalPushes=>2, :totalDistanceCm=>264,
             :cadencePerMin=>12, :distanceModelSource=>:profile_height}) ||
-        session.fieldIds.size() != 34 || session.fieldNames.size() != 34) { return false; }
+        session.fieldIds.size() != 33 || session.fieldNames.size() != 33) { return false; }
     for (var i = 0; i < expectedIds.size(); i += 1) {
         if (session.fieldIds[i] != expectedIds[i] ||
             !session.fieldNames[expectedIds[i]].equals(expectedNames[i])) { return false; }
     }
-    return session.fields[62].lastValue == 2 && session.fields[63].lastValue == 264;
+    return session.fields[62].lastValue == 2 && session.fields[110].lastValue == 2.64;
 }
 
 (:test)
 function shadowWriterUsesOnlyNewStableFieldIds(logger as Test.Logger) as Lang.Boolean {
     var session = new ShadowSessionFake();
     var writer = new ShadowFitWriter(session);
-    var expected = [44, 45, 51, 52, 55, 56, 62, 63, 65, 66, 71, 72,
-        73, 74, 75, 76, 78, 79, 80, 81, 82, 83, 84, 85, 86,
-        89, 93, 94, 95, 96, 97, 98, 99, 100];
-    if (!writer.allocate() || session.fieldIds.size() != 34) { return false; }
+    var expected = [112, 44, 45, 51, 52, 55, 56, 62, 65, 71, 72,
+        73, 74, 78, 85, 86, 95, 96, 97, 98, 99, 100,
+        101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111];
+    if (!writer.allocate() || session.fieldIds.size() != 33) { return false; }
     for (var i = 0; i < expected.size(); i += 1) {
         if (session.fieldIds[i] != expected[i]) { return false; }
     }
@@ -149,27 +264,28 @@ function shadowWriterUsesOnlyNewStableFieldIds(logger as Test.Logger) as Lang.Bo
         session.fieldNames[100].equals("raw_push_candidate_count_total") &&
         session.fieldTypes[62] == FitContributor.DATA_TYPE_UINT32 &&
         session.fieldTypes[74] == FitContributor.DATA_TYPE_UINT8 &&
-        session.fieldTypes[75] == FitContributor.DATA_TYPE_UINT16 &&
+        session.fieldTypes[101] == FitContributor.DATA_TYPE_FLOAT &&
         session.fieldTypes[96] == FitContributor.DATA_TYPE_UINT16 &&
         session.fieldTypes[97] == FitContributor.DATA_TYPE_FLOAT &&
         session.fieldTypes[98] == FitContributor.DATA_TYPE_FLOAT &&
-        session.fieldTypes[93] == FitContributor.DATA_TYPE_SINT16 &&
+        session.fieldTypes[112] == FitContributor.DATA_TYPE_STRING &&
         session.fieldScopes[62] == FitContributor.MESG_TYPE_RECORD &&
         session.fieldScopes[65] == FitContributor.MESG_TYPE_LAP &&
         session.fieldScopes[73] == FitContributor.MESG_TYPE_RECORD &&
-        session.fieldScopes[84] == FitContributor.MESG_TYPE_SESSION &&
-        session.fieldScopes[93] == FitContributor.MESG_TYPE_LAP &&
-        session.fields[73].lastValue == 8 &&
+        session.fieldScopes[108] == FitContributor.MESG_TYPE_SESSION &&
+        session.fieldScopes[111] == FitContributor.MESG_TYPE_LAP &&
+        session.fieldNativeNums[97] == 9 &&
+        session.fields[73].lastValue == 10 &&
         writer.writeManualBoundary(12000, :on_ice, null) && session.laps == 1 &&
         session.lastBoundaryMs == 12000 && session.fields[51].lastValue == 0 &&
         session.fields[52].lastValue == 0;
 }
 
 (:test)
-function schemaEightWritesLosslessShiftDurationAndDiagnostics(logger as Test.Logger) as Lang.Boolean {
+function schemaTenWritesLosslessShiftDurationAndDiagnostics(logger as Test.Logger) as Lang.Boolean {
     var session = new ShadowSessionFake();
     var writer = new ShadowFitWriter(session);
-    if (!writer.allocate() || session.fieldIds.size() != 34) { return false; }
+    if (!writer.allocate() || session.fieldIds.size() != 33) { return false; }
     if (!session.fields.hasKey(44) || !session.fields.hasKey(45) ||
         !session.fields.hasKey(99) || !session.fields.hasKey(100)) { return false; }
     if (!writer.writeSecond({:valid=>true, :motionMg=>220,
@@ -199,17 +315,19 @@ function unknownCoverageUsesInvalidSentinelButKnownZeroIsZero(logger as Test.Log
         :medianShiftMs=>null, :topShiftHeartRates=>[]})) { return false; }
     if (session.fields[98].lastValue == session.fields[98].lastValue ||
         session.fields[78].lastValue != 255 ||
-        session.fields[79].lastValue != 65535) { return false; }
-    if (!writer.writeManualBoundary(1000, :bench,
-        {:pushes=>0, :distanceCm=>0, :shortPushes=>0,
-            :coveragePercent=>0, :hasValidMotion=>false})) { return false; }
+        session.fields[103].lastValue == session.fields[103].lastValue) { return false; }
+    if (!writer.writePhaseLap({:phase=>:on_ice, :endedAtMs=>1000,
+        :durationMs=>1000}, {:pushes=>null, :distanceCm=>null,
+            :shortPushes=>null, :coveragePercent=>null})) { return false; }
     if (session.lapSnapshots[0][:pushes] != 65535 ||
-        session.lapSnapshots[0][:distance] != 4294967295l ||
+        session.lapSnapshots[0][:distanceMetres] ==
+            session.lapSnapshots[0][:distanceMetres] ||
         session.lapSnapshots[0][:coverage] != 255) { return false; }
-    return writer.writeManualBoundary(2000, :bench,
-        {:pushes=>0, :distanceCm=>0, :shortPushes=>0,
-            :coveragePercent=>100, :hasValidMotion=>true}) &&
+    return writer.writePhaseLap({:phase=>:on_ice, :endedAtMs=>2000,
+        :durationMs=>1000}, {:pushes=>0, :distanceCm=>0,
+            :shortPushes=>0, :coveragePercent=>100}) &&
         session.lapSnapshots[1][:pushes] == 0 &&
+        session.lapSnapshots[1][:distanceMetres] == 0.0 &&
         session.lapSnapshots[1][:coverage] == 100;
 }
 
@@ -232,9 +350,10 @@ function failedSecondShiftEstimateCannotReusePreviousLap(logger as Test.Logger) 
     clock.now = 4000;
     if (!coordinator.toggleShift()) { return false; }
     if (!coordinator.stopAndSave()) { return false; }
-    return factory.session.lapSnapshots.size() == 2 &&
+    return factory.session.lapSnapshots.size() == 3 &&
         factory.session.lapSnapshots[0][:pushes] == 1 &&
-        factory.session.lapSnapshots[1][:pushes] == 65535;
+        factory.session.lapSnapshots[1][:phase].equals("Bench") &&
+        factory.session.lapSnapshots[2][:pushes] == 65535;
 }
 
 (:test)
@@ -248,7 +367,7 @@ function unavailableSessionEstimateStaysUnknown(logger as Test.Logger) as Lang.B
     var distanceMetres = factory.session.fields[97].lastValue;
     return averageMinutes != averageMinutes && distanceMetres != distanceMetres &&
         factory.session.fields[78].lastValue == 255 &&
-        factory.session.fields[79].lastValue == 65535;
+        factory.session.fields[103].lastValue != factory.session.fields[103].lastValue;
 }
 
 (:test)
@@ -270,27 +389,30 @@ function cumulativePushRecordsSurviveSkippedIntervals(logger as Test.Logger) as 
         0, 1, 1000, {:totalPushes=>2, :totalDistanceCm=>250,
             :cadencePerMin=>12})) { return false; }
     if (session.fields[62].lastValue != 2 ||
-        session.fields[63].lastValue != 250) { return false; }
+        session.fields[110].lastValue != 2.5) { return false; }
     if (!writer.writeSecond(null, null, :on_ice, 0, 4, 4000,
         {:totalPushes=>8, :totalDistanceCm=>1400,
             :cadencePerMin=>null})) { return false; }
     return session.fields[62].lastValue == 8 &&
-        session.fields[63].lastValue == 1400;
+        session.fields[110].lastValue == 14.0;
 }
 
 (:test)
 function manualLapMetricsDoNotLeakIntoAutomaticLap(logger as Test.Logger) as Lang.Boolean {
     var session = new ShadowSessionFake();
     var writer = new ShadowFitWriter(session);
-    if (!writer.allocate() || !writer.writeManualBoundary(3000, :bench,
+    if (!writer.allocate() || !writer.writePhaseLap({:phase=>:on_ice,
+        :endedAtMs=>3000, :durationMs=>3000},
         {:pushes=>6, :distanceCm=>950, :shortPushes=>4,
-            :coveragePercent=>80, :hasValidMotion=>true})) { return false; }
+            :coveragePercent=>80})) { return false; }
     if (!writer.writeAutoBoundary(3200, :on_ice)) { return false; }
     var manual = session.lapSnapshots[0];
     var automatic = session.lapSnapshots[1];
-    return manual[:pushes] == 6 && manual[:distance] == 950 &&
+    return manual[:pushes] == 6 && manual[:distanceMetres] == 9.5 &&
         manual[:shortPushes] == 4 && manual[:coverage] == 80 &&
-        automatic[:pushes] == 65535 && automatic[:distance] == 4294967295l &&
+        automatic[:pushes] == 65535 &&
+        automatic[:distanceMetres] != automatic[:distanceMetres] &&
+        automatic[:phase].equals("") &&
         automatic[:shortPushes] == 65535 && automatic[:coverage] == 255;
 }
 
@@ -311,11 +433,217 @@ function openShiftPushSummaryIsLappedBeforeSessionStop(logger as Test.Logger) as
     if (!coordinator.stopAndSave()) { return false; }
     var lap = factory.session.lapSnapshots[0];
     return factory.session.stopLapCount == 1 &&
-        lap[:manualState] == 2 && lap[:pushes] == 1 &&
-        lap[:distance] == 125 && factory.session.fields[74].lastValue == 1 &&
+        lap[:manualState] == 1 && lap[:phase].equals("On-Ice") &&
+        lap[:pushes] == 1 && lap[:distanceMetres] == 1.25 &&
+        factory.session.fields[74].lastValue == 1 &&
         factory.session.fields[96].lastValue == 1 &&
         factory.session.fields[97].lastValue > 1.24 &&
         factory.session.fields[97].lastValue < 1.26;
+}
+
+(:test)
+function inferredShiftBeforeManualStartWritesNoLap(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    if (!coordinator.start()) { return false; }
+    for (var i = 0; i < 10; i += 1) {
+        clock.now = 1000 + i * 1000;
+        coordinator.onMotionFeature({:valid=>true, :motionMg=>220,
+            :rotationDps=>40, :periodic=>true});
+    }
+    if (factory.session.laps != 0 || coordinator.getDashboard()[:onIce] ||
+        coordinator.getDashboard()[:shiftCount] != 0) { return false; }
+    clock.now = 11000;
+    return coordinator.stopAndSave() && factory.session.laps == 0 &&
+        factory.session.fields[44].lastValue == 220;
+}
+
+(:test)
+function inferredBoundariesBetweenManualPhasesWriteNoExtraLaps(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    for (var i = 0; i < 10; i += 1) {
+        clock.now = 1000 + i * 1000;
+        coordinator.onMotionFeature({:valid=>true, :motionMg=>220,
+            :rotationDps=>40, :periodic=>true});
+    }
+    if (factory.session.laps != 0) { return false; }
+    clock.now = 11000;
+    if (!coordinator.toggleShift() || factory.session.laps != 1) { return false; }
+    for (var j = 10; j < 30; j += 1) {
+        clock.now = 1000 + j * 1000;
+        coordinator.onMotionFeature({:valid=>true, :motionMg=>20,
+            :rotationDps=>5, :periodic=>false});
+    }
+    if (factory.session.laps != 1 || coordinator.getDashboard()[:onIce]) { return false; }
+    clock.now = 31000;
+    if (!coordinator.toggleShift() || factory.session.laps != 2) { return false; }
+    clock.now = 41000;
+    return coordinator.stopAndSave() && factory.session.laps == 3 &&
+        factory.session.lapSnapshots[0][:phase].equals("On-Ice") &&
+        factory.session.lapSnapshots[1][:phase].equals("Bench") &&
+        factory.session.lapSnapshots[2][:phase].equals("On-Ice");
+}
+
+(:test)
+function coordinatorPhaseLapRetainsValidShortPushes(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    var estimator = new DistanceEstimator();
+    var config = new DistanceModelConfigFake();
+    config.selectedMode = :fixed;
+    coordinator.setDistanceEstimator(estimator);
+    if (!coordinator.setDistanceModelConfig(config) || !coordinator.start() ||
+        !coordinator.toggleShift()) { return false; }
+    var times = [100, 700, 1300, 1900, 2500, 3100];
+    for (var i = 0; i < times.size(); i += 1) {
+        estimator.observe(distanceResult(times[i],
+            [pushAt(times[i], i == 0)], times[i] - 100, true, false));
+    }
+    clock.now = 4200;
+    if (!coordinator.toggleShift() || factory.session.laps != 1) { return false; }
+    var lap = factory.session.lapSnapshots[0];
+    if (!lap[:phase].equals("On-Ice") || lap[:pushes] != 6 ||
+        lap[:shortPushes] != 4 || lap[:distanceMetres] != 9.5) { return false; }
+    clock.now = 5000;
+    if (!coordinator.toggleShift()) { return false; }
+    clock.now = 6000;
+    return coordinator.stopAndSave() && factory.session.laps == 3 &&
+        factory.session.lapSnapshots[1][:shortPushes] == 65535 &&
+        factory.session.lapSnapshots[2][:shortPushes] == 65535;
+}
+
+(:test)
+function equalTimeTogglesPreservePhaseAndLedgerThroughSave(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    if (coordinator.toggleShift() || !coordinator.getDashboard()[:onIce] ||
+        coordinator.getDashboard()[:shiftCount] != 1 || factory.session.laps != 0) {
+        return false;
+    }
+    clock.now = 61000;
+    if (!coordinator.toggleShift() || coordinator.toggleShift() ||
+        coordinator.getDashboard()[:onIce] || factory.session.laps != 1) { return false; }
+    clock.now = 60000;
+    if (coordinator.toggleShift() || coordinator.getDashboard()[:onIce]) { return false; }
+    clock.now = 121000;
+    if (!coordinator.toggleShift() || coordinator.toggleShift() ||
+        !coordinator.getDashboard()[:onIce] ||
+        coordinator.getDashboard()[:shiftCount] != 2) { return false; }
+    clock.now = 181000;
+    if (!coordinator.stopAndSave() || factory.session.laps != 3) { return false; }
+    var laps = factory.session.lapSnapshots;
+    var summary = coordinator.getSessionSummary();
+    return laps[0][:phase].equals("On-Ice") && laps[0][:durationMinutes] == 1.0 &&
+        laps[1][:phase].equals("Bench") && laps[1][:durationMinutes] == 1.0 &&
+        laps[2][:phase].equals("On-Ice") && laps[2][:durationMinutes] == 1.0 &&
+        !coordinator.getDashboard()[:onIce] && summary[:shiftCount] == 2 &&
+        summary[:timeOnIceMs] == 120000 && summary[:benchTimeMs] == 60000;
+}
+
+(:test)
+function manualTogglesWriteAlternatingOnIceAndBenchLaps(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    if (!coordinator.start() || !coordinator.toggleShift() ||
+        factory.session.laps != 0) { return false; }
+    clock.now = 10000;
+    if (!coordinator.toggleShift() || factory.session.laps != 1) { return false; }
+    clock.now = 20000;
+    if (!coordinator.toggleShift() || factory.session.laps != 2) { return false; }
+    clock.now = 30000;
+    if (!coordinator.toggleShift() || factory.session.laps != 3) { return false; }
+    return factory.session.lapSnapshots[0][:phase].equals("On-Ice") &&
+        factory.session.lapSnapshots[1][:phase].equals("Bench") &&
+        factory.session.lapSnapshots[2][:phase].equals("On-Ice");
+}
+
+(:test)
+function saveOnIceClosesOneOnIceLap(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    clock.now = 12000;
+    return coordinator.stopAndSave() && factory.session.laps == 1 &&
+        factory.session.lapSnapshots[0][:phase].equals("On-Ice");
+}
+
+(:test)
+function saveOnBenchClosesOneBenchLap(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    clock.now = 10000;
+    if (!coordinator.toggleShift() || factory.session.laps != 1) { return false; }
+    clock.now = 18000;
+    return coordinator.stopAndSave() && factory.session.laps == 2 &&
+        factory.session.lapSnapshots[1][:phase].equals("Bench");
+}
+
+(:test)
+function saveBeforeFirstShiftWritesNoPhaseLap(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var coordinator = new RecordingCoordinator(recorder, new ClockFake());
+    return coordinator.start() && coordinator.stopAndSave() &&
+        factory.session.laps == 0;
+}
+
+(:test)
+function missingMotionAndHeartRateKeepPhaseAndDuration(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    clock.now = 61000;
+    if (!coordinator.stopAndSave() || factory.session.laps != 1) { return false; }
+    var lap = factory.session.lapSnapshots[0];
+    return lap[:phase].equals("On-Ice") && lap[:durationMinutes] == 1.0 &&
+        lap[:averageHeartRate] == 255 && lap[:pushes] == 65535 &&
+        lap[:distanceMetres] != lap[:distanceMetres];
+}
+
+(:test)
+function recoveryDeadlinesNeverCreateAdditionalLaps(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    var clock = new ClockFake();
+    var coordinator = new RecordingCoordinator(recorder, clock);
+    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    clock.now = 10000;
+    if (!coordinator.toggleShift() || factory.session.laps != 1) { return false; }
+    clock.now = 75000;
+    coordinator.onHeartRate({:heartRate=>120});
+    if (factory.session.laps != 1) { return false; }
+    return coordinator.stopAndSave() && factory.session.laps == 2 &&
+        factory.session.lapSnapshots[1][:phase].equals("Bench");
 }
 
 (:test)
@@ -334,13 +662,61 @@ function activitySummaryWritesHockeyMetricsBeforeSave(logger as Test.Logger) as 
     })) { return false; }
     return session.fields.hasKey(96) && session.fields.hasKey(97) &&
         session.fields.hasKey(98) && session.fields[74].lastValue == 3 &&
-        session.fields[75].lastValue == 95 && session.fields[76].lastValue == 205 &&
+        session.fields[101].lastValue > 1.583 && session.fields[101].lastValue < 1.584 &&
+        session.fields[102].lastValue > 3.416 && session.fields[102].lastValue < 3.417 &&
         session.fields[98].lastValue > 0.527 && session.fields[98].lastValue < 0.529 &&
         session.fields[78].lastValue == 157 &&
         session.fields[96].lastValue == 146 && session.fields[97].lastValue == 220.0 &&
-        session.fields[79].lastValue == 11 && session.fields[83].lastValue == 55 &&
-        session.fields[84].lastValue == 12 && session.fields[85].lastValue == 5 &&
-        session.fields[86].lastValue == 36 && session.fields[89].lastValue == 31;
+        session.fields[103].lastValue > 0.183 && session.fields[103].lastValue < 0.184 &&
+        session.fields[107].lastValue > 0.916 && session.fields[107].lastValue < 0.917 &&
+        session.fields[108].lastValue == 0.2 && session.fields[85].lastValue == 5 &&
+        session.fields[86].lastValue == 36 &&
+        session.fields[109].lastValue > 0.516 && session.fields[109].lastValue < 0.517;
+}
+
+(:test)
+function estimatedDistanceMapsToNativeSessionTotalDistanceAtCentimetrePrecision(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    var writer = new ShadowFitWriter(session);
+    if (!writer.allocate() || !writer.writeActivitySummary({
+        :shiftCount=>1,
+        :timeOnIceMs=>60000, :benchTimeMs=>0,
+        :averageShiftMs=>60000, :averageShiftHeartRate=>150,
+        :zoneSeconds=>[0, 0, 0, 60, 0], :overNinetySeconds=>0,
+        :workRestTenths=>10, :shiftDensityPerHour=>60,
+        :medianShiftMs=>60000, :detectedPushes=>9,
+        :estimatedDistanceCm=>12345
+    })) { return false; }
+    return session.fieldScopes[97] == FitContributor.MESG_TYPE_SESSION &&
+        session.fieldNativeNums[97] == 9 &&
+        session.fields[97].lastValue == 123.45;
+}
+
+(:test)
+function schemaTenWritesMinuteSessionFields(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    var writer = new ShadowFitWriter(session);
+    if (!writer.allocate() || !writer.writeActivitySummary({
+        :shiftCount=>1, :timeOnIceMs=>95000, :benchTimeMs=>0,
+        :averageShiftMs=>95000, :averageShiftHeartRate=>150,
+        :zoneSeconds=>[0, 30, 60, 90, 120], :overNinetySeconds=>45,
+        :workRestTenths=>1, :shiftDensityPerHour=>1,
+        :medianShiftMs=>95000, :detectedPushes=>0,
+        :estimatedDistanceCm=>0
+    })) { return false; }
+    if (session.fields[73].lastValue != 10 ||
+        session.fields[101].lastValue < 1.583 || session.fields[101].lastValue > 1.584 ||
+        session.fields[102].lastValue != 0.0 ||
+        session.fields[103].lastValue != 0.0 ||
+        session.fields[104].lastValue != 0.5 ||
+        session.fields[105].lastValue != 1.0 ||
+        session.fields[108].lastValue != 0.75 ||
+        session.fields[109].lastValue < 1.583 || session.fields[109].lastValue > 1.584) {
+        return false;
+    }
+    return !session.fields.hasKey(75) && !session.fields.hasKey(76) &&
+        !session.fields.hasKey(79) && !session.fields.hasKey(84) &&
+        !session.fields.hasKey(89);
 }
 
 (:test)
@@ -361,28 +737,55 @@ function savedSummaryRejectsSparseShiftHeartRate(logger as Test.Logger) as Lang.
     clock.now = 91000;
     if (!coordinator.toggleShift() || !coordinator.stopAndSave()) { return false; }
     return factory.session.fields[74].lastValue == 2 &&
-        factory.session.fields[75].lastValue == 60 &&
-        factory.session.fields[76].lastValue == 30 &&
+        factory.session.fields[101].lastValue == 1.0 &&
+        factory.session.fields[102].lastValue == 0.5 &&
         factory.session.fields[98].lastValue == 0.5 &&
         factory.session.fields[78].lastValue == 255;
 }
 
 (:test)
-function recoveryLapWritesSignedValuesAndMissingSentinels(logger as Test.Logger) as Lang.Boolean {
+function transitionalShiftLapWritesOnIceWithoutRecoveryFields(logger as Test.Logger) as Lang.Boolean {
     var session = new ShadowSessionFake();
     var writer = new ShadowFitWriter(session);
-    if (!writer.allocate() || !writer.writeShiftLap({:endedAtMs=>12000,
+    if (!writer.allocate() || session.fields.hasKey(93) || session.fields.hasKey(94) ||
+        !writer.writeShiftLap({:endedAtMs=>12000, :durationMs=>10000,
         :heartRateDrop30=>-7, :heartRateDrop60=>22,
         :averageHeartRate=>181}, null)) { return false; }
-    if (session.lapSnapshots[0][:drop30] != -7 ||
-        session.lapSnapshots[0][:drop60] != 22 ||
-        session.lapSnapshots[0][:averageHeartRate] != 181) { return false; }
-    return writer.writeShiftLap({:endedAtMs=>13000,
-        :heartRateDrop30=>null, :heartRateDrop60=>40000,
-        :averageHeartRate=>null}, null) &&
-        session.lapSnapshots[1][:drop30] == 32767 &&
-        session.lapSnapshots[1][:drop60] == 32767 &&
-        session.lapSnapshots[1][:averageHeartRate] == 255;
+    return session.lapSnapshots[0][:phase].equals("On-Ice") &&
+        session.lapSnapshots[0][:averageHeartRate] == 181 &&
+        session.lapSnapshots[0][:durationMinutes] > 0.166 &&
+        session.lapSnapshots[0][:durationMinutes] < 0.167;
+}
+
+(:test)
+function transitionalShiftLapWithoutValidMotionWritesInvalidMetrics(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    if (!recorder.start() || !recorder.writeShiftLap(
+        {:endedAtMs=>12000, :durationMs=>10000, :averageHeartRate=>181},
+        {:hasValidMotion=>false, :pushes=>0, :distanceCm=>0,
+            :shortPushes=>0, :coveragePercent=>0})) { return false; }
+    var lap = factory.session.lapSnapshots[0];
+    return lap[:phase].equals("On-Ice") &&
+        lap[:averageHeartRate] == 181 &&
+        lap[:pushes] == 65535 &&
+        lap[:distanceMetres] != lap[:distanceMetres] &&
+        lap[:shortPushes] == 65535 && lap[:coverage] == 255;
+}
+
+(:test)
+function transitionalShiftLapPreservesShortPushesWithValidMotion(logger as Test.Logger) as Lang.Boolean {
+    var factory = new ShadowRecordingFactoryFake();
+    var recorder = new SessionRecorder(factory);
+    recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
+    if (!recorder.start() || !recorder.writeShiftLap(
+        {:endedAtMs=>12000, :durationMs=>10000, :averageHeartRate=>181},
+        {:hasValidMotion=>true, :pushes=>6, :distanceCm=>950,
+            :shortPushes=>4, :coveragePercent=>80})) { return false; }
+    var lap = factory.session.lapSnapshots[0];
+    return lap[:pushes] == 6 && lap[:distanceMetres] == 9.5 &&
+        lap[:shortPushes] == 4 && lap[:coverage] == 80;
 }
 
 (:test)
@@ -398,16 +801,18 @@ function summaryOverflowUsesMissingInsteadOfClamping(logger as Test.Logger) as L
         :medianShiftMs=>1000, :topShiftHeartRates=>[255]
     })) { return false; }
     return session.fields[74].lastValue == 255 &&
-        session.fields[75].lastValue == 65535 &&
-        session.fields[76].lastValue == 65535 &&
+        session.fields[101].lastValue > 1092.24 &&
+        session.fields[101].lastValue < 1092.26 &&
+        session.fields[102].lastValue != session.fields[102].lastValue &&
         session.fields[98].lastValue > 1092.24 &&
         session.fields[98].lastValue < 1092.26 &&
         session.fields[78].lastValue == 255 &&
-        session.fields[79].lastValue == 65535;
+        session.fields[103].lastValue > 1092.24 &&
+        session.fields[103].lastValue < 1092.26;
 }
 
 (:test)
-function manualShiftLapWaitsForRecoveryAndWritesOnce(logger as Test.Logger) as Lang.Boolean {
+function manualShiftLapWritesImmediatelyWithoutRecoveryDuplicate(logger as Test.Logger) as Lang.Boolean {
     var factory = new ShadowRecordingFactoryFake();
     var recorder = new SessionRecorder(factory);
     recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
@@ -415,15 +820,17 @@ function manualShiftLapWaitsForRecoveryAndWritesOnce(logger as Test.Logger) as L
     var coordinator = new RecordingCoordinator(recorder, clock);
     if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
     clock.now = 11000;
-    if (!coordinator.toggleShift() || factory.session.laps != 0) { return false; }
+    if (!coordinator.toggleShift() || factory.session.laps != 1 ||
+        !factory.session.lapSnapshots[0][:phase].equals("On-Ice")) { return false; }
     clock.now = 76000;
     if (!coordinator.stopAndSave()) { return false; }
-    return factory.session.laps == 1 && factory.session.stopLapCount == 1 &&
-        factory.session.lastBoundaryMs == 10000;
+    return factory.session.laps == 2 && factory.session.stopLapCount == 2 &&
+        factory.session.lapSnapshots[1][:phase].equals("Bench") &&
+        factory.session.lastBoundaryMs == 75000;
 }
 
 (:test)
-function saveRetryNeverDuplicatesDelayedShiftLap(logger as Test.Logger) as Lang.Boolean {
+function saveRetryNeverDuplicatesFinalPhaseLap(logger as Test.Logger) as Lang.Boolean {
     var factory = new ShadowRecordingFactoryFake();
     factory.session.saveResult = false;
     var recorder = new SessionRecorder(factory);

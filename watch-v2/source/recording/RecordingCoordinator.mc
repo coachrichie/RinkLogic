@@ -32,6 +32,8 @@ class RecordingCoordinator {
     private var mAnalytics;
     private var mSessionSummary = null;
     private var mPendingPushSummaries;
+    private var mPhaseLapTracker;
+    private var mLastManualToggleAt = null;
 
     function initialize(recorder, clock) {
         mRecorder = recorder;
@@ -43,6 +45,7 @@ class RecordingCoordinator {
         mDistanceModelConfig = new DistanceModelConfig();
         mAnalytics = new SessionAnalytics();
         mPendingPushSummaries = {};
+        mPhaseLapTracker = new PhaseLapTracker();
     }
 
     function setDataSources(profileSource, heartRateSource) as Void {
@@ -75,11 +78,23 @@ class RecordingCoordinator {
         if (mProfileSource != null) {
             try { mProfile = mProfileSource.read(); } catch (ex) { mProfile = null; }
         }
+        var heightCm = mProfile != null && mProfile.hasKey(:heightCm) ?
+            mProfile[:heightCm] : null;
+        var mode = :fixed;
+        try { mode = mDistanceModelConfig.mode(); }
+        catch (distanceModeEx) { mode = :fixed; }
+        var personalFactor = 1.0;
+        var calibrationSource = :none;
         try {
-            var heightCm = mProfile != null && mProfile.hasKey(:heightCm) ?
-                mProfile[:heightCm] : null;
-            var mode = mDistanceModelConfig.mode();
-            mDistanceEstimator.configure(mode, heightCm);
+            personalFactor = mDistanceModelConfig.personalCalibrationFactor();
+            calibrationSource = mDistanceModelConfig.calibrationSource();
+        } catch (distanceCalibrationEx) {
+            personalFactor = 1.0;
+            calibrationSource = :none;
+        }
+        try {
+            mDistanceEstimator.configure(mode, heightCm, personalFactor,
+                calibrationSource);
         } catch (distanceConfigEx) { }
         if (mHeartRateSource != null) {
             try { mHeartRateSourceStarted = mHeartRateSource.start(method(:onHeartRate)); }
@@ -92,6 +107,8 @@ class RecordingCoordinator {
             return false;
         }
         mStartedAt = mClock.nowMs();
+        mPhaseLapTracker = new PhaseLapTracker();
+        mLastManualToggleAt = null;
         mAnalytics.start(mStartedAt, mProfile);
         try { mPushDetector.reset(); } catch (ex) { }
         if (mMotionSource != null) {
@@ -120,7 +137,6 @@ class RecordingCoordinator {
             mShiftHrTotal += value;
             mShiftHrCount += 1;
         }
-        drainReadyShiftLaps(mHeartRateAt);
     }
 
     function onMotionFeature(feature) as Void {
@@ -143,7 +159,6 @@ class RecordingCoordinator {
             var proposal = mShiftInference.push(feature, getElapsedMs());
             if (proposal != null) {
                 mShiftLedger.noteProposal(proposal);
-                mRecorder.writeAutoBoundary(proposal[:atMs], proposal[:state]);
             }
             var snapshot = mShiftLedger.snapshot(mClock.nowMs());
             var manualState = snapshot[:onIce] ? :on_ice :
@@ -156,7 +171,6 @@ class RecordingCoordinator {
             catch (pushSnapshotEx) { }
             mRecorder.writeShadowSecond(feature, status, manualState,
                 0, mSampleSeq, getElapsedMs(), pushSnapshot);
-            drainReadyShiftLaps(mClock.nowMs());
         } catch (ex) { }
     }
 
@@ -215,6 +229,10 @@ class RecordingCoordinator {
             if (push.hasKey(:distanceModelSource)) {
                 dashboard[:distanceModelSource] = push[:distanceModelSource];
             }
+            if (push.hasKey(:distanceCalibrationSource)) {
+                dashboard[:distanceCalibrationSource] =
+                    push[:distanceCalibrationSource];
+            }
         } catch (ex) { }
         return dashboard;
     }
@@ -222,9 +240,14 @@ class RecordingCoordinator {
     function toggleShift() as Lang.Boolean {
         if (mRecorder.getState() != :recording) { return false; }
         var now = mClock.nowMs();
+        // Both trackers must accept the timestamp before either changes phase.
+        if (mLastManualToggleAt != null && now <= mLastManualToggleAt) { return false; }
         var event = mShiftLedger.manualToggle(now);
         if (event == null) { return false; }
+        mLastManualToggleAt = now;
         if (event[:state] == :on_ice) {
+            var benchInterval = mPhaseLapTracker.startShift(now - mStartedAt);
+            writeClosedPhase(benchInterval, null, null);
             mAnalytics.onShiftStarted(now);
             try { mDistanceEstimator.beginShift(now - mStartedAt); } catch (ex) { }
             mShiftHrTotal = 0;
@@ -239,11 +262,13 @@ class RecordingCoordinator {
                 mCompletedShiftHrAverageTotal += mLastShiftHrAverage;
                 mCompletedShiftHrAverageCount += 1;
             }
-            mAnalytics.onShiftEnded(now);
+            var completedShift = mAnalytics.onShiftEnded(now);
             mPendingPushSummaries[mShiftLedger.snapshot(now)[:shiftCount]] =
                 mLastCompletedPushSummary;
+            var onIceInterval = mPhaseLapTracker.endShift(now - mStartedAt);
+            writeClosedPhase(onIceInterval, mLastCompletedPushSummary,
+                completedShift);
         }
-        drainReadyShiftLaps(now);
         return true;
     }
 
@@ -266,14 +291,17 @@ class RecordingCoordinator {
         if (mStartedAt == null || mRecorder.getState() != :recording) { return false; }
         var stopAt = mClock.nowMs();
         var shifts = mShiftLedger.snapshot(stopAt);
+        var completedOpenShift = null;
+        var finalPush = null;
         if (shifts[:onIce] && !mOpenShiftFinalized) {
-            var finalPush = null;
             try { finalPush = mDistanceEstimator.endShift(stopAt - mStartedAt); }
             catch (pushEndEx) { }
-            mAnalytics.onShiftEnded(stopAt);
+            completedOpenShift = mAnalytics.onShiftEnded(stopAt);
             mPendingPushSummaries[shifts[:shiftCount]] = finalPush;
             mOpenShiftFinalized = true;
         }
+        var finalInterval = mPhaseLapTracker.finish(stopAt - mStartedAt);
+        writeClosedPhase(finalInterval, finalPush, completedOpenShift);
         if (mSessionSummary == null) {
             mSessionSummary = mAnalytics.finish(stopAt);
             var propulsion = mDistanceEstimator.sessionSummary();
@@ -282,7 +310,6 @@ class RecordingCoordinator {
             mSessionSummary[:estimatedDistanceCm] = propulsion[:hasValidMotion] ?
                 propulsion[:totalDistanceCm] : null;
         }
-        drainReadyShiftLaps(stopAt);
         mRecorder.writeActivitySummary(mSessionSummary);
         var saved = mRecorder.stopAndSave();
         if (mRecorder.getState() == :stopped || mRecorder.getState() == :saved) {
@@ -298,21 +325,29 @@ class RecordingCoordinator {
         return saved;
     }
 
-    private function drainReadyShiftLaps(atMs) as Void {
-        var ready = mAnalytics.drainReadyShiftLaps(atMs);
-        for (var i = 0; i < ready.size(); i += 1) {
-            var item = ready[i];
-            var index = item[:index];
-            var pushSummary = mPendingPushSummaries.hasKey(index) ?
-                mPendingPushSummaries[index] : null;
-            var lap = {:index=>index,
-                :endedAtMs=>item[:endedAtMs] - mStartedAt,
-                :durationMs=>item[:durationMs],
-                :averageHeartRate=>item[:averageHeartRate],
-                :heartRateDrop30=>item[:heartRateDrop30],
-                :heartRateDrop60=>item[:heartRateDrop60]};
-            try { mRecorder.writeShiftLap(lap, pushSummary); } catch (ex) { }
+    private function writeClosedPhase(interval, pushSummary, shiftSummary) as Void {
+        if (interval == null) { return; }
+        var metrics = null;
+        if (interval[:phase] == :on_ice) {
+            var hasValidMotion = pushSummary != null &&
+                pushSummary.hasKey(:hasValidMotion) &&
+                pushSummary[:hasValidMotion] == true;
+            metrics = {
+                :averageHeartRate=>shiftSummary != null &&
+                    shiftSummary.hasKey(:averageHeartRate) ?
+                    shiftSummary[:averageHeartRate] : null,
+                :pushes=>hasValidMotion && pushSummary.hasKey(:pushes) ?
+                    pushSummary[:pushes] : null,
+                :shortPushes=>hasValidMotion && pushSummary.hasKey(:shortPushes) ?
+                    pushSummary[:shortPushes] : null,
+                :distanceCm=>hasValidMotion && pushSummary.hasKey(:distanceCm) ?
+                    pushSummary[:distanceCm] : null,
+                :coveragePercent=>hasValidMotion &&
+                    pushSummary.hasKey(:coveragePercent) ?
+                    pushSummary[:coveragePercent] : null
+            };
         }
+        try { mRecorder.writePhaseLap(interval, metrics); } catch (ex) { }
     }
 
     private function averageShiftHeartRate(includeOpenShift as Lang.Boolean) {

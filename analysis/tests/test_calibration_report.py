@@ -61,6 +61,16 @@ class CalibrationReportTests(unittest.TestCase):
         self.assertEqual(stick["valid_repetitions"], 1)
         self.assertAlmostEqual(stick["median_distance_error_m"], 2.0)
 
+    def test_twenty_metre_reference_error_uses_two_thousand_centimetres(self):
+        manifest = read_calibration_manifest(self.manifest([self.row(1, distance=2000)]))
+        result = build_calibration_report_from_report(normalized_report([
+            {"at_ms": 1000, "pushes": 10, "estimated_distance_cm": 2150,
+             "coverage_percent": 90},
+        ]), manifest)
+        trial = result["trials"][0]
+        self.assertAlmostEqual(trial["reference_distance_m"], 20.0)
+        self.assertAlmostEqual(trial["distance_error_m"], 1.5)
+
     def test_unknown_distance_is_invalid_not_zero(self):
         path = self.manifest([self.row(1, distance=2500)])
         result = build_calibration_report_from_report(
@@ -83,6 +93,14 @@ class CalibrationReportTests(unittest.TestCase):
             normalized_report(shifts), read_calibration_manifest(self.manifest(rows)))
         self.assertEqual(result["groups"]["inline/skate_only"]["profile_status"], "eligible")
         self.assertEqual(result["profile_status"], "provisional")
+
+    def test_report_identifies_factor_as_local_personal_test_only(self):
+        result = build_calibration_report_from_report(normalized_report([]), [])
+        calibration = result["personal_test_calibration"]
+        self.assertAlmostEqual(calibration["factor"], 220.0 / 292.5)
+        self.assertEqual(calibration["scope"], "local_personal_test")
+        self.assertFalse(calibration["population_coefficient"])
+        self.assertFalse(calibration["automatic_activation"])
 
     def test_both_conditions_required_for_overall_eligibility(self):
         rows = [self.row(i) for i in range(1, 6)] + [

@@ -6,7 +6,6 @@
     <string id="HrSignalStatus">PULS</string>
     <string id="PulseSourceUnknown">QUELLE UNBEKANNT</string>
     <string id="ReadyStart">START</string>
-    <string id="CalibrationAction">KALIBRIERUNG</string>
     <string id="CalibrationTitle">KALIBRIERUNG</string>
     <string id="CalibrationReady">BEREIT · UNTEN: START</string>
     <string id="CalibrationEnd">ENDE · UNTEN: WEITER</string>
@@ -57,6 +56,10 @@
     <string id="ConnectPushCadence">Anschubkadenz</string>
     <string id="ConnectShiftPushCount">Anschübe pro Shift</string>
     <string id="ConnectShiftEstimatedDistance">Shift-Distanz ≈</string>
+    <string id="ConnectPhase">Phase</string>
+    <string id="ConnectPhaseUnit"></string>
+    <string id="ConnectOnIce">On-Ice</string>
+    <string id="ConnectBench">Bench</string>
     <string id="ConnectMotionCoverage">Bewegungsabdeckung</string>
     <string id="ConnectShortPushCount">Kurze Anschübe</string>
     <string id="ConnectShiftShortPushCount">Kurze Anschübe pro Shift</string>

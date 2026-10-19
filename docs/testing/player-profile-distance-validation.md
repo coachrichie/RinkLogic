@@ -27,6 +27,24 @@ Er schreibt `watch-v2/bin/venu2plus/RinkLogic-profile-test.prg`. Ohne
 `-DistanceModel ProfileHeight` entsteht weiterhin der feste Release-Build;
 die beiden Artefakte dürfen beim Hardwaretest nicht verwechselt werden.
 
+Für den persönlichen Beta-4-Test existiert zusätzlich der isolierte Modus
+`CalibratedProfile`. Er berechnet zuerst dieselbe höhenbegrenzte Baseline und
+rundet sie half-up auf ganze Zentimeter. Erst danach wird der lokale
+persönliche Testfaktor `220/292,5` angewandt und erneut half-up gerundet. Damit
+ergeben sich bei 80/180/250 cm 89/159, 94/169 beziehungsweise 100/180 cm.
+Bei ungültiger Höhe wird exakt 125/225 cm als Baseline verwendet und erst dann
+der persönliche Faktor angewandt. Der Faktor ist weder wissenschaftlicher
+Populationskoeffizient noch automatisch aktivierte Nutzereinstellung.
+
+```powershell
+.\scripts\watch-v2-build.ps1 -Device venu2plus -DistanceModel CalibratedProfile
+```
+
+Dieser Build ergänzt ausdrücklich kein GPS, keinen Upload und kein globales
+Modell oder Training. Gewicht und BMI bleiben ohne Einfluss. Eine spätere
+Freigabe des Höhenmodells bleibt von den unten definierten, spielergruppierten
+Held-out-Gates abhängig und wird durch den persönlichen Beta-Test nicht ersetzt.
+
 Bei einer gültigen Garmin-Profilhöhe von einschließlich 80–250 cm gilt:
 
 ```text

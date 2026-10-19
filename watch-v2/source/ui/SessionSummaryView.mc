@@ -34,7 +34,7 @@ class SessionSummaryView extends WatchUi.View {
 
         if (mPage == 0) {
             drawMetric(dc, 32, Rez.Strings.SummaryDuration,
-                formatDuration(value(:durationMs)));
+                HockeyTimeFormatter.formatMinutes(value(:durationMs), 1));
             drawMetric(dc, 51, Rez.Strings.SummaryAverageHr,
                 formatMetric(value(:averageHeartRate)));
             drawMetric(dc, 70, Rez.Strings.SummaryMaximumHr,
@@ -43,14 +43,14 @@ class SessionSummaryView extends WatchUi.View {
             drawMetric(dc, 32, Rez.Strings.SummaryShiftCount,
                 formatMetric(value(:shiftCount)));
             drawMetric(dc, 51, Rez.Strings.SummaryIceTime,
-                formatDuration(value(:timeOnIceMs)));
+                HockeyTimeFormatter.formatMinutes(value(:timeOnIceMs), 1));
             drawMetric(dc, 70, Rez.Strings.SummaryBenchTime,
-                formatDuration(value(:benchTimeMs)));
+                HockeyTimeFormatter.formatMinutes(value(:benchTimeMs), 1));
         } else {
             drawMetric(dc, 32, Rez.Strings.SummaryAverageShift,
-                formatDuration(value(:averageShiftMs)));
+                HockeyTimeFormatter.formatMinutes(value(:averageShiftMs), 2));
             drawMetric(dc, 51, Rez.Strings.SummaryLongestShift,
-                formatDuration(value(:longestShiftMs)));
+                HockeyTimeFormatter.formatMinutes(value(:longestShiftMs), 2));
             drawMetric(dc, 70, Rez.Strings.SummaryAverageShiftHr,
                 formatMetric(value(:averageShiftHeartRate)));
         }
@@ -67,19 +67,6 @@ class SessionSummaryView extends WatchUi.View {
 
     private function formatMetric(metric) as Lang.String {
         return metric == null ? "--" : metric.toString();
-    }
-
-    private function formatDuration(milliseconds) as Lang.String {
-        if (milliseconds == null || milliseconds < 0) { return "--"; }
-        var totalSeconds = milliseconds / 1000;
-        var hours = totalSeconds / 3600;
-        var minutes = (totalSeconds % 3600) / 60;
-        var seconds = totalSeconds % 60;
-        if (hours > 0) {
-            return hours.format("%02d") + ":" + minutes.format("%02d") +
-                ":" + seconds.format("%02d");
-        }
-        return minutes.format("%02d") + ":" + seconds.format("%02d");
     }
 
     private function drawMetric(dc as Graphics.Dc, yPercent as Lang.Number,

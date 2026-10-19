@@ -54,9 +54,9 @@ class SessionAnalytics {
             :heartRateCount=>0, :lastHeartRate=>null, :lastHeartRateAt=>null};
     }
 
-    function onShiftEnded(atMs) as Void {
+    function onShiftEnded(atMs) {
         if (mSnapshot != null || mCurrentShift == null ||
-            atMs <= mCurrentShift[:startedAtMs]) { return; }
+            atMs <= mCurrentShift[:startedAtMs]) { return null; }
         flushBucket();
         var duration = atMs - mCurrentShift[:startedAtMs];
         var fullSeconds = duration / 1000;
@@ -73,14 +73,16 @@ class SessionAnalytics {
             endHeartRate = mCurrentShift[:lastHeartRate];
             endHeartRateAt = mCurrentShift[:lastHeartRateAt];
         }
-        mShifts.add({:index=>mShifts.size() + 1,
+        var completed = {:index=>mShifts.size() + 1,
             :startedAtMs=>mCurrentShift[:startedAtMs], :endedAtMs=>atMs,
             :durationMs=>duration, :averageHeartRate=>average,
             :endHeartRate=>endHeartRate, :endHeartRateAt=>endHeartRateAt,
             :heartRateDrop30=>null, :heartRateDrop60=>null,
             :recoveryDistance30=>null, :recoveryDistance60=>null,
-            :recoveryAborted=>false, :released=>false});
+            :recoveryAborted=>false, :released=>false};
+        mShifts.add(completed);
         mCurrentShift = null;
+        return completed;
     }
 
     function finish(stoppedAtMs) {

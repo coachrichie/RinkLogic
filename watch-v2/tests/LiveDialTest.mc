@@ -140,8 +140,9 @@ function dialSeparatesPairedMetrics(logger as Test.Logger) as Lang.Boolean {
 
 (:test)
 function dialDistinguishesBeforeFirstShiftFromBench(logger as Test.Logger) as Lang.Boolean {
+    var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
-        new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
+        new SessionRecorder(new RecordingFactoryFake()), clock);
     if (!coordinator.start()) { return false; }
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
@@ -151,9 +152,11 @@ function dialDistinguishesBeforeFirstShiftFromBench(logger as Test.Logger) as La
             beforeFirstShift = true;
         }
     }
-    if (!beforeFirstShift || !coordinator.toggleShift() || !coordinator.toggleShift()) {
+    if (!beforeFirstShift || !coordinator.toggleShift()) {
         return false;
     }
+    clock.now += 1;
+    if (!coordinator.toggleShift()) { return false; }
     dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
     for (var j = 0; j < dc.texts.size(); j += 1) {
@@ -265,7 +268,7 @@ function dialKeepsElapsedClearOfSaveHint(logger as Test.Logger) as Lang.Boolean 
         if ((dc.textJustifications[i] & Graphics.TEXT_JUSTIFY_VCENTER) != 0) {
             top -= height / 2;
         }
-        if (dc.texts[i].equals("00:00") && dc.textYs[i] >= dc.getHeight() * 70 / 100) {
+        if (dc.texts[i].equals("0.0 min") && dc.textYs[i] >= dc.getHeight() * 70 / 100) {
             elapsedBottom = top + height;
         }
         if (dc.texts[i].equals("UPPER: SAVE")) { hintTop = top; }

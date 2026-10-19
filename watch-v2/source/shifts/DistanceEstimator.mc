@@ -4,6 +4,7 @@ using Toybox.Math;
 class DistanceEstimator {
     private var mDistanceModelMode = :fixed;
     private var mDistanceModelSource = :default;
+    private var mDistanceCalibrationSource = :none;
     private var mStartDistanceCm = 125;
     private var mRhythmDistanceCm = 225;
     private var mDistanceModelLocked = false;
@@ -38,33 +39,50 @@ class DistanceEstimator {
 
     function initialize() { }
 
-    function configure(modelMode, heightCm) as Void {
+    function configure(modelMode, heightCm, personalFactor,
+        calibrationSource) as Void {
         if (mDistanceModelLocked) { return; }
         mDistanceModelLocked = true;
-        if (modelMode != :profile_height) { return; }
-        try {
-            if (heightCm == null || heightCm != heightCm ||
-                heightCm < 80 || heightCm > 250) { return; }
-            var factor = 1.0 + ((heightCm - 180) / 360.0);
-            var factorNumerator = heightCm + 180;
-            var factorDenominator = 360.0;
-            if (factor < 0.94) {
-                factor = 0.94;
-                factorNumerator = 47;
-                factorDenominator = 50.0;
-            }
-            if (factor > 1.06) {
-                factor = 1.06;
-                factorNumerator = 53;
-                factorDenominator = 50.0;
-            }
-            mStartDistanceCm = Math.floor(
-                125.0 * factorNumerator / factorDenominator + 0.5).toNumber();
-            mRhythmDistanceCm = Math.floor(
-                225.0 * factorNumerator / factorDenominator + 0.5).toNumber();
-            mDistanceModelMode = :profile_height;
-            mDistanceModelSource = :profile_height;
-        } catch (ex) { }
+        var profileMode = modelMode == :profile_height ||
+            modelMode == :calibrated_profile_test;
+        if (profileMode) {
+            try {
+                if (heightCm != null && heightCm == heightCm &&
+                    heightCm >= 80 && heightCm <= 250) {
+                    var factor = 1.0 + ((heightCm - 180) / 360.0);
+                    var factorNumerator = heightCm + 180;
+                    var factorDenominator = 360.0;
+                    if (factor < 0.94) {
+                        factorNumerator = 47;
+                        factorDenominator = 50.0;
+                    }
+                    if (factor > 1.06) {
+                        factorNumerator = 53;
+                        factorDenominator = 50.0;
+                    }
+                    mStartDistanceCm = Math.floor(
+                        125.0 * factorNumerator / factorDenominator + 0.5).toNumber();
+                    mRhythmDistanceCm = Math.floor(
+                        225.0 * factorNumerator / factorDenominator + 0.5).toNumber();
+                    mDistanceModelSource = :profile_height;
+                }
+            } catch (profileEx) { }
+        }
+        if (modelMode == :calibrated_profile_test) {
+            try {
+                if (personalFactor != null && personalFactor == personalFactor &&
+                    personalFactor > 0 && calibrationSource == :local_known_distance) {
+                    mStartDistanceCm = Math.floor(
+                        mStartDistanceCm * personalFactor + 0.5).toNumber();
+                    mRhythmDistanceCm = Math.floor(
+                        mRhythmDistanceCm * personalFactor + 0.5).toNumber();
+                    mDistanceCalibrationSource = :local_known_distance;
+                }
+            } catch (calibrationEx) { }
+        }
+        if (profileMode) {
+            mDistanceModelMode = modelMode;
+        }
     }
 
     function getModelSource() as Lang.Symbol {
@@ -173,6 +191,7 @@ class DistanceEstimator {
         var result = {:pushes=>mShiftPushes,
             :distanceCm=>mShiftDistanceCm,
             :distanceModelSource=>mDistanceModelSource,
+            :distanceCalibrationSource=>mDistanceCalibrationSource,
             :shortPushes=>mShiftShortPushes,
             :coveragePercent=>mLastShiftCoverage,
             :partial=>mLastShiftPartial,
@@ -199,6 +218,7 @@ class DistanceEstimator {
             :totalDistanceCm=>mTotalDistanceCm,
             :rawCandidateCountTotal=>mRawCandidateCountTotal,
             :distanceModelSource=>mDistanceModelSource,
+            :distanceCalibrationSource=>mDistanceCalibrationSource,
             :cadencePerMin=>cadence(atMs),
             :shortPushesTotal=>mShortPushesTotal,
             :coveragePercent=>coverage, :partial=>partial,
@@ -220,6 +240,7 @@ class DistanceEstimator {
             :totalDistanceCm=>mTotalDistanceCm,
             :rawCandidateCountTotal=>mRawCandidateCountTotal,
             :distanceModelSource=>mDistanceModelSource,
+            :distanceCalibrationSource=>mDistanceCalibrationSource,
             :shortPushesTotal=>mShortPushesTotal,
             :coveragePercent=>percentage(valid, ice),
             :partial=>ice > 0 && valid < ice,
