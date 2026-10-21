@@ -17,8 +17,7 @@ class ShadowFitWriter {
         if (mAllocated) { return true; }
         if (mSession == null || !(mSession has :createField)) { return false; }
         try {
-            if (!addStringField(112, "phase", FitContributor.MESG_TYPE_LAP, 8) ||
-                !addField(44, "motion_mg", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_RECORD, "mg") ||
+            if (!addField(44, "motion_mg", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_RECORD, "mg") ||
                 !addField(45, "rotation_dps", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_RECORD, "deg_s") ||
                 !addField(51, "manual_boundary_ms", FitContributor.DATA_TYPE_UINT32, FitContributor.MESG_TYPE_LAP, "ms") ||
                 !addField(52, "manual_boundary_state", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_LAP, "enum") ||
@@ -35,7 +34,7 @@ class ShadowFitWriter {
                 !addField(86, "shift_density_per_hour", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_SESSION, "shifts_per_hour") ||
                 !addField(95, "shift_average_heart_rate", FitContributor.DATA_TYPE_UINT8, FitContributor.MESG_TYPE_LAP, "bpm") ||
                 !addField(96, "detected_push_count", FitContributor.DATA_TYPE_UINT16, FitContributor.MESG_TYPE_SESSION, "pushes") ||
-                !addNativeField(97, "estimated_distance_m", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_SESSION, "m", 9) ||
+                !addField(97, "estimated_distance_m", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_SESSION, "m") ||
                 !addField(98, "average_shift_minutes", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_SESSION, "min") ||
                 !addField(99, "shift_duration_minutes", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_LAP, "min") ||
                 !addField(100, "raw_push_candidate_count_total", FitContributor.DATA_TYPE_UINT32, FitContributor.MESG_TYPE_RECORD, "candidates") ||
@@ -49,8 +48,10 @@ class ShadowFitWriter {
                 !addField(108, "time_above_90_percent_hrmax_minutes", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_SESSION, "min") ||
                 !addField(109, "median_shift_minutes", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_SESSION, "min") ||
                 !addField(110, "estimated_distance_m_total", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_RECORD, "m") ||
-                !addField(111, "shift_estimated_distance_m", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_LAP, "m")) { return false; }
-            mFields[73].setData(10);
+                !addField(111, "shift_estimated_distance_m", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_LAP, "m") ||
+                !addField(113, "on_ice_phase_minutes", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_LAP, "min") ||
+                !addField(114, "bench_phase_minutes", FitContributor.DATA_TYPE_FLOAT, FitContributor.MESG_TYPE_LAP, "min")) { return false; }
+            mFields[73].setData(11);
             clearLapMetrics();
             mAllocated = true;
             return true;
@@ -59,23 +60,6 @@ class ShadowFitWriter {
 
     private function addField(id, name, type, messageType, unit) as Lang.Boolean {
         var field = mSession.createField(name, id, type, {:mesgType=>messageType, :units=>unit});
-        if (field == null) { return false; }
-        mFields[id] = field;
-        return true;
-    }
-
-    private function addStringField(id, name, messageType, count) as Lang.Boolean {
-        var field = mSession.createField(name, id, FitContributor.DATA_TYPE_STRING,
-            {:mesgType=>messageType, :count=>count});
-        if (field == null) { return false; }
-        mFields[id] = field;
-        return true;
-    }
-
-    private function addNativeField(id, name, type, messageType, unit,
-                                    nativeNum) as Lang.Boolean {
-        var field = mSession.createField(name, id, type,
-            {:mesgType=>messageType, :units=>unit, :nativeNum=>nativeNum});
         if (field == null) { return false; }
         mFields[id] = field;
         return true;
@@ -102,10 +86,18 @@ class ShadowFitWriter {
     }
 
     function writeManualBoundary(elapsedMs, state, pushSummary) as Lang.Boolean {
-        return writeLap(elapsedMs, state, pushSummary, null, null, null);
+        return writeLap(elapsedMs, state, pushSummary, null, null, true);
     }
 
     function writePhaseLap(interval, metrics) as Lang.Boolean {
+        return writePhase(interval, metrics, true);
+    }
+
+    function stageFinalPhase(interval, metrics) as Lang.Boolean {
+        return writePhase(interval, metrics, false);
+    }
+
+    private function writePhase(interval, metrics, closeLap) as Lang.Boolean {
         if (interval == null || !interval.hasKey(:phase) ||
             !interval.hasKey(:endedAtMs) || !interval.hasKey(:durationMs) ||
             (interval[:phase] != :on_ice && interval[:phase] != :bench)) {
@@ -113,10 +105,9 @@ class ShadowFitWriter {
         }
         return writeLap(interval[:endedAtMs], interval[:phase],
             interval[:phase] == :on_ice ? metrics : null,
-            interval[:phase] == :on_ice ? "On-Ice" : "Bench",
             interval[:phase] == :on_ice && metrics != null &&
                 metrics.hasKey(:averageHeartRate) ? metrics[:averageHeartRate] : null,
-            interval[:durationMs]);
+            interval[:durationMs], closeLap);
     }
 
     // Transitional path for the recovery-driven coordinator until Task 5.
@@ -141,8 +132,8 @@ class ShadowFitWriter {
             :durationMs=>summary.hasKey(:durationMs) ? summary[:durationMs] : null}, metrics);
     }
 
-    private function writeLap(elapsedMs, state, metrics, phase,
-                              averageHeartRate, durationMs) as Lang.Boolean {
+    private function writeLap(elapsedMs, state, metrics,
+                              averageHeartRate, durationMs, closeLap) as Lang.Boolean {
         if (!mAllocated || elapsedMs == null || elapsedMs < 0 || elapsedMs > 2147483647) { return false; }
         try {
             mFields[51].setData(elapsedMs);
@@ -156,7 +147,12 @@ class ShadowFitWriter {
             }
             mFields[95].setData(uint8OrMissing(averageHeartRate));
             mFields[99].setData(millisecondsMinutesOrMissing(durationMs));
-            if (phase != null) { mFields[112].setData(phase); }
+            if (state == :on_ice) {
+                mFields[113].setData(millisecondsMinutesOrMissing(durationMs));
+            } else if (state == :bench) {
+                mFields[114].setData(millisecondsMinutesOrMissing(durationMs));
+            }
+            if (!closeLap) { return true; }
             var added = mSession.addLap();
             mFields[51].setData(0); mFields[52].setData(0); clearLapMetrics();
             return added;
@@ -257,7 +253,8 @@ class ShadowFitWriter {
         mFields[71].setData(65535); mFields[72].setData(255);
         mFields[95].setData(255);
         mFields[99].setData(Math.sqrt(-1.0).toFloat());
-        mFields[112].setData("");
+        mFields[113].setData(Math.sqrt(-1.0).toFloat());
+        mFields[114].setData(Math.sqrt(-1.0).toFloat());
     }
     private function stateCode(state) as Lang.Number {
         if (state == :on_ice) { return 1; }

@@ -7,6 +7,47 @@ from analysis.shift_pilot import load_pilot_fit, normalize_messages, score_bound
 
 
 class PilotReportTests(unittest.TestCase):
+    def test_schema_eleven_reads_exclusive_phase_minutes_and_preserves_schema_ten(self):
+        report = normalize_messages([
+            {"type": "session", "total_elapsed_time": 150,
+             "estimated_distance_m": 15.0},
+            {"type": "record", "summary_schema_version": 11},
+            {"type": "lap", "manual_boundary_ms": 30000,
+             "manual_boundary_state": 1,
+             "on_ice_phase_minutes": 0.5,
+             "shift_estimated_distance_m": 7.0},
+            {"type": "lap", "manual_boundary_ms": 90000,
+             "manual_boundary_state": 2,
+             "bench_phase_minutes": 1.0},
+            {"type": "lap", "manual_boundary_ms": 150000,
+             "manual_boundary_state": 1,
+             "on_ice_phase_minutes": 1.0,
+             "shift_estimated_distance_m": 8.0},
+        ])
+        self.assertEqual(report["schema_version"], 11)
+        self.assertEqual(report["phase_intervals"], [
+            {"phase": "On-Ice", "duration_minutes": 0.5,
+             "estimated_distance_m": 7.0},
+            {"phase": "Bench", "duration_minutes": 1.0,
+             "estimated_distance_m": None},
+            {"phase": "On-Ice", "duration_minutes": 1.0,
+             "estimated_distance_m": 8.0},
+        ])
+        self.assertEqual(report["manual_boundaries"], [
+            {"at_ms": 0, "state": "ice"},
+            {"at_ms": 30000, "state": "bench"},
+            {"at_ms": 90000, "state": "ice"},
+        ])
+        self.assertEqual(len(report["push_metrics"]["manual_shifts"]), 2)
+        legacy = normalize_messages([
+            {"type": "session"},
+            {"type": "record", "summary_schema_version": 10},
+            {"type": "lap", "manual_boundary_ms": 30000,
+             "manual_boundary_state": 1, "phase": "On-Ice",
+             "shift_duration_minutes": 0.5},
+        ])
+        self.assertEqual(legacy["phase_intervals"][0]["phase"], "On-Ice")
+
     def test_schema_ten_reads_record_lap_and_session_metres(self):
         report = normalize_messages([
             {"type": "session", "total_elapsed_time": 90,

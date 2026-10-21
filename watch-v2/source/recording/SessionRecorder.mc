@@ -107,6 +107,17 @@ class SessionRecorder {
         return false;
     }
 
+    function stageFinalPhase(interval, metrics) as Lang.Boolean {
+        if (mState != :recording || mShadowWriter == null || interval == null) {
+            return false;
+        }
+        try {
+            if (mShadowWriter.stageFinalPhase(interval, metrics)) { return true; }
+        } catch (ex) { }
+        mShadowWriter = null;
+        return false;
+    }
+
     function writeAutoBoundary(elapsedMs, state) as Lang.Boolean {
         if (mState != :recording || mShadowWriter == null) { return false; }
         try {

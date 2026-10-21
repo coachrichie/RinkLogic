@@ -81,6 +81,8 @@ PILOT_FIELD_NAMES = {
     110: "estimated_distance_m_total",
     111: "shift_estimated_distance_m",
     112: "phase",
+    113: "on_ice_phase_minutes",
+    114: "bench_phase_minutes",
 }
 STATE_NAMES = {1: "ice", 2: "bench"}
 
@@ -132,6 +134,21 @@ def _finite_nonnegative(value, divisor=1.0):
     return number / divisor
 
 
+def _lap_phase_minutes(lap, schema_version):
+    if schema_version >= 11:
+        ice = _finite_nonnegative(lap.get("on_ice_phase_minutes"))
+        bench = _finite_nonnegative(lap.get("bench_phase_minutes"))
+        if ice is not None and bench is None:
+            return "On-Ice", ice
+        if bench is not None and ice is None:
+            return "Bench", bench
+        return None, None
+    if schema_version == 10:
+        return lap.get("phase"), _finite_nonnegative(
+            lap.get("shift_duration_minutes"))
+    return None, None
+
+
 def _time_metrics(session, messages, schema_version):
     legacy = {
         "time_on_ice": "time_on_ice",
@@ -170,9 +187,12 @@ def _time_metrics(session, messages, schema_version):
     lap_minutes = [
         value for message in messages
         if message.get("type") == "lap"
-        and ((schema_version >= 10 and message.get("phase") == "On-Ice")
+        and ((schema_version >= 10 and
+              _lap_phase_minutes(message, schema_version)[0] == "On-Ice")
              or (schema_version < 10 and message.get("manual_boundary_state") == 2))
-        for value in [_finite_nonnegative(message.get("shift_duration_minutes"))]
+        for value in [(_lap_phase_minutes(message, schema_version)[1]
+                       if schema_version >= 10 else
+                       _finite_nonnegative(message.get("shift_duration_minutes")))]
         if value is not None
     ]
     if lap_minutes:
@@ -209,7 +229,7 @@ def _push_metrics(session, records, messages, schema_version):
         if lap.get("type") != "lap":
             continue
         if schema_version >= 10:
-            if lap.get("phase") != "On-Ice":
+            if _lap_phase_minutes(lap, schema_version)[0] != "On-Ice":
                 continue
         elif lap.get("manual_boundary_state") != 2:
             continue
@@ -217,7 +237,10 @@ def _push_metrics(session, records, messages, schema_version):
             continue
         duration_seconds = None
         try:
-            duration_minutes = float(lap.get("shift_duration_minutes"))
+            raw_minutes = (_lap_phase_minutes(lap, schema_version)[1]
+                           if schema_version >= 10 else
+                           lap.get("shift_duration_minutes"))
+            duration_minutes = float(raw_minutes)
             if math.isfinite(duration_minutes) and duration_minutes >= 0:
                 duration_seconds = duration_minutes * 60
         except (TypeError, ValueError):
@@ -297,7 +320,7 @@ def _phase_intervals(messages, schema_version):
         return []
     intervals = []
     for lap in messages:
-        phase = lap.get("phase")
+        phase, duration = _lap_phase_minutes(lap, schema_version)
         if lap.get("type") != "lap" or phase not in ("On-Ice", "Bench"):
             continue
         distance_m = None
@@ -306,28 +329,27 @@ def _phase_intervals(messages, schema_version):
                 lap.get("shift_estimated_distance_m"))
         intervals.append({
             "phase": phase,
-            "duration_minutes": _finite_nonnegative(
-                lap.get("shift_duration_minutes")),
+            "duration_minutes": duration,
             "estimated_distance_m": distance_m,
         })
     return intervals
 
 
-def _phase_entry_boundaries(messages):
-    """Use Schema 10 phase starts; its numeric state names the closed phase."""
+def _phase_entry_boundaries(messages, schema_version):
+    """Use phase starts; the numeric state names the closed phase."""
     boundaries = []
     for lap in messages:
-        if lap.get("type") != "lap" or lap.get("phase") not in ("On-Ice", "Bench"):
+        phase, duration_minutes = _lap_phase_minutes(lap, schema_version)
+        if lap.get("type") != "lap" or phase not in ("On-Ice", "Bench"):
             continue
         end_ms = lap.get("manual_boundary_ms")
-        duration_minutes = _finite_nonnegative(lap.get("shift_duration_minutes"))
         if end_ms is None or duration_minutes is None:
             continue
         start_ms = round(int(end_ms) - duration_minutes * 60000)
         if start_ms < 0:
             continue
         boundaries.append({"at_ms": start_ms,
-                           "state": "ice" if lap["phase"] == "On-Ice" else "bench"})
+                           "state": "ice" if phase == "On-Ice" else "bench"})
     return sorted(boundaries, key=lambda item: item["at_ms"])
 
 
@@ -396,12 +418,12 @@ def normalize_messages(messages):
     schema_version = session.get("shadow_schema_version") if session is not None else None
     if session is None:
         summary_record = next((m for m in messages if m.get("type") == "record"
-                               and m.get("summary_schema_version") in (7, 8, 9, 10)), None)
+                               and m.get("summary_schema_version") in (7, 8, 9, 10, 11)), None)
         if summary_record is not None and sessions:
             session = sessions[0]
             schema_version = summary_record["summary_schema_version"]
     if session is None:
-        raise ValueError("This activity has no ShiftSense schema 4 through 10")
+        raise ValueError("This activity has no ShiftSense schema 4 through 11")
     start = session.get("start_time")
     if schema_version <= 6:
         records = [m for m in messages if m.get("type") == "record"
@@ -409,7 +431,7 @@ def normalize_messages(messages):
     else:
         records = [m for m in messages if m.get("type") == "record"]
     if schema_version >= 10:
-        boundaries = _phase_entry_boundaries(messages)
+        boundaries = _phase_entry_boundaries(messages, schema_version)
     else:
         boundaries = sorted(
             ({"at_ms": int(m["manual_boundary_ms"]),
@@ -503,7 +525,7 @@ def normalize_messages(messages):
 
 
 def load_pilot_fit(path):
-    """CRC-check one user-owned FIT file and decode schema 4 through 10."""
+    """CRC-check one user-owned FIT file and decode schema 4 through 11."""
     import fitdecode
     from fitdecode.types import DevFieldDefinition
 
@@ -546,7 +568,7 @@ def _read_reference_csv(path):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("fit", nargs="+", type=Path, help="local schema-4 through schema-10 FIT files")
+    parser.add_argument("fit", nargs="+", type=Path, help="local schema-4 through schema-11 FIT files")
     parser.add_argument("--reference", action="append", type=Path,
                         help="optional elapsed_ms,state CSV; repeat per FIT file")
     parser.add_argument("--output", type=Path, help="write local JSON report")

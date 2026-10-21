@@ -301,7 +301,7 @@ class RecordingCoordinator {
             mOpenShiftFinalized = true;
         }
         var finalInterval = mPhaseLapTracker.finish(stopAt - mStartedAt);
-        writeClosedPhase(finalInterval, finalPush, completedOpenShift);
+        writePhase(finalInterval, finalPush, completedOpenShift, false);
         if (mSessionSummary == null) {
             mSessionSummary = mAnalytics.finish(stopAt);
             var propulsion = mDistanceEstimator.sessionSummary();
@@ -326,6 +326,11 @@ class RecordingCoordinator {
     }
 
     private function writeClosedPhase(interval, pushSummary, shiftSummary) as Void {
+        writePhase(interval, pushSummary, shiftSummary, true);
+    }
+
+    private function writePhase(interval, pushSummary, shiftSummary,
+                                closeLap) as Void {
         if (interval == null) { return; }
         var metrics = null;
         if (interval[:phase] == :on_ice) {
@@ -347,7 +352,10 @@ class RecordingCoordinator {
                     pushSummary[:coveragePercent] : null
             };
         }
-        try { mRecorder.writePhaseLap(interval, metrics); } catch (ex) { }
+        try {
+            if (closeLap) { mRecorder.writePhaseLap(interval, metrics); }
+            else { mRecorder.stageFinalPhase(interval, metrics); }
+        } catch (ex) { }
     }
 
     private function averageShiftHeartRate(includeOpenShift as Lang.Boolean) {

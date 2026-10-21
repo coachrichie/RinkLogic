@@ -328,3 +328,23 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
   Rebuild reproduzierte exakt den dokumentierten Fixed-Hash. Das Paket wurde
   weder auf die Uhr installiert noch in das Garmin Developer Center
   hochgeladen.
+
+## 2026-10-21 – Schema-11-Korrektur der Connect-Phasenrunden
+
+- Der Hardware-FIT aus dem Schema-10-Test enthält 15 On-Ice- und 15
+  Bench-Phasen plus eine leere native Schlussrunde. Garmin Connect mobile
+  zeigt den String aus Feld 112 nicht als Rundenbeschriftung an.
+- Schema 11 verwendet deshalb die lapbezogenen Float-Minutenfelder 113
+  (`On-Ice`) und 114 (`Bench`); genau eines ist pro Phasenrunde gültig.
+  Frühere Phasen schließen weiter sofort mit `addLap()`. Die letzte offene
+  Phase wird vor `Session.stop()` in den Entwicklerfeldern bereitgestellt,
+  sodass die native Schlussrunde sie aufnimmt. Bei 15 Schichten entstehen
+  29 explizite und eine native Phasenrunde. Ohne ersten Shift wird keine
+  Phase bereitgestellt; ein Speicher-Retry erzeugt keine weitere Runde.
+- Sessionfeld 97 bleibt geschätzte Entwicklerdistanz in Metern. Die bisherige
+  `nativeNum=9`-Zuordnung befüllte das native `total_distance` auf der Uhr
+  nicht und ist entfernt. GPS wird nicht aktiviert. Der lokale Parser liest
+  Schema 4–11 einschließlich des historischen Schema-10-Stringfelds 112.
+- Die sichtbaren Connect-Labels und die native Schlussrunde müssen mit einem
+  neuen physischen Uhrlauf und synchronisiertem Garmin Connect geprüft werden.
+  Es wurde keine Beta installiert oder veröffentlicht.
