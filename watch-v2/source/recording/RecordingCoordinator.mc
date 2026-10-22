@@ -34,6 +34,7 @@ class RecordingCoordinator {
     private var mPendingPushSummaries;
     private var mPhaseLapTracker;
     private var mLastManualToggleAt = null;
+    private var mSessionCalibrationFactor = null;
 
     function initialize(recorder, clock) {
         mRecorder = recorder;
@@ -65,12 +66,26 @@ class RecordingCoordinator {
 
     function start() as Lang.Boolean {
         mCalibrationOptions = null;
+        mSessionCalibrationFactor = null;
         return startInternal();
     }
 
     function startCalibration(options) as Lang.Boolean {
         mCalibrationOptions = options;
+        mSessionCalibrationFactor = null;
         return startInternal();
+    }
+
+    function setSessionCalibrationFactor(factor) as Lang.Boolean {
+        if (mCalibrationOptions == null || mStartedAt == null ||
+            mStoppedAt != null || mSessionSummary != null) { return false; }
+        try {
+            if (factor == null || factor != factor || factor < 0.50 || factor > 1.50) {
+                return false;
+            }
+            mSessionCalibrationFactor = factor.toFloat();
+            return true;
+        } catch (ex) { return false; }
     }
 
     private function startInternal() as Lang.Boolean {
@@ -91,6 +106,17 @@ class RecordingCoordinator {
         } catch (distanceCalibrationEx) {
             personalFactor = 1.0;
             calibrationSource = :none;
+        }
+        if (mCalibrationOptions != null &&
+            mDistanceModelConfig instanceof StoredDistanceModelConfig) {
+            mode = mDistanceModelConfig.baselineMode();
+            personalFactor = 1.0;
+            calibrationSource = :none;
+        } else if (mCalibrationOptions == null && mode == :calibrated_profile_test &&
+            calibrationSource == :local_known_distance &&
+            personalFactor != null && personalFactor == personalFactor &&
+            personalFactor >= 0.50 && personalFactor <= 1.50) {
+            mSessionCalibrationFactor = personalFactor.toFloat();
         }
         try {
             mDistanceEstimator.configure(mode, heightCm, personalFactor,
@@ -309,6 +335,10 @@ class RecordingCoordinator {
                 propulsion[:totalPushes] : null;
             mSessionSummary[:estimatedDistanceCm] = propulsion[:hasValidMotion] ?
                 propulsion[:totalDistanceCm] : null;
+            if (mSessionCalibrationFactor != null) {
+                mSessionSummary[:personalCalibrationFactor] =
+                    mSessionCalibrationFactor;
+            }
         }
         mRecorder.writeActivitySummary(mSessionSummary);
         var saved = mRecorder.stopAndSave();

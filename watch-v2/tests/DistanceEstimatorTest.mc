@@ -17,6 +17,62 @@ function pushAt(atMs, startsBurst) as Lang.Dictionary {
     return {:atMs=>atMs, :startsBurst=>startsBurst};
 }
 
+class StoredProfileStoreFake {
+    var profile = null;
+    var throwOnLoad = false;
+    function loadActive() {
+        if (throwOnLoad) { throw new Lang.Exception(); }
+        return profile;
+    }
+}
+
+(:test)
+function storedDistanceConfigFallsBackToHeightBaselineWithoutProfile(logger as Test.Logger) as Lang.Boolean {
+    var wrapper = new StoredDistanceModelConfig(new DistanceModelConfigFake(),
+        new StoredProfileStoreFake());
+    return wrapper.mode() == :profile_height &&
+        wrapper.personalCalibrationFactor() == 1.0 &&
+        wrapper.calibrationSource() == :none && wrapper.activeProfile() == null;
+}
+
+(:test)
+function storedDistanceConfigUsesValidLocalProfile(logger as Test.Logger) as Lang.Boolean {
+    var store = new StoredProfileStoreFake();
+    store.profile = {:schemaVersion=>1, :sport=>:inline, :factor=>0.875,
+        :source=>:local_known_distance, :referenceDistanceCm=>2500,
+        :conditionMedians=>{:skate_only=>0.9, :puck_stickhandling=>0.85}};
+    var wrapper = new StoredDistanceModelConfig(new DistanceModelConfigFake(), store);
+    return wrapper.mode() == :calibrated_profile_test &&
+        wrapper.personalCalibrationFactor() == 0.875 &&
+        wrapper.calibrationSource() == :local_known_distance &&
+        wrapper.activeProfile()[:sport] == :inline;
+}
+
+(:test)
+function storedDistanceConfigFailsClosedOnCorruptStorage(logger as Test.Logger) as Lang.Boolean {
+    var store = new StoredProfileStoreFake();
+    store.throwOnLoad = true;
+    var wrapper = new StoredDistanceModelConfig(new DistanceModelConfigFake(), store);
+    return wrapper.mode() == :profile_height &&
+        wrapper.personalCalibrationFactor() == 1.0 &&
+        wrapper.calibrationSource() == :none;
+}
+
+(:test)
+function storedDistanceConfigAppliesHeightThenFactorWithExistingRounding(logger as Test.Logger) as Lang.Boolean {
+    var store = new StoredProfileStoreFake();
+    store.profile = {:schemaVersion=>1, :sport=>:ice, :factor=>0.8,
+        :source=>:local_known_distance, :referenceDistanceCm=>2500,
+        :conditionMedians=>{:skate_only=>0.8, :puck_stickhandling=>0.8}};
+    var wrapper = new StoredDistanceModelConfig(new DistanceModelConfigFake(), store);
+    var estimate = new DistanceEstimator();
+    estimate.configure(wrapper.mode(), 250, wrapper.personalCalibrationFactor(),
+        wrapper.calibrationSource());
+    estimate.beginShift(0);
+    estimate.observe(distanceResult(100, [pushAt(100, true)], 0, true, false));
+    return estimate.endShift(200)[:distanceCm] == 106;
+}
+
 function runSixPushDistanceBurst(modelMode, heightCm) as Lang.Dictionary {
     var estimate = new DistanceEstimator();
     estimate.configure(modelMode, heightCm, 1.0, :none);

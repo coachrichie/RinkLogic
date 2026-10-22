@@ -385,6 +385,65 @@ function coordinatorCalibrationStartsASeparateRecording(logger as Test.Logger) a
 }
 
 (:test)
+function calibrationRecordingBypassesStoredPersonalFactor(logger as Test.Logger) as Lang.Boolean {
+    var store = new StoredProfileStoreFake();
+    store.profile = {:schemaVersion=>1, :sport=>:ice, :factor=>0.8,
+        :source=>:local_known_distance, :referenceDistanceCm=>2500,
+        :conditionMedians=>{:skate_only=>0.8, :puck_stickhandling=>0.8}};
+    var coordinator = new RecordingCoordinator(
+        new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
+    var estimator = new DistanceEstimatorConfigSpy();
+    coordinator.setDistanceEstimator(estimator);
+    coordinator.setDistanceModelConfig(new StoredDistanceModelConfig(
+        new DistanceModelConfigFake(), store));
+    if (!coordinator.startCalibration({:sport=>:ice, :referenceDistanceCm=>2500})) {
+        return false;
+    }
+    return estimator.configuredMode == :profile_height &&
+        estimator.configuredPersonalFactor == 1.0 &&
+        estimator.configuredCalibrationSource == :none;
+}
+
+(:test)
+function normalRecordingFreezesStoredFactorInSummary(logger as Test.Logger) as Lang.Boolean {
+    var store = new StoredProfileStoreFake();
+    store.profile = {:schemaVersion=>1, :sport=>:ice, :factor=>0.875,
+        :source=>:local_known_distance, :referenceDistanceCm=>2500,
+        :conditionMedians=>{:skate_only=>0.875, :puck_stickhandling=>0.875}};
+    var coordinator = new RecordingCoordinator(
+        new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
+    coordinator.setDistanceModelConfig(new StoredDistanceModelConfig(
+        new DistanceModelConfigFake(), store));
+    if (!coordinator.start()) { return false; }
+    store.profile[:factor] = 1.25;
+    if (!coordinator.stopAndSave()) { return false; }
+    return coordinator.getSessionSummary()[:personalCalibrationFactor] == 0.875;
+}
+
+(:test)
+function calibrationSessionAcceptsOnlyValidExplicitFactor(logger as Test.Logger) as Lang.Boolean {
+    var coordinator = new RecordingCoordinator(
+        new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
+    if (coordinator.setSessionCalibrationFactor(1.0) ||
+        !coordinator.startCalibration({:sport=>:inline, :referenceDistanceCm=>2500}) ||
+        coordinator.setSessionCalibrationFactor(0.49) ||
+        coordinator.setSessionCalibrationFactor(1.51) ||
+        !coordinator.setSessionCalibrationFactor(1.125) ||
+        !coordinator.stopAndSave()) { return false; }
+    return coordinator.getSessionSummary()[:personalCalibrationFactor] == 1.125;
+}
+
+(:test)
+function normalSessionRejectsExplicitCalibrationFactor(logger as Test.Logger) as Lang.Boolean {
+    var coordinator = new RecordingCoordinator(
+        new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
+    return coordinator.setDistanceModelConfig(new DistanceModelConfigFake()) &&
+        coordinator.start() && !coordinator.setSessionCalibrationFactor(1.0) &&
+        coordinator.stopAndSave() &&
+        !coordinator.getSessionSummary().hasKey(:personalCalibrationFactor);
+}
+
+(:test)
 function recordingIsSavedAsHockeyInsteadOfOther(logger as Test.Logger) as Lang.Boolean {
     var factory = new RecordingFactoryFake();
     var recorder = new SessionRecorder(factory);

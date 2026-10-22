@@ -71,7 +71,8 @@ class DistanceEstimator {
         if (modelMode == :calibrated_profile_test) {
             try {
                 if (personalFactor != null && personalFactor == personalFactor &&
-                    personalFactor > 0 && calibrationSource == :local_known_distance) {
+                    personalFactor >= 0.50 && personalFactor <= 1.50 &&
+                    calibrationSource == :local_known_distance) {
                     mStartDistanceCm = Math.floor(
                         mStartDistanceCm * personalFactor + 0.5).toNumber();
                     mRhythmDistanceCm = Math.floor(
