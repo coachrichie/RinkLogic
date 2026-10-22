@@ -34,13 +34,14 @@ class CalibrationRunView extends WatchUi.View {
             return mStarted;
         }
         var metrics = {:distanceCm=>null, :pushes=>null,
-            :coveragePercent=>null};
+            :coveragePercent=>null, :timebase=>null};
         if (mCoordinator != null) {
             if (!mCoordinator.toggleShift()) { return false; }
             var dashboard = mCoordinator.getDashboard();
             metrics = {:distanceCm=>dashboard[:lastShiftDistanceCm],
                 :pushes=>dashboard[:lastShiftPushes],
-                :coveragePercent=>dashboard[:coveragePercent]};
+                :coveragePercent=>dashboard[:coveragePercent],
+                :timebase=>dashboard[:timebase]};
         }
         mController.endRepetition(atMs, metrics);
         mEnded = true;

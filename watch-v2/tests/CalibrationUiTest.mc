@@ -20,11 +20,12 @@ class CalibrationCoordinatorFake {
     var lastShiftPushes = 8;
     var lastShiftDistanceCm = 2500;
     var coveragePercent = 90;
+    var timebase = :measured;
     function toggleShift() as Lang.Boolean { toggles += 1; return true; }
     function getDashboard() as Lang.Dictionary {
         return {:onIce=>false, :lastShiftPushes=>lastShiftPushes,
             :lastShiftDistanceCm=>lastShiftDistanceCm,
-            :coveragePercent=>coveragePercent};
+            :coveragePercent=>coveragePercent, :timebase=>timebase};
     }
 }
 
@@ -51,7 +52,7 @@ function setupCyclesToIceAndStickhandling(logger as Test.Logger) as Lang.Boolean
 function runViewUsesLowerMarkerForStartAndEndStates(logger as Test.Logger) as Lang.Boolean {
     var target = new CalibrationTargetFake();
     var controller = new CalibrationController();
-    controller.configure(:inline, :skate_only, 2500, 5);
+    controller.configureLegacy(:inline, :skate_only, 2500, 5);
     var view = new CalibrationRunView(target, controller);
     if (view.getState() != :ready) { return false; }
     if (!view.toggleMarker(1000) || view.getState() != :run) { return false; }
@@ -64,7 +65,7 @@ function runViewUsesLowerMarkerForStartAndEndStates(logger as Test.Logger) as La
 function runViewForwardsMarkersToLiveCoordinator(logger as Test.Logger) as Lang.Boolean {
     var target = new CalibrationTargetFake();
     var controller = new CalibrationController();
-    controller.configure(:inline, :skate_only, 2500, 5);
+    controller.configureLegacy(:inline, :skate_only, 2500, 5);
     var coordinator = new CalibrationCoordinatorFake();
     var view = new CalibrationRunView(target, controller);
     view.setCoordinator(coordinator);
@@ -76,7 +77,7 @@ function runViewForwardsMarkersToLiveCoordinator(logger as Test.Logger) as Lang.
 function runViewUpperActionSavesCalibration(logger as Test.Logger) as Lang.Boolean {
     var target = new CalibrationTargetFake();
     var controller = new CalibrationController();
-    controller.configure(:inline, :skate_only, 2500, 5);
+    controller.configureLegacy(:inline, :skate_only, 2500, 5);
     var view = new CalibrationRunView(target, controller);
     view.requestSave();
     return target.saves == 1;
@@ -85,7 +86,7 @@ function runViewUpperActionSavesCalibration(logger as Test.Logger) as Lang.Boole
 (:test)
 function missingMotionStillCompletesMarkerPairAndAdvances(logger as Test.Logger) as Lang.Boolean {
     var controller = new CalibrationController();
-    controller.configure(:inline, :skate_only, 2000, 5);
+    controller.configureLegacy(:inline, :skate_only, 2000, 5);
     var coordinator = new CalibrationCoordinatorFake();
     coordinator.lastShiftPushes = null;
     coordinator.lastShiftDistanceCm = null;

@@ -40,7 +40,7 @@ class ShiftSenseApp extends Application.AppBase {
 
     function startCalibration(sport, condition, distanceCm, repetitions) as Void {
         mCalibrationController = new CalibrationController();
-        if (!mCalibrationController.configure(sport, condition, distanceCm, repetitions)) {
+        if (!mCalibrationController.configureLegacy(sport, condition, distanceCm, repetitions)) {
             requestCalibration();
             return;
         }
