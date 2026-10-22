@@ -128,11 +128,65 @@ class ShadowRecordingFactoryFake {
     function createSession(options) { return session; }
 }
 
+function schemaTwelveSummary(factor) as Lang.Dictionary {
+    var summary = {
+        :shiftCount=>3, :timeOnIceMs=>95000, :benchTimeMs=>205000,
+        :averageShiftMs=>31666, :averageShiftHeartRate=>157,
+        :zoneSeconds=>[11, 22, 33, 44, 55], :overNinetySeconds=>12,
+        :workRestTenths=>5, :shiftDensityPerHour=>36,
+        :shortestShiftMs=>28000, :longestShiftMs=>36000,
+        :medianShiftMs=>31000, :topShiftHeartRates=>[181, 175, 169],
+        :detectedPushes=>146, :estimatedDistanceCm=>22000
+    };
+    if (factor != null) { summary[:personalCalibrationFactor] = factor; }
+    return summary;
+}
+
 (:test)
-function schemaElevenAllocatesExclusivePhaseMinuteFieldsWithinLimit(logger as Test.Logger) as Lang.Boolean {
+function schemaTwelveReplacesAboveNinetyWithPersonalFactor(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    var writer = new ShadowFitWriter(session);
+    if (!writer.allocate() || session.fields[73].lastValue != 12 ||
+        session.fields.hasKey(108) || !session.fields.hasKey(115) ||
+        session.fieldTypes[115] != FitContributor.DATA_TYPE_FLOAT ||
+        session.fieldScopes[115] != FitContributor.MESG_TYPE_SESSION ||
+        !writer.writeActivitySummary(schemaTwelveSummary(0.7521))) { return false; }
+    return session.fields[115].lastValue > 0.75209 &&
+        session.fields[115].lastValue < 0.75211;
+}
+
+(:test)
+function schemaTwelveKeepsThirtyFourTotalAndSixteenSessionFields(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    if (!(new ShadowFitWriter(session)).allocate() || session.fieldIds.size() != 34) {
+        return false;
+    }
+    var sessionCount = 0;
+    for (var i = 0; i < session.fieldIds.size(); i += 1) {
+        if (session.fieldScopes[session.fieldIds[i]] == FitContributor.MESG_TYPE_SESSION) {
+            sessionCount += 1;
+        }
+    }
+    return sessionCount == 16 && session.fields.hasKey(97) &&
+        session.fields.hasKey(110) && session.fields.hasKey(111) &&
+        session.fields.hasKey(113) && session.fields.hasKey(114) &&
+        session.fields.hasKey(115);
+}
+
+(:test)
+function missingPersonalFactorWritesFitInvalid(logger as Test.Logger) as Lang.Boolean {
+    var session = new ShadowSessionFake();
+    var writer = new ShadowFitWriter(session);
+    return writer.allocate() &&
+        writer.writeActivitySummary(schemaTwelveSummary(null)) &&
+        session.fields[115].lastValue != session.fields[115].lastValue;
+}
+
+(:test)
+function schemaTwelveAllocatesExclusivePhaseMinuteFieldsWithinLimit(logger as Test.Logger) as Lang.Boolean {
     var session = new ShadowSessionFake();
     if (!(new ShadowFitWriter(session)).allocate() ||
-        session.fieldIds.size() != 34 || session.fields[73].lastValue != 11) { return false; }
+        session.fieldIds.size() != 34 || session.fields[73].lastValue != 12) { return false; }
     var sessionCount = 0;
     for (var i = 0; i < session.fieldIds.size(); i += 1) {
         if (session.fieldScopes[session.fieldIds[i]] == FitContributor.MESG_TYPE_SESSION) {
@@ -279,7 +333,7 @@ function distanceModelSourceDoesNotCreateFitField(logger as Test.Logger) as Lang
     var writer = new ShadowFitWriter(session);
     var expectedIds = [44, 45, 51, 52, 55, 56, 62, 65, 71, 72,
         73, 74, 78, 85, 86, 95, 96, 97, 98, 99, 100,
-        101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 113, 114];
+        101, 102, 103, 104, 105, 106, 107, 109, 110, 111, 113, 114, 115];
     var expectedNames = ["motion_mg", "rotation_dps",
         "manual_boundary_ms", "manual_boundary_state",
         "auto_boundary_ms", "auto_boundary_state", "push_count_total",
@@ -293,9 +347,10 @@ function distanceModelSourceDoesNotCreateFitField(logger as Test.Logger) as Lang
         "bench_time_minutes", "heart_rate_zone_1_minutes",
         "heart_rate_zone_2_minutes", "heart_rate_zone_3_minutes",
         "heart_rate_zone_4_minutes", "heart_rate_zone_5_minutes",
-        "time_above_90_percent_hrmax_minutes", "median_shift_minutes",
+        "median_shift_minutes",
         "estimated_distance_m_total", "shift_estimated_distance_m",
-        "on_ice_phase_minutes", "bench_phase_minutes"];
+        "on_ice_phase_minutes", "bench_phase_minutes",
+        "personal_calibration_factor"];
     if (!writer.allocate() || !writer.writeSecond(null, null, :on_ice,
         0, 1, 1000, {:totalPushes=>2, :totalDistanceCm=>264,
             :cadencePerMin=>12, :distanceModelSource=>:profile_height}) ||
@@ -313,7 +368,7 @@ function shadowWriterUsesOnlyNewStableFieldIds(logger as Test.Logger) as Lang.Bo
     var writer = new ShadowFitWriter(session);
     var expected = [44, 45, 51, 52, 55, 56, 62, 65, 71, 72,
         73, 74, 78, 85, 86, 95, 96, 97, 98, 99, 100,
-        101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 113, 114];
+        101, 102, 103, 104, 105, 106, 107, 109, 110, 111, 113, 114, 115];
     if (!writer.allocate() || session.fieldIds.size() != 34) { return false; }
     for (var i = 0; i < expected.size(); i += 1) {
         if (session.fieldIds[i] != expected[i]) { return false; }
@@ -335,17 +390,17 @@ function shadowWriterUsesOnlyNewStableFieldIds(logger as Test.Logger) as Lang.Bo
         session.fieldScopes[62] == FitContributor.MESG_TYPE_RECORD &&
         session.fieldScopes[65] == FitContributor.MESG_TYPE_LAP &&
         session.fieldScopes[73] == FitContributor.MESG_TYPE_RECORD &&
-        session.fieldScopes[108] == FitContributor.MESG_TYPE_SESSION &&
+        session.fieldScopes[115] == FitContributor.MESG_TYPE_SESSION &&
         session.fieldScopes[111] == FitContributor.MESG_TYPE_LAP &&
         session.fieldNativeNums[97] == null &&
-        session.fields[73].lastValue == 11 &&
+        session.fields[73].lastValue == 12 &&
         writer.writeManualBoundary(12000, :on_ice, null) && session.laps == 1 &&
         session.lastBoundaryMs == 12000 && session.fields[51].lastValue == 0 &&
         session.fields[52].lastValue == 0;
 }
 
 (:test)
-function schemaElevenWritesLosslessShiftDurationAndDiagnostics(logger as Test.Logger) as Lang.Boolean {
+function schemaTwelveWritesLosslessShiftDurationAndDiagnostics(logger as Test.Logger) as Lang.Boolean {
     var session = new ShadowSessionFake();
     var writer = new ShadowFitWriter(session);
     if (!writer.allocate() || session.fieldIds.size() != 34) { return false; }
@@ -723,7 +778,8 @@ function activitySummaryWritesHockeyMetricsBeforeSave(logger as Test.Logger) as 
         :workRestTenths=>5, :shiftDensityPerHour=>36,
         :shortestShiftMs=>28000, :longestShiftMs=>36000,
         :medianShiftMs=>31000, :topShiftHeartRates=>[181, 175, 169],
-        :detectedPushes=>146, :estimatedDistanceCm=>22000
+        :detectedPushes=>146, :estimatedDistanceCm=>22000,
+        :personalCalibrationFactor=>0.7521
     })) { return false; }
     return session.fields.hasKey(96) && session.fields.hasKey(97) &&
         session.fields.hasKey(98) && session.fields[74].lastValue == 3 &&
@@ -734,7 +790,8 @@ function activitySummaryWritesHockeyMetricsBeforeSave(logger as Test.Logger) as 
         session.fields[96].lastValue == 146 && session.fields[97].lastValue == 220.0 &&
         session.fields[103].lastValue > 0.183 && session.fields[103].lastValue < 0.184 &&
         session.fields[107].lastValue > 0.916 && session.fields[107].lastValue < 0.917 &&
-        session.fields[108].lastValue == 0.2 && session.fields[85].lastValue == 5 &&
+        session.fields[115].lastValue > 0.75209 && session.fields[115].lastValue < 0.75211 &&
+        session.fields[85].lastValue == 5 &&
         session.fields[86].lastValue == 36 &&
         session.fields[109].lastValue > 0.516 && session.fields[109].lastValue < 0.517;
 }
@@ -758,7 +815,7 @@ function estimatedDistanceRemainsDeveloperSessionMetresAtCentimetrePrecision(log
 }
 
 (:test)
-function schemaElevenWritesMinuteSessionFields(logger as Test.Logger) as Lang.Boolean {
+function schemaTwelveWritesMinuteSessionFields(logger as Test.Logger) as Lang.Boolean {
     var session = new ShadowSessionFake();
     var writer = new ShadowFitWriter(session);
     if (!writer.allocate() || !writer.writeActivitySummary({
@@ -767,15 +824,15 @@ function schemaElevenWritesMinuteSessionFields(logger as Test.Logger) as Lang.Bo
         :zoneSeconds=>[0, 30, 60, 90, 120], :overNinetySeconds=>45,
         :workRestTenths=>1, :shiftDensityPerHour=>1,
         :medianShiftMs=>95000, :detectedPushes=>0,
-        :estimatedDistanceCm=>0
+        :estimatedDistanceCm=>0, :personalCalibrationFactor=>1.125
     })) { return false; }
-    if (session.fields[73].lastValue != 11 ||
+    if (session.fields[73].lastValue != 12 ||
         session.fields[101].lastValue < 1.583 || session.fields[101].lastValue > 1.584 ||
         session.fields[102].lastValue != 0.0 ||
         session.fields[103].lastValue != 0.0 ||
         session.fields[104].lastValue != 0.5 ||
         session.fields[105].lastValue != 1.0 ||
-        session.fields[108].lastValue != 0.75 ||
+        session.fields[115].lastValue != 1.125 ||
         session.fields[109].lastValue < 1.583 || session.fields[109].lastValue > 1.584) {
         return false;
     }

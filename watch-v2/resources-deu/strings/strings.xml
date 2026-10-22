@@ -76,6 +76,8 @@
     <string id="ConnectHrZone4">Zeit in HF-Zone 4</string>
     <string id="ConnectHrZone5">Zeit in HF-Zone 5</string>
     <string id="ConnectAboveNinety">Zeit über 90 % HFmax</string>
+    <string id="ConnectPersonalCalibrationFactor">Persönlicher Kalibrierungsfaktor</string>
+    <string id="ConnectFactorUnit">Faktor</string>
     <string id="ConnectWorkRest">Work-to-Rest-Verhältnis</string>
     <string id="ConnectShiftDensity">Shift-Dichte</string>
     <string id="ConnectShortestShift">Kürzester Shift</string>

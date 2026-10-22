@@ -76,6 +76,8 @@
     <string id="ConnectHrZone4">Time in HR Zone 4</string>
     <string id="ConnectHrZone5">Time in HR Zone 5</string>
     <string id="ConnectAboveNinety">Time above 90% HRmax</string>
+    <string id="ConnectPersonalCalibrationFactor">Personal calibration factor</string>
+    <string id="ConnectFactorUnit">factor</string>
     <string id="ConnectWorkRest">Work-to-rest ratio</string>
     <string id="ConnectShiftDensity">Shift density</string>
     <string id="ConnectShortestShift">Shortest shift</string>

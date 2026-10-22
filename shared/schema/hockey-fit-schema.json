@@ -1,14 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ShiftSense Hockey FIT developer field registry",
-  "version": 11,
+  "version": 12,
   "recordPayloadLimitBytes": 256,
   "monkeyCRepresentableUint32Max": 2147483647,
-  "fieldIdRange": [1, 114],
+  "fieldIdRange": [1, 115],
   "deviceAllocationLimit": 34,
   "activeAllocationCount": 34,
-  "activeFieldIds": [44, 45, 51, 52, 55, 56, 62, 65, 71, 72, 73, 74, 78, 85, 86, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 113, 114],
-  "notes": "Developer field IDs are unique app-wide and must never be reused with a different meaning. Watch V2 schema 11 allocates 34 active fields from the historical ID range 43-114; exactly 16 active fields use session scope. Legacy IDs 1-42 remain unchanged. Retired IDs remain reserved and are never repurposed.",
+  "activeFieldIds": [44, 45, 51, 52, 55, 56, 62, 65, 71, 72, 73, 74, 78, 85, 86, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 109, 110, 111, 113, 114, 115],
+  "notes": "Developer field IDs are unique app-wide and must never be reused with a different meaning. Watch V2 schema 12 allocates 34 active fields from the historical ID range 43-115; exactly 16 active fields use session scope. Legacy IDs 1-42 remain unchanged. Retired IDs remain reserved and are never repurposed.",
   "fields": [
     {"id":1,"key":"schemaVersion","scope":"record","type":"uint8","unit":"version","bytes":1},
     {"id":2,"key":"hockeyMode","scope":"record","type":"uint8","unit":"enum","bytes":1},
@@ -114,12 +114,13 @@
     {"id":105,"key":"summaryHrZone3Minutes","name":"heart_rate_zone_3_minutes","scope":"session","type":"float32","unit":"min","bytes":4},
     {"id":106,"key":"summaryHrZone4Minutes","name":"heart_rate_zone_4_minutes","scope":"session","type":"float32","unit":"min","bytes":4},
     {"id":107,"key":"summaryHrZone5Minutes","name":"heart_rate_zone_5_minutes","scope":"session","type":"float32","unit":"min","bytes":4},
-    {"id":108,"key":"summaryAbove90PercentMinutes","name":"time_above_90_percent_hrmax_minutes","scope":"session","type":"float32","unit":"min","bytes":4},
+    {"id":108,"key":"summaryAbove90PercentMinutes","name":"time_above_90_percent_hrmax_minutes","scope":"session","type":"float32","unit":"min","bytes":4,"status":"retired_after_schema_11"},
     {"id":109,"key":"summaryMedianShiftMinutes","name":"median_shift_minutes","scope":"session","type":"float32","unit":"min","bytes":4},
     {"id":110,"key":"estimatedDistanceMetersTotal","name":"estimated_distance_m_total","scope":"record","type":"float32","unit":"m","bytes":4},
     {"id":111,"key":"shiftEstimatedDistanceMeters","name":"shift_estimated_distance_m","scope":"lap","type":"float32","unit":"m","bytes":4},
     {"id":112,"key":"phase","name":"phase","scope":"lap","type":"string","count":8,"bytes":8,"status":"retired_after_schema_10"},
     {"id":113,"key":"onIcePhaseMinutes","name":"on_ice_phase_minutes","scope":"lap","type":"float32","unit":"min","bytes":4},
-    {"id":114,"key":"benchPhaseMinutes","name":"bench_phase_minutes","scope":"lap","type":"float32","unit":"min","bytes":4}
+    {"id":114,"key":"benchPhaseMinutes","name":"bench_phase_minutes","scope":"lap","type":"float32","unit":"min","bytes":4},
+    {"id":115,"key":"personalCalibrationFactor","name":"personal_calibration_factor","scope":"session","type":"float32","unit":"factor","bytes":4}
   ]
 }

@@ -21,7 +21,7 @@ def test_hockey_headline_fields_are_first_in_connect_summary():
     assert ordered_ids[:5] == [74, 98, 78, 97, 96]
 
 
-def test_schema_eleven_allocation_keeps_device_and_session_limits():
+def test_schema_twelve_allocation_keeps_device_and_session_limits():
     registry = json.loads(
         (ROOT / "shared" / "schema" / "hockey-fit-schema.json").read_text(
             encoding="utf-8"
@@ -30,8 +30,8 @@ def test_schema_eleven_allocation_keeps_device_and_session_limits():
     fields = {field["id"]: field for field in registry["fields"]}
     active_ids = registry["activeFieldIds"]
 
-    assert registry["version"] == 11
-    assert registry["fieldIdRange"] == [1, 114]
+    assert registry["version"] == 12
+    assert registry["fieldIdRange"] == [1, 115]
     assert registry["deviceAllocationLimit"] == 34
     assert registry["activeAllocationCount"] == len(active_ids)
     assert len(active_ids) == 34
@@ -41,7 +41,7 @@ def test_schema_eleven_allocation_keeps_device_and_session_limits():
     assert registry["activeFieldIds"] == [
         44, 45, 51, 52, 55, 56, 62, 65, 71, 72, 73, 74,
         78, 85, 86, 95, 96, 97, 98, 99, 100, 101, 102, 103,
-        104, 105, 106, 107, 108, 109, 110, 111, 113, 114,
+        104, 105, 106, 107, 109, 110, 111, 113, 114, 115,
     ]
     for field_id in [75, 76, 79, 80, 81, 82, 83, 84, 89]:
         assert fields[field_id]["status"] == "retired_after_schema_8"
@@ -54,7 +54,6 @@ def test_schema_eleven_allocation_keeps_device_and_session_limits():
         105: "heart_rate_zone_3_minutes",
         106: "heart_rate_zone_4_minutes",
         107: "heart_rate_zone_5_minutes",
-        108: "time_above_90_percent_hrmax_minutes",
         109: "median_shift_minutes",
     }
     for field_id, name in expected_minute_names.items():
@@ -110,7 +109,19 @@ def test_schema_eleven_allocation_keeps_device_and_session_limits():
         assert fields[field_id]["unit"] == "min"
         assert field_id in active_ids
     assert len({field["id"] for field in registry["fields"]}) == len(registry["fields"])
-    assert max(field["id"] for field in registry["fields"]) == 114
+    assert fields[108]["status"] == "retired_after_schema_11"
+    assert 108 not in active_ids
+    assert fields[115] == {
+        "id": 115,
+        "key": "personalCalibrationFactor",
+        "name": "personal_calibration_factor",
+        "scope": "session",
+        "type": "float32",
+        "unit": "factor",
+        "bytes": 4,
+    }
+    assert 115 in active_ids
+    assert max(field["id"] for field in registry["fields"]) == 115
     active_contracts = [
         (fields[field_id].get("name"), fields[field_id]["scope"])
         for field_id in active_ids
@@ -125,16 +136,16 @@ def _strings(path):
     }
 
 
-def test_schema_eleven_contributions_are_localized_and_keep_lap_duration():
+def test_schema_twelve_contributions_are_localized_and_keep_lap_duration():
     tree = ET.parse(ROOT / "watch-v2" / "resources" / "fitfields.xml")
     contributions = {
         int(field.get("id")): field for field in tree.findall(".//fitField")
     }
-    minute_ids = list(range(101, 110))
+    minute_ids = list(range(101, 108)) + [109]
     assert all(contributions[field_id].get("unitLabel") == "@Strings.ConnectMinutesUnit"
                for field_id in minute_ids)
     assert all(contributions[field_id].get("precision") == "1"
-               for field_id in range(101, 109))
+               for field_id in range(101, 108))
     assert contributions[109].get("precision") == "2"
     assert contributions[99].get("displayInActivityLaps") == "true"
     assert contributions[99].get("unitLabel") == "@Strings.ConnectMinutesUnit"
@@ -154,11 +165,16 @@ def test_schema_eleven_contributions_are_localized_and_keep_lap_duration():
     assert contributions[114].get("unitLabel") == "@Strings.ConnectMinutesUnit"
     assert int(contributions[113].get("sortOrder")) < int(contributions[65].get("sortOrder"))
     assert int(contributions[114].get("sortOrder")) < int(contributions[65].get("sortOrder"))
+    assert 108 not in contributions
+    assert contributions[115].get("displayInActivitySummary") == "true"
+    assert contributions[115].get("precision") == "4"
+    assert contributions[115].get("dataLabel") == "@Strings.ConnectPersonalCalibrationFactor"
+    assert contributions[115].get("unitLabel") == "@Strings.ConnectFactorUnit"
 
     label_ids = {
         contributions[field_id].get("dataLabel").split(".")[-1]
         for field_id in minute_ids
-    } | {"ConnectMinutesUnit", "ConnectMetresUnit", "ConnectEstimatedDistance", "ConnectOnIce", "ConnectBench"}
+    } | {"ConnectMinutesUnit", "ConnectMetresUnit", "ConnectEstimatedDistance", "ConnectOnIce", "ConnectBench", "ConnectPersonalCalibrationFactor", "ConnectFactorUnit"}
     for relative in [
         Path("watch-v2/resources/strings/strings.xml"),
         Path("watch-v2/resources-deu/strings/strings.xml"),
@@ -177,3 +193,5 @@ def test_schema_eleven_contributions_are_localized_and_keep_lap_duration():
     german = _strings(ROOT / "watch-v2/resources-deu/strings/strings.xml")
     assert "Estimated distance" in english["ConnectEstimatedDistance"]
     assert "Geschätzte Distanz" in german["ConnectEstimatedDistance"]
+    assert english["ConnectFactorUnit"] == "factor"
+    assert german["ConnectFactorUnit"] == "Faktor"

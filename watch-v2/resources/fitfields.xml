@@ -24,7 +24,7 @@
         <fitField id="105" displayInActivitySummary="true" sortOrder="17" precision="1" dataLabel="@Strings.ConnectHrZone3" unitLabel="@Strings.ConnectMinutesUnit" />
         <fitField id="106" displayInActivitySummary="true" sortOrder="18" precision="1" dataLabel="@Strings.ConnectHrZone4" unitLabel="@Strings.ConnectMinutesUnit" />
         <fitField id="107" displayInActivitySummary="true" sortOrder="19" precision="1" dataLabel="@Strings.ConnectHrZone5" unitLabel="@Strings.ConnectMinutesUnit" />
-        <fitField id="108" displayInActivitySummary="true" sortOrder="20" precision="1" dataLabel="@Strings.ConnectAboveNinety" unitLabel="@Strings.ConnectMinutesUnit" />
         <fitField id="109" displayInActivitySummary="true" sortOrder="23" precision="2" dataLabel="@Strings.ConnectMedianShift" unitLabel="@Strings.ConnectMinutesUnit" />
+        <fitField id="115" displayInActivitySummary="true" sortOrder="24" precision="4" dataLabel="@Strings.ConnectPersonalCalibrationFactor" unitLabel="@Strings.ConnectFactorUnit" />
     </fitContributions>
 </resources>
