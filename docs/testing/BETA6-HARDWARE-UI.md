@@ -17,7 +17,9 @@ Signierter Prüfkandidat:
 
 - **Quellcode-Gate: bestanden.** Commit `43694fc` zeichnet Bedingung, das zur laufenden Wiederholung gehörende Tempo und die Dauer in Minuten. Die obere Taste ist konsistent als `UPPER: CANCEL` beschriftet. Review-Touches führen nur innerhalb der beiden Optionszonen die direkt berührte Aktion aus.
 - **Simulator-Gate: bestanden.** Die gemeldete vollständige Suite umfasst 247/247 grüne Watch-Tests; die neuen Fälle decken Run-Texte, Cancel-Beschriftung, beide Review-Zonen und Touches außerhalb der Zonen ab.
+- **Prüfkandidaten-Gate: bestanden.** Der lokal verifizierte signierte PRG umfasst 448348 Bytes und hat exakt den dokumentierten SHA-256 `0E8016ECF80EC36BD16D13E0378772C5099390AA57A6E8F13B2F4A532D8EB275`. Damit ist der zu prüfende Build eindeutig festgelegt.
 - **Hardware-Gate: offen.** Noch nicht nachgewiesen sind Lesbarkeit, reale Tastenbelegung, Treffergenauigkeit und Entprellung auf der Venu 2 Plus. Diese offenen Punkte sind unten als P0-Prüfungen aufgeführt.
+- **Upload/Veröffentlichung: nicht ausgeführt.** Sie ist nicht Bestandteil dieser UI-Abnahme.
 
 ## Zweck und Freigabegrenze
 
