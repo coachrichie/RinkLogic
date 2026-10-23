@@ -203,6 +203,13 @@ def _validate_schema_twelve_manifest(manifest, shifts):
         raise ValueError("Schema 12 calibration condition order is invalid")
     if [row["target_pace"] for row in valid] != PACE_ORDER:
         raise ValueError("Schema 12 calibration pace order is invalid")
+    if len({row["sport"] for row in valid}) != 1:
+        raise ValueError("Schema 12 calibration requires one sport per session")
+    distances = {row["reference_distance_cm"] for row in valid}
+    if len(distances) != 1:
+        raise ValueError("Schema 12 calibration requires one reference distance per session")
+    if next(iter(distances)) not in {2000.0, 2200.0, 2500.0, 3000.0}:
+        raise ValueError("Schema 12 reference distance must be 20, 22, 25, or 30 metres")
 
 
 def _time_above_ninety(records, hrmax):
@@ -369,11 +376,17 @@ def build_calibration_report_from_report(report: dict, manifest: list[dict]) -> 
                         if row.get("active_factor") is not None}
     fit_factor = report.get("personal_calibration_factor")
     factor_mismatch = None
-    if fit_factor is not None and declared_factors:
+    if schema_twelve:
+        factor_mismatch = not (
+            factor is not None and fit_factor is not None and
+            len(declared_factors) == 1 and
+            abs(next(iter(declared_factors)) - fit_factor) <= 0.00005 and
+            abs(factor - fit_factor) <= 0.00005)
+        if factor_mismatch:
+            profile_status = "inconsistent"
+    elif fit_factor is not None and declared_factors:
         factor_mismatch = (len(declared_factors) != 1 or
                            abs(next(iter(declared_factors)) - fit_factor) > 0.00005)
-        if factor is not None:
-            factor_mismatch = factor_mismatch or abs(factor - fit_factor) > 0.00005
     hrmax_values = {row["hrmax_bpm"] for row in manifest
                     if row.get("hrmax_bpm") is not None}
     hrmax = next(iter(hrmax_values)) if len(hrmax_values) == 1 else None

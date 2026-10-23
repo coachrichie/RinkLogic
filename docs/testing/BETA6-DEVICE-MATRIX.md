@@ -6,7 +6,7 @@ Tester-Geräteinventur übernommen und niemals geraten.
 
 | Garmin-Modell | Produkt-ID | Compile | Simulator | Hardware | Freigabe |
 | --- | --- | --- | --- | --- | --- |
-| Venu 2 Plus | `venu2plus` | offen | offen | offen | noch nicht freigegeben |
+| Venu 2 Plus | `venu2plus` | bestanden | 247/247 bestanden | offen | noch nicht freigegeben |
 
 Ein weiteres Modell wird erst ergänzt, wenn seine exakte Produkt-ID aus einer
 registrierten Testerangabe vorliegt und mindestens Compile plus Simulator oder

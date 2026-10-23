@@ -102,6 +102,12 @@ Prozent, positive Anschubzahl und Basisschätzung sowie das Verhältnis
 0,50–1,50. Bedingungsmediane, relative MAD und Bedingungsdifferenz entscheiden
 wie auf der Uhr über die technische Konsistenz.
 
+Zusätzlich verlangt sie genau eine Oberfläche und eine gemeinsame erlaubte
+Referenzdistanz von 20, 22, 25 oder 30 m je Sitzung. FIT-Feld 115,
+Formularfaktor und offline rekonstruierter Kandidat müssen vollständig
+vorhanden und innerhalb der Toleranz identisch sein; fehlende oder abweichende
+Faktoridentität setzt den Bericht auf `inconsistent` und damit Quarantäne.
+
 Der Formularvertrag ist eindeutig: Jede tatsächlich gespeicherte technische
 FIT-Lap erhält genau eine Zeile in derselben Reihenfolge; darunter müssen exakt
 zehn Zeilen `valid` sein. Verworfene Versuche bleiben als nicht gültige Zeilen

@@ -8,6 +8,11 @@ Zielgerät: Garmin Venu 2 Plus
 
 Automatisierter Ausgangsstand: 247/247 Watch-Tests grün; die Prüfung am physischen Gerät ist noch offen.
 
+Signierter Prüfkandidat:
+
+- PRG: `448348` Bytes, SHA-256 `0E8016ECF80EC36BD16D13E0378772C5099390AA57A6E8F13B2F4A532D8EB275`
+- IQ: `245417` Bytes, SHA-256 `9D3A8988C1DD7AD48E4724D132D63E3A713590FBA4E65CA9DDE21DC4538C0372`
+
 ## Aktueller UI-Gate-Status
 
 - **Quellcode-Gate: bestanden.** Commit `43694fc` zeichnet Bedingung, das zur laufenden Wiederholung gehörende Tempo und die Dauer in Minuten. Die obere Taste ist konsistent als `UPPER: CANCEL` beschriftet. Review-Touches führen nur innerhalb der beiden Optionszonen die direkt berührte Aktion aus.
@@ -30,6 +35,7 @@ Ergebniskennzeichen:
 ## Vorbereitung
 
 - [ ] Installierten Build eindeutig als Beta 6 und Commit `43694fc` dokumentieren.
+- [ ] PRG-Prüfsumme stimmt exakt mit dem oben genannten SHA-256 überein.
 - [ ] Uhr neu starten und sicherstellen, dass keine ältere App-Instanz im Speicher aktiv ist.
 - [ ] Einen Durchlauf ohne persönliches Profil und einen Durchlauf mit gespeichertem lokalen Profil vorsehen.
 - [ ] Einen Durchlauf mit verfügbarer HR-Quelle und einen ohne erkannte HR-Quelle vorsehen.

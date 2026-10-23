@@ -30,18 +30,19 @@ gespeicherten Trainings- und FIT-Felder.
 
 ## Testbuild
 
-Der nächste Lauf verwendet den noch final zu paketierenden Beta-6-/Schema-12-Kandidaten.
-Commit, Dateiname, Größe und SHA-256 werden erst nach der vollständigen
-Endprüfung hier und in `docs/DEVELOPMENT.md` eingetragen. Die bestätigte
+Der nächste Lauf verwendet den signierten Beta-6-/Schema-12-Kandidaten. Die bestätigte
 Beta 4 bleibt unangetastet als Rollback; ihr signiertes IQ-Paket wird nicht
 überschrieben oder erneut veröffentlicht.
 
-- Beta-6-/Schema-12-Quellcommit: ____________________
-- PRG-Datei, Größe und SHA-256: ____________________
-- IQ-Datei, Größe und SHA-256: ____________________
+- Beta-6-/Schema-12-Watch-Code-Quellcommit: `43694fc`
+- PRG-Datei: `RinkLogic-personal-calibration-beta.prg`, 448348 Bytes,
+  SHA-256 `0E8016ECF80EC36BD16D13E0378772C5099390AA57A6E8F13B2F4A532D8EB275`
+- IQ-Datei: `RinkLogic-0.2.0-beta.6.iq`, 245417 Bytes,
+  SHA-256 `9D3A8988C1DD7AD48E4724D132D63E3A713590FBA4E65CA9DDE21DC4538C0372`
 - SDK 9.2.0, Gerät `venu2plus`
-- Distanzmodus: ____________________
-- Automatisierte Prüfergebnisse: ____________________
+- Distanzmodus: `PersonalCalibrationBeta`
+- Automatisierte Prüfergebnisse: 247/247 Watch-Tests; 89 Python-Tests plus
+  34 Subtests (vor finaler Dokumentationsprüfung erneut auszuführen)
 
 ## Beobachtete Beta-Abnahme
 
@@ -120,7 +121,7 @@ Plattformgrenze und kein bestandener Sichtbarkeitstest.
 | Median-Shift | [ ] | [ ] | |
 | geschätzte Distanz | [ ] | [ ] | Entwicklerfeld 97; native Distanz darf 0,0 bleiben |
 | erkannte Anschübe | [ ] | [ ] | |
-| persönlicher Faktor | [ ] | [ ] | Feld 115 oder leer ohne aktives Profil |
+| persönlicher Faktor | [ ] | [ ] | Bei aktiviertem Profil muss Feld 115 vorhanden sein und übereinstimmen |
 
 In der Aktivitätszusammenfassung werden erwartet:
 
@@ -140,6 +141,9 @@ In der Aktivitätszusammenfassung werden erwartet:
       `min`; Distanz trägt `≈` und `m`.
 - [ ] Geschätzte Distanz, erkannte Anschübe und persönlicher Faktor 115 sind
       jeweils als eigene Entwicklerwerte sichtbar und plausibel.
+- [ ] Ein kontrollierter Bewegungsabschnitt erzeugt mindestens einen
+      automatischen Vorschlag in 55/56; bleibt er aus, werden Ablauf und Grund
+      ausdrücklich protokolliert und das Auto-Ereignis-Gate bleibt offen.
 - [ ] Die Top 3 beziehungsweise intensivsten Shifts sind intern nach gültigem
       Durchschnittspuls ermittelt. Eine eigene Garmin-Connect-Anzeige wird nur
       als bestanden markiert, wenn tatsächlich ein geeignetes Feld sichtbar ist.
@@ -167,9 +171,10 @@ In der Runden-/Lap-Tabelle werden erwartet:
       überein. Das historische Stringfeld 112 ist nicht aktiv.
 - [ ] Die letzte Phase erscheint nach Speichern genau einmal; ein Speicher-Retry
       erzeugt keine zusätzliche Schlussrunde.
-- [ ] Bei 15 On-Ice- und 15 Bench-Phasen stehen 29 explizite Runden plus die
-      native Schlussrunde im FIT, insgesamt 30 statt 31. Dieses Verhalten ist
-      hardwareabhängig und muss auf der echten Uhr bestätigt werden.
+- [ ] Bei 15 On-Ice- und 15 Bench-Phasen enthält das exportierte FIT insgesamt
+      30 Phasenrunden statt 31. Entscheidend sind Anzahl, Reihenfolge,
+      Exklusivität 113/114 und fehlende Duplikate; die Herkunft einzelner
+      Runden als explizit oder nativ ist im Export kein Abnahmekriterium.
 
 Screenshot-/Notizreferenzen für Summary und Phasen-Laps: ____________________
 
@@ -192,13 +197,21 @@ manuell notierten Zeiten vergleichen.
 
 - [ ] FIT-Datei lässt sich mit gültiger CRC dekodieren.
 - [ ] Schema-12-Marker ID 73 kommt in Record-Nachrichten vor.
+- [ ] Die vollständige aktive Feldmenge ist exakt
+      `44,45,51,52,55,56,62,65,71,72,73,74,78,85,86,95,96,97,98,99,100,101,102,103,104,105,106,107,109,110,111,113,114,115`.
+- [ ] Manuelle Grenzen 51/52, automatische Vorschläge 55/56,
+      Bewegungs-/Qualitätswerte 44/45/72, Anschub-/Rohkandidaten
+      62/65/71/100 und Lap-Dauer 99 sind entsprechend dem kontrollierten Lauf
+      vorhanden oder ihr zulässiges Fehlen ist einzeln begründet.
 - [ ] Aktive Session-IDs sind exakt `74,78,85,86,96,97,98,101–107,109,115`.
 - [ ] IDs 101–107 und 109 sind Float-Minuten; alte Sekunden-IDs 75/76/79–84/89 sind
       nicht aktiv allokiert.
 - [ ] IDs 63, 66, 93, 94, 108 und 112 bleiben historisch registriert, sind in Schema 12
       aber nicht aktiv allokiert oder umgedeutet.
-- [ ] Session-ID 115 ist `float32`/`factor` und enthält den aktiven lokalen
-      Faktor oder FIT-invalid ohne aktives Profil.
+- [ ] Im Lauf mit aktiviertem Profil ist Session-ID 115 `float32`/`factor`,
+      vorhanden und stimmt mit Uhranzeige sowie Referenzformular überein. Nur
+      ein getrennt dokumentierter Baseline-Lauf ohne Profil darf FIT-invalid
+      beziehungsweise leer sein.
 - [ ] ID 110 ist `record`/`float32`/`m`, ID 111 ist `lap`/`float32`/`m` und
       IDs 113/114 sind `lap`/`float32`/`min` mit exklusiver Gültigkeit.
 - [ ] Session-ID 97 bleibt `float32`/`m` ohne `nativeNum`; das native
@@ -208,7 +221,9 @@ manuell notierten Zeiten vergleichen.
 - [ ] Die 20-m-Referenzzeilen sind im lokalen Kalibrierungsmanifest jeweils als
       `2.000 cm` hinterlegt; 22-m-Altwerte werden nicht verwendet.
 - [ ] Die Garmin-Connect-Anzeige stimmt mit den dekodierten FIT-Werten überein.
-- [ ] Die Original-FIT-Datei bleibt ausschließlich lokal; CRC ist gültig.
+- [ ] Die Original-FIT-Datei bleibt lokal oder im ausdrücklich autorisierten
+      privaten Upload-only-/verschlüsselten Kanal; niemals Repository,
+      öffentlicher Chat oder öffentlicher Drive. CRC ist gültig.
 
 ## Abnahme
 

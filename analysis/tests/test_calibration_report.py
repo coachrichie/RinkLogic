@@ -290,6 +290,43 @@ class CalibrationReportTests(unittest.TestCase):
             report, read_calibration_manifest(self.manifest(rows)))
         self.assertEqual(result["timebase_verification"], "not_exported_in_schema_12")
 
+    def test_schema_twelve_requires_one_supported_reference_distance(self):
+        rows, _, report = self.schema_twelve_fixture()
+        rows[5]["reference_distance_cm"] = "3000"
+        with self.assertRaisesRegex(ValueError, "one reference distance"):
+            build_calibration_report_from_report(
+                report, read_calibration_manifest(self.manifest(rows)))
+        rows, _, report = self.schema_twelve_fixture()
+        for row in rows:
+            row["reference_distance_cm"] = "2100"
+        with self.assertRaisesRegex(ValueError, "20, 22, 25, or 30"):
+            build_calibration_report_from_report(
+                report, read_calibration_manifest(self.manifest(rows)))
+
+    def test_schema_twelve_rejects_mixed_surfaces(self):
+        rows, _, report = self.schema_twelve_fixture()
+        rows[5]["sport"] = "ice"
+        with self.assertRaisesRegex(ValueError, "one sport"):
+            build_calibration_report_from_report(
+                report, read_calibration_manifest(self.manifest(rows)))
+
+    def test_schema_twelve_factor_identity_fails_closed_and_quarantines(self):
+        rows, _, report = self.schema_twelve_fixture()
+        for row in rows:
+            row["active_factor"] = ""
+        report["personal_calibration_factor"] = 1.2
+        missing = build_calibration_report_from_report(
+            report, read_calibration_manifest(self.manifest(rows)))
+        self.assertTrue(missing["factor_mismatch"])
+        self.assertEqual(missing["profile_status"], "inconsistent")
+
+        rows, _, report = self.schema_twelve_fixture()
+        report["personal_calibration_factor"] = 1.2
+        wrong = build_calibration_report_from_report(
+            report, read_calibration_manifest(self.manifest(rows)))
+        self.assertTrue(wrong["factor_mismatch"])
+        self.assertEqual(wrong["profile_status"], "inconsistent")
+
     def test_both_conditions_required_for_overall_eligibility(self):
         rows = [self.row(i) for i in range(1, 6)] + [
             self.row(i, condition="puck_stickhandling") for i in range(6, 11)
