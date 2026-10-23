@@ -13,6 +13,7 @@ class ReadyView extends WatchUi.View {
     private var mTimer = null;
     private var mBackground = null;
     private var mLogo = null;
+    private var mCalibrationProfile = null;
 
     function initialize(target, statusSource, heartRateSource, clock) {
         View.initialize();
@@ -26,6 +27,13 @@ class ReadyView extends WatchUi.View {
         onHide();
         mTarget.requestStart();
     }
+
+    function requestStartMenu() as Void {
+        onHide();
+        mTarget.requestStartMenu();
+    }
+
+    function setCalibrationProfile(profile) as Void { mCalibrationProfile = profile; }
 
     function onShow() as Void {
         mHeartRateAt = null;
@@ -108,9 +116,21 @@ class ReadyView extends WatchUi.View {
             WatchUi.loadResource(Rez.Strings.HrSignalStatus),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
 
+        dc.setColor(inactive, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(centerX, height * 75 / 100, Graphics.FONT_XTINY,
+            WatchUi.loadResource(Rez.Strings.PulseSourceUnknown),
+            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(0xB6C6D8, Graphics.COLOR_TRANSPARENT);
         dc.drawText(centerX, height * 79 / 100, Graphics.FONT_XTINY,
-            WatchUi.loadResource(Rez.Strings.PulseSourceUnknown),
+            mCalibrationProfile == null ? WatchUi.loadResource(Rez.Strings.CalibrationBaseline) :
+                ((mCalibrationProfile[:sport] == :ice ? "ICE " : "INLINE ") +
+                    mCalibrationProfile[:factor].format("%.4f") + " · LOCAL"),
+            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.setColor(0x394B61, Graphics.COLOR_TRANSPARENT);
+        dc.fillRectangle(centerX - 156, height * 85 / 100, 72, 40);
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(centerX - 120, height * 85 / 100 + 20, Graphics.FONT_XTINY,
+            WatchUi.loadResource(Rez.Strings.ReadyMenu),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(0x0D6CC1, Graphics.COLOR_TRANSPARENT);
         dc.fillRectangle(centerX - 76, height * 85 / 100, 152, 40);
@@ -130,9 +150,9 @@ class ReadyInputDelegate extends WatchUi.InputDelegate {
     }
 
     function onKey(event as WatchUi.KeyEvent) as Lang.Boolean {
-        if (event.getKey() != WatchUi.KEY_ENTER) { return false; }
-        mView.requestStart();
-        return true;
+        if (event.getKey() == WatchUi.KEY_ESC) { mView.requestStart(); return true; }
+        if (event.getKey() == WatchUi.KEY_ENTER) { mView.requestStartMenu(); return true; }
+        return false;
     }
 
     function onTap(event as WatchUi.ClickEvent) as Lang.Boolean {
@@ -140,9 +160,15 @@ class ReadyInputDelegate extends WatchUi.InputDelegate {
         var settings = Toybox.System.getDeviceSettings();
         var centerX = settings.screenWidth / 2;
         var startY = settings.screenHeight * 85 / 100;
-        if (coordinates[0] < centerX - 76 || coordinates[0] > centerX + 76 ||
-            coordinates[1] < startY || coordinates[1] > startY + 40) { return false; }
-        mView.requestStart();
-        return true;
+        if (coordinates[1] < startY || coordinates[1] > startY + 40) { return false; }
+        if (coordinates[0] >= centerX - 156 && coordinates[0] <= centerX - 84) {
+            mView.requestStartMenu();
+            return true;
+        }
+        if (coordinates[0] >= centerX - 76 && coordinates[0] <= centerX + 76) {
+            mView.requestStart();
+            return true;
+        }
+        return false;
     }
 }

@@ -1,18 +1,28 @@
 using Toybox.Lang;
 using Toybox.Test as Test;
+using Toybox.WatchUi;
 
 class CalibrationTargetFake {
     var starts = 0;
     var cancels = 0;
     var saves = 0;
+    var reviews = 0;
+    var activations = 0;
+    var discards = 0;
+    var exits = 0;
+    var menuRequests = 0;
     var last = null;
-    function startCalibration(sport, condition, distanceCm, repetitions) as Void {
+    function startCalibration(sport, distanceCm) as Void {
         starts += 1;
-        last = {:sport=>sport, :condition=>condition,
-            :distanceCm=>distanceCm, :repetitions=>repetitions};
+        last = {:sport=>sport, :distanceCm=>distanceCm};
     }
     function cancelCalibration() as Void { cancels += 1; }
     function saveCalibration() as Void { saves += 1; }
+    function reviewCalibration(candidate) as Void { reviews += 1; last = candidate; }
+    function activateAndSaveCalibration() as Void { activations += 1; }
+    function discardCalibration() as Void { discards += 1; }
+    function exitApp() as Void { exits += 1; }
+    function requestCalibration() as Void { menuRequests += 1; }
 }
 
 class CalibrationCoordinatorFake {
@@ -30,22 +40,37 @@ class CalibrationCoordinatorFake {
 }
 
 (:test)
-function setupDefaultsUseInlineTwentyFiveMetresAndFiveRepetitions(logger as Test.Logger) as Lang.Boolean {
+function setupDefaultsUseInlineTwentyFiveMetres(logger as Test.Logger) as Lang.Boolean {
     var view = new CalibrationSetupView(new CalibrationTargetFake());
     var config = view.configuration();
-    return config[:sport] == :inline && config[:condition] == :skate_only &&
-        config[:referenceDistanceCm] == 2500 && config[:targetRepetitions] == 5;
+    return config[:sport] == :inline && config[:referenceDistanceCm] == 2500 &&
+        !config.hasKey(:condition) && !config.hasKey(:targetRepetitions);
 }
 
 (:test)
-function setupCyclesToIceAndStickhandling(logger as Test.Logger) as Lang.Boolean {
+function setupCyclesAllSurfacesAndKnownDistances(logger as Test.Logger) as Lang.Boolean {
     var target = new CalibrationTargetFake();
     var view = new CalibrationSetupView(target);
-    view.cycleSelection(1);
-    view.cycleSelection(1);
+    var seen = {};
+    for (var i = 0; i < 8; i += 1) {
+        var config = view.configuration();
+        seen[config[:sport].toString() + config[:referenceDistanceCm].toString()] = true;
+        view.cycleSelection(1);
+    }
     view.requestStart();
-    return target.starts == 1 && target.last[:sport] == :ice &&
-        target.last[:condition] == :puck_stickhandling;
+    return seen.size() == 8 && target.starts == 1;
+}
+
+(:test)
+function startMenuUpperCyclesAndLowerConfirms(logger as Test.Logger) as Lang.Boolean {
+    var target = new CalibrationTargetFake();
+    var menu = new StartMenuView(target);
+    var delegate = new StartMenuInputDelegate(menu);
+    if (menu.selection() != :calibration ||
+        !delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ENTER)) ||
+        menu.selection() != :exit ||
+        !delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC))) { return false; }
+    return target.exits == 1 && target.menuRequests == 0;
 }
 
 (:test)
@@ -79,8 +104,34 @@ function runViewUpperActionSavesCalibration(logger as Test.Logger) as Lang.Boole
     var controller = new CalibrationController();
     controller.configureLegacy(:inline, :skate_only, 2500, 5);
     var view = new CalibrationRunView(target, controller);
-    view.requestSave();
-    return target.saves == 1;
+    view.requestCancel();
+    return target.cancels == 1;
+}
+
+(:test)
+function calibrationReviewOffersExplicitActivateAndDiscard(logger as Test.Logger) as Lang.Boolean {
+    var target = new CalibrationTargetFake();
+    var candidate = calibrationProfileCandidate(:ice, 1.0);
+    var view = new CalibrationSummaryView(target, candidate);
+    var delegate = new CalibrationSummaryInputDelegate(view);
+    if (view.selection() != :activate ||
+        !delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) ||
+        target.activations != 1) { return false; }
+    view.cycleSelection();
+    return view.selection() == :discard &&
+        delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) &&
+        target.discards == 1;
+}
+
+(:test)
+function calibrationRunExposesConditionPaceAndMinuteDuration(logger as Test.Logger) as Lang.Boolean {
+    var controller = new CalibrationController();
+    controller.configure(:ice, 2500);
+    var view = new CalibrationRunView(new CalibrationTargetFake(), controller);
+    if (view.prompt()[:condition] != :skate_only || view.prompt()[:pace] != :slow ||
+        !view.toggleMarker(1000) || !view.toggleMarker(11000)) { return false; }
+    return view.prompt()[:durationMinutes] > 0.1666 &&
+        view.prompt()[:durationMinutes] < 0.1667;
 }
 
 (:test)

@@ -9,6 +9,8 @@ class CalibrationRunView extends WatchUi.View {
     private var mStarted = false;
     private var mEnded = false;
     private var mRepetition = 1;
+    private var mLastDurationMinutes = null;
+    private var mRunStartedAt = null;
 
     function initialize(target, controller) {
         View.initialize();
@@ -23,6 +25,12 @@ class CalibrationRunView extends WatchUi.View {
 
     function setCoordinator(coordinator) as Void { mCoordinator = coordinator; }
 
+    function prompt() as Lang.Dictionary {
+        return {:condition=>mController.currentCondition(),
+            :pace=>mController.currentPace(), :repetition=>mController.validCount() + 1,
+            :durationMinutes=>mLastDurationMinutes};
+    }
+
     function toggleMarker(atMs) as Lang.Boolean {
         if (mEnded) {
             nextRepetition();
@@ -31,6 +39,7 @@ class CalibrationRunView extends WatchUi.View {
         if (!mStarted) {
             if (mCoordinator != null && !mCoordinator.toggleShift()) { return false; }
             mStarted = mController.startRepetition(atMs);
+            if (mStarted) { mRunStartedAt = atMs; }
             return mStarted;
         }
         var metrics = {:distanceCm=>null, :pushes=>null,
@@ -44,7 +53,10 @@ class CalibrationRunView extends WatchUi.View {
                 :timebase=>dashboard[:timebase]};
         }
         mController.endRepetition(atMs, metrics);
+        mLastDurationMinutes = mRunStartedAt == null ? null :
+            (atMs - mRunStartedAt).toFloat() / 60000.0;
         mEnded = true;
+        if (mController.isEligible()) { mTarget.reviewCalibration(mController.candidateProfile()); }
         return true;
     }
 
@@ -52,12 +64,12 @@ class CalibrationRunView extends WatchUi.View {
         mStarted = false;
         mEnded = false;
         mRepetition += 1;
+        mLastDurationMinutes = null;
+        mRunStartedAt = null;
         WatchUi.requestUpdate();
     }
 
     function requestCancel() as Void { mController.abort(); mTarget.cancelCalibration(); }
-
-    function requestSave() as Void { mTarget.saveCalibration(); }
 
     function onUpdate(dc as Graphics.Dc) as Void {
         var centerX = dc.getWidth() / 2;
@@ -91,7 +103,7 @@ class CalibrationRunInputDelegate extends WatchUi.InputDelegate {
     function onKey(event as WatchUi.KeyEvent) as Lang.Boolean {
         var key = event.getKey();
         if (key == WatchUi.KEY_ESC) { return mView.toggleMarker(mClock.nowMs()); }
-        if (key == WatchUi.KEY_ENTER) { mView.requestSave(); return true; }
+        if (key == WatchUi.KEY_ENTER) { mView.requestCancel(); return true; }
         return false;
     }
     function onTap(event) as Lang.Boolean { return mView.toggleMarker(mClock.nowMs()); }

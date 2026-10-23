@@ -5,9 +5,8 @@ using Toybox.WatchUi;
 class CalibrationSetupView extends WatchUi.View {
     private var mTarget;
     private var mSport = :inline;
-    private var mCondition = :skate_only;
     private var mDistanceCm = 2500;
-    private var mRepetitions = 5;
+    private var mIndex = 2;
 
     function initialize(target) {
         View.initialize();
@@ -15,27 +14,19 @@ class CalibrationSetupView extends WatchUi.View {
     }
 
     function configuration() as Lang.Dictionary {
-        return {:sport=>mSport, :condition=>mCondition,
-            :referenceDistanceCm=>mDistanceCm, :targetRepetitions=>mRepetitions};
+        return {:sport=>mSport, :referenceDistanceCm=>mDistanceCm};
     }
 
     function cycleSelection(direction) as Void {
-        if (direction > 0) {
-            if (mSport == :inline) { mSport = :ice; }
-            else if (mCondition == :skate_only) { mCondition = :puck_stickhandling; }
-            else if (mDistanceCm == 2000) { mDistanceCm = 2500; }
-            else if (mDistanceCm == 2500) { mDistanceCm = 3000; }
-        } else {
-            if (mSport == :ice) { mSport = :inline; }
-            else if (mCondition == :puck_stickhandling) { mCondition = :skate_only; }
-            else if (mDistanceCm == 3000) { mDistanceCm = 2500; }
-            else if (mDistanceCm == 2500) { mDistanceCm = 2000; }
-        }
+        mIndex = (mIndex + (direction > 0 ? 1 : 7)) % 8;
+        mSport = mIndex < 4 ? :inline : :ice;
+        var distances = [2000, 2200, 2500, 3000];
+        mDistanceCm = distances[mIndex % 4];
         WatchUi.requestUpdate();
     }
 
     function requestStart() as Void {
-        mTarget.startCalibration(mSport, mCondition, mDistanceCm, mRepetitions);
+        mTarget.startCalibration(mSport, mDistanceCm);
     }
 
     function onUpdate(dc as Graphics.Dc) as Void {
@@ -50,10 +41,7 @@ class CalibrationSetupView extends WatchUi.View {
         dc.drawText(centerX, 105, Graphics.FONT_SMALL,
             mSport == :ice ? "ICE" : "INLINE",
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.drawText(centerX, 145, Graphics.FONT_SMALL,
-            mCondition == :skate_only ? "SKATE ONLY" : "PUCK + STICK",
-            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.drawText(centerX, 185, Graphics.FONT_SMALL,
+        dc.drawText(centerX, 165, Graphics.FONT_SMALL,
             (mDistanceCm / 100).toString() + " m",
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(0x20D49A, Graphics.COLOR_TRANSPARENT);
@@ -72,10 +60,10 @@ class CalibrationSetupInputDelegate extends WatchUi.InputDelegate {
     function initialize(view) { InputDelegate.initialize(); mView = view; }
     function onKey(event as WatchUi.KeyEvent) as Lang.Boolean {
         var key = event.getKey();
-        if (key == WatchUi.KEY_ENTER) { mView.requestStart(); return true; }
+        if (key == WatchUi.KEY_ENTER) { mView.cycleSelection(1); return true; }
+        if (key == WatchUi.KEY_ESC) { mView.requestStart(); return true; }
         if (key == WatchUi.KEY_UP) { mView.cycleSelection(1); return true; }
         if (key == WatchUi.KEY_DOWN) { mView.cycleSelection(-1); return true; }
-        if (key == WatchUi.KEY_ESC) { return false; }
         return false;
     }
     function onSwipe(event) as Lang.Boolean {

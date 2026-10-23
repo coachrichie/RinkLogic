@@ -28,8 +28,10 @@ class StartSequenceAppFake extends ShiftSenseApp {
 class ReadyStartTargetFake {
     var requests = 0;
     var calibrationRequests = 0;
+    var menuRequests = 0;
     function requestStart() as Void { requests += 1; }
     function requestCalibration() as Void { calibrationRequests += 1; }
+    function requestStartMenu() as Void { menuRequests += 1; }
 }
 
 class RecordingSessionFake {
@@ -77,6 +79,13 @@ class OutsideReadySideTapEventFake extends WatchUi.ClickEvent {
     function getCoordinates() {
         var settings = Toybox.System.getDeviceSettings();
         return [settings.screenWidth*10/100, settings.screenHeight*90/100];
+    }
+}
+
+class ReadyMenuTapEventFake extends WatchUi.ClickEvent {
+    function getCoordinates() {
+        var settings = Toybox.System.getDeviceSettings();
+        return [settings.screenWidth/2 - 120, settings.screenHeight*90/100];
     }
 }
 
@@ -296,12 +305,21 @@ function appOpensReadyScreenBeforeRecordingConfirmation(logger as Test.Logger) a
 }
 
 (:test)
-function readyUpperKeyRequestsRecordingConfirmation(logger as Test.Logger) as Lang.Boolean {
+function readyLowerKeyRequestsRecordingConfirmation(logger as Test.Logger) as Lang.Boolean {
+    var target = new ReadyStartTargetFake();
+    var delegate = new ReadyInputDelegate(new ReadyView(target,
+        new ReadyStatusSourceFake(), new HeartRateSourceFake(), new ClockFake()));
+    return delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) &&
+        target.requests == 1 && target.menuRequests == 0;
+}
+
+(:test)
+function readyUpperKeyOpensStartMenu(logger as Test.Logger) as Lang.Boolean {
     var target = new ReadyStartTargetFake();
     var delegate = new ReadyInputDelegate(new ReadyView(target,
         new ReadyStatusSourceFake(), new HeartRateSourceFake(), new ClockFake()));
     return delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ENTER)) &&
-        target.requests == 1;
+        target.requests == 0 && target.menuRequests == 1;
 }
 
 (:test)
@@ -310,6 +328,15 @@ function readyStartAreaRequestsRecordingConfirmation(logger as Test.Logger) as L
     var delegate = new ReadyInputDelegate(new ReadyView(target,
         new ReadyStatusSourceFake(), new HeartRateSourceFake(), new ClockFake()));
     return delegate.onTap(new TapEventFake()) && target.requests == 1;
+}
+
+(:test)
+function readyMenuAreaOpensStartMenu(logger as Test.Logger) as Lang.Boolean {
+    var target = new ReadyStartTargetFake();
+    var delegate = new ReadyInputDelegate(new ReadyView(target,
+        new ReadyStatusSourceFake(), new HeartRateSourceFake(), new ClockFake()));
+    return delegate.onTap(new ReadyMenuTapEventFake()) &&
+        target.requests == 0 && target.menuRequests == 1;
 }
 
 (:test)
