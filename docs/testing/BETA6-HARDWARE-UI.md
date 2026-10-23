@@ -2,11 +2,17 @@
 
 Stand: 23. Oktober 2026
 
-Prüfkandidat: Beta 6, Commit `c195814`
+Prüfkandidat: Beta 6, Commit `43694fc`
 
 Zielgerät: Garmin Venu 2 Plus
 
-Automatisierter Ausgangsstand: 244/244 Watch-Tests grün; die Prüfung am physischen Gerät ist noch offen.
+Automatisierter Ausgangsstand: 247/247 Watch-Tests grün; die Prüfung am physischen Gerät ist noch offen.
+
+## Aktueller UI-Gate-Status
+
+- **Quellcode-Gate: bestanden.** Commit `43694fc` zeichnet Bedingung, das zur laufenden Wiederholung gehörende Tempo und die Dauer in Minuten. Die obere Taste ist konsistent als `UPPER: CANCEL` beschriftet. Review-Touches führen nur innerhalb der beiden Optionszonen die direkt berührte Aktion aus.
+- **Simulator-Gate: bestanden.** Die gemeldete vollständige Suite umfasst 247/247 grüne Watch-Tests; die neuen Fälle decken Run-Texte, Cancel-Beschriftung, beide Review-Zonen und Touches außerhalb der Zonen ab.
+- **Hardware-Gate: offen.** Noch nicht nachgewiesen sind Lesbarkeit, reale Tastenbelegung, Treffergenauigkeit und Entprellung auf der Venu 2 Plus. Diese offenen Punkte sind unten als P0-Prüfungen aufgeführt.
 
 ## Zweck und Freigabegrenze
 
@@ -23,7 +29,7 @@ Ergebniskennzeichen:
 
 ## Vorbereitung
 
-- [ ] Installierten Build eindeutig als Beta 6 und Commit `c195814` dokumentieren.
+- [ ] Installierten Build eindeutig als Beta 6 und Commit `43694fc` dokumentieren.
 - [ ] Uhr neu starten und sicherstellen, dass keine ältere App-Instanz im Speicher aktiv ist.
 - [ ] Einen Durchlauf ohne persönliches Profil und einen Durchlauf mit gespeichertem lokalen Profil vorsehen.
 - [ ] Einen Durchlauf mit verfügbarer HR-Quelle und einen ohne erkannte HR-Quelle vorsehen.
@@ -150,7 +156,11 @@ P0-Hardwareprüfung.
 - [ ] Fehlermeldungen sind lesbar und führen in einen sicheren, nachvollziehbaren Zustand.
 - [ ] Offene P1-/P2-Beobachtungen sind dokumentiert und einer späteren Entscheidung zugeordnet.
 
-Die drei zuvor auf Quellstand-Ebene sichtbaren P0-Konflikte sind im Code und in
-den Simulator-Tests behoben. Die Hardware-UI-Freigabe bleibt dennoch **offen**,
-bis Run-Details, `UPPER: CANCEL` und beide Review-Touchbereiche auf der echten
-Venu 2 Plus bestanden sind.
+Die drei zuvor auf Quellstand-Ebene sichtbaren P0-Konflikte sind behoben. Es
+verbleiben ausschließlich Hardware-Nachweise: Lesbarkeit und Randabstände aller
+Pflichttexte, tatsächliche Zuordnung und Entprellung der oberen und unteren
+Taste, sichere Trennung aller Touchbereiche, direkte Treffergenauigkeit der
+Review-Zonen, bestätigungsfreie Ausführung der gewählten Review-Aktion sowie
+vollständig lesbare und sicher verlassbare Fehlerzustände. Bis diese Punkte auf
+der echten Venu 2 Plus bestanden sind, bleibt die Hardware-UI-Freigabe
+**offen**.
