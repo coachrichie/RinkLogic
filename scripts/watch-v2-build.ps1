@@ -4,7 +4,7 @@ param(
     [string]$Device,
     [switch]$UnitTest,
     [string]$TestName,
-    [ValidateSet("Fixed", "ProfileHeight", "CalibratedProfile")]
+    [ValidateSet("Fixed", "ProfileHeight", "CalibratedProfile", "PersonalCalibrationBeta")]
     [string]$DistanceModel = "Fixed",
     [switch]$ExportPackage,
     [switch]$DescribeConfiguration
@@ -15,10 +15,15 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $jungle = switch ($DistanceModel) {
     "ProfileHeight" { "watch-v2/monkey-profile-test.jungle" }
     "CalibratedProfile" { "watch-v2/monkey-calibrated-profile-test.jungle" }
+    "PersonalCalibrationBeta" { "watch-v2/monkey-personal-calibration-beta.jungle" }
     default { "watch-v2/monkey.jungle" }
 }
-$artifact = if ($ExportPackage -and $DistanceModel -eq "CalibratedProfile") {
+$artifact = if ($ExportPackage -and $DistanceModel -eq "PersonalCalibrationBeta") {
+    "RinkLogic-0.2.0-beta.6.iq"
+} elseif ($ExportPackage -and $DistanceModel -eq "CalibratedProfile") {
     "RinkLogic-0.2.0-beta.5.iq"
+} elseif ($DistanceModel -eq "PersonalCalibrationBeta") {
+    "RinkLogic-personal-calibration-beta.prg"
 } elseif ($DistanceModel -eq "ProfileHeight") {
     "RinkLogic-profile-test.prg"
 } elseif ($DistanceModel -eq "CalibratedProfile") {
@@ -27,8 +32,8 @@ $artifact = if ($ExportPackage -and $DistanceModel -eq "CalibratedProfile") {
     "ShiftSenseV2.prg"
 }
 
-if ($ExportPackage -and $DistanceModel -ne "CalibratedProfile") {
-    throw "ExportPackage is only supported with DistanceModel CalibratedProfile."
+if ($ExportPackage -and $DistanceModel -notin @("CalibratedProfile", "PersonalCalibrationBeta")) {
+    throw "ExportPackage is only supported with a versioned beta distance model."
 }
 
 if ($ExportPackage -and $UnitTest) {

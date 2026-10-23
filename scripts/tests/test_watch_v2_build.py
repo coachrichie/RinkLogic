@@ -41,6 +41,10 @@ class WatchV2BuildConfigurationTests(unittest.TestCase):
                 "watch-v2/monkey-calibrated-profile-test.jungle",
                 "RinkLogic-calibrated-profile-test.prg",
             ),
+            "PersonalCalibrationBeta": (
+                "watch-v2/monkey-personal-calibration-beta.jungle",
+                "RinkLogic-personal-calibration-beta.prg",
+            ),
         }
         for model, (jungle, artifact) in expected.items():
             with self.subTest(model=model):
@@ -59,6 +63,13 @@ class WatchV2BuildConfigurationTests(unittest.TestCase):
         self.assertTrue(config["exportPackage"])
         self.assertEqual(config["artifact"], "RinkLogic-0.2.0-beta.5.iq")
 
+    def test_personal_calibration_export_uses_beta_six_iq_name(self):
+        result = self.describe("PersonalCalibrationBeta", export=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        config = json.loads(result.stdout)
+        self.assertTrue(config["exportPackage"])
+        self.assertEqual(config["artifact"], "RinkLogic-0.2.0-beta.6.iq")
+
     def test_export_rejects_non_calibrated_modes(self):
         for model in ["Fixed", "ProfileHeight"]:
             with self.subTest(model=model):
@@ -66,8 +77,10 @@ class WatchV2BuildConfigurationTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
 
     def test_export_rejects_unit_test_combination(self):
-        result = self.describe("CalibratedProfile", export=True, unit_test=True)
-        self.assertNotEqual(result.returncode, 0)
+        for model in ["CalibratedProfile", "PersonalCalibrationBeta"]:
+            with self.subTest(model=model):
+                result = self.describe(model, export=True, unit_test=True)
+                self.assertNotEqual(result.returncode, 0)
 
     def test_unsupported_distance_model_is_rejected(self):
         result = self.describe("Unsupported")

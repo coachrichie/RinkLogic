@@ -1,6 +1,6 @@
 # V2-Testprotokoll: Trainingszusammenfassung und Garmin Connect
 
-Stand: 21. Oktober 2026. Zielgerät: Garmin Venu 2 Plus. Dieses Protokoll trennt
+Stand: 23. Oktober 2026. Zielgerät: Garmin Venu 2 Plus. Dieses Protokoll trennt
 automatisierte Nachweise, beobachtete Beta-Ergebnisse und weiterhin nicht
 protokollierte Detailprüfungen.
 
@@ -30,13 +30,13 @@ gespeicherten Trainings- und FIT-Felder.
 
 ## Testbuild
 
-Der nächste Lauf verwendet einen noch zu paketierenden Schema-11-Kandidaten.
+Der nächste Lauf verwendet den noch final zu paketierenden Beta-6-/Schema-12-Kandidaten.
 Commit, Dateiname, Größe und SHA-256 werden erst nach der vollständigen
 Endprüfung hier und in `docs/DEVELOPMENT.md` eingetragen. Die bestätigte
 Beta 4 bleibt unangetastet als Rollback; ihr signiertes IQ-Paket wird nicht
 überschrieben oder erneut veröffentlicht.
 
-- Schema-11-Quellcommit: ____________________
+- Beta-6-/Schema-12-Quellcommit: ____________________
 - PRG-Datei, Größe und SHA-256: ____________________
 - IQ-Datei, Größe und SHA-256: ____________________
 - SDK 9.2.0, Gerät `venu2plus`
@@ -115,7 +115,6 @@ Plattformgrenze und kein bestandener Sichtbarkeitstest.
 | Ø Shiftdauer | [ ] | [ ] | |
 | Ø Herzfrequenz pro Shift | [ ] | [ ] | |
 | HF-Zonen 1–5 | [ ] | [ ] | |
-| Zeit über 90 % HFmax | [ ] | [ ] | |
 | Work-to-Rest-Verhältnis | [ ] | [ ] | |
 | Shift-Dichte | [ ] | [ ] | |
 | kürzester, längster und Median-Shift | [ ] | [ ] | |
@@ -125,14 +124,13 @@ In der Aktivitätszusammenfassung werden erwartet:
 - [ ] Anzahl Shifts, Time on Ice, Bankzeit.
 - [ ] Ø Shiftdauer und Ø Herzfrequenz pro Shift.
 - [ ] Zeit in HF-Zone 1, 2, 3, 4 und 5.
-- [ ] Zeit über 90 % HFmax.
 - [ ] Work-to-Rest-Verhältnis; der gespeicherte Ganzzahlwert trägt die Einheit
       `×0,1 Arbeit/Pause`.
 - [ ] Shift-Dichte in Shifts pro Stunde.
 - [ ] Kürzester, längster und Median-Shift.
 - [ ] Die ersten fünf Entwicklerwerte stehen in der Reihenfolge Anzahl Shifts,
       Ø Shiftdauer, Ø Shift-HF, geschätzte Distanz, erkannte Anschübe.
-- [ ] Eis-/Bankzeit, HF-Zonen, Zeit über 90 % und Median tragen die Einheit
+- [ ] Eis-/Bankzeit, HF-Zonen und Median tragen die Einheit
       `min`; Distanz trägt `≈` und `m`.
 - [ ] Die Top 3 beziehungsweise intensivsten Shifts sind intern nach gültigem
       Durchschnittspuls ermittelt. Eine eigene Garmin-Connect-Anzeige wird nur
@@ -180,12 +178,14 @@ Die Aktivität aus Garmin Connect als Original-FIT exportieren und mit den
 manuell notierten Zeiten vergleichen.
 
 - [ ] FIT-Datei lässt sich mit gültiger CRC dekodieren.
-- [ ] Schema-11-Marker ID 73 kommt in Record-Nachrichten vor.
-- [ ] Aktive Session-IDs sind exakt `74,78,85,86,96,97,98,101–109`.
-- [ ] IDs 101–109 sind Float-Minuten; alte Sekunden-IDs 75/76/79–84/89 sind
+- [ ] Schema-12-Marker ID 73 kommt in Record-Nachrichten vor.
+- [ ] Aktive Session-IDs sind exakt `74,78,85,86,96,97,98,101–107,109,115`.
+- [ ] IDs 101–107 und 109 sind Float-Minuten; alte Sekunden-IDs 75/76/79–84/89 sind
       nicht aktiv allokiert.
-- [ ] IDs 63, 66, 93, 94 und 112 bleiben historisch registriert, sind in Schema 11
+- [ ] IDs 63, 66, 93, 94, 108 und 112 bleiben historisch registriert, sind in Schema 12
       aber nicht aktiv allokiert oder umgedeutet.
+- [ ] Session-ID 115 ist `float32`/`factor` und enthält den aktiven lokalen
+      Faktor oder FIT-invalid ohne aktives Profil.
 - [ ] ID 110 ist `record`/`float32`/`m`, ID 111 ist `lap`/`float32`/`m` und
       IDs 113/114 sind `lap`/`float32`/`min` mit exklusiver Gültigkeit.
 - [ ] Session-ID 97 bleibt `float32`/`m` ohne `nativeNum`; das native
@@ -215,7 +215,7 @@ Darstellung in Garmin Connect.
 
 Bei `IQ!`, fehlgeschlagenem Speichern, nicht öffnbarer Aktivität, falscher
 Phasenfolge, doppelter Schlussrunde, Zentimeter-/Meterfehler oder fehlenden
-Schema-11-Pflichtfeldern wird der Test abgebrochen. Diagnose-Logs und
+Schema-12-Pflichtfeldern wird der Test abgebrochen. Diagnose-Logs und
 Original-FIT bleiben lokal; anschließend wird die zuletzt bestätigte Beta 4
 installiert. Simulatorerfolg darf keinen dieser Hardware-/Connect-Punkte
 automatisch abhaken.

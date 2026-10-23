@@ -2,6 +2,28 @@
 
 Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entscheidungen, Implementierungsstände, Tests, Messergebnisse, Abweichungen und bekannte Risiken nachvollziehbar fest.
 
+## 2026-10-23 – Beta 6: persönliche Kalibrierung und Remote-Testvorbereitung
+
+- Zielversion `0.2.0-beta.6`, interne Portalversion `6`, FIT-Schema 12 und
+  Modellkennung `profile_height_v1+local_known_distance_v1`; zunächst ist nur
+  Garmin `venu2plus` freigegeben.
+- Die untere Ready-Taste startet Training, die obere öffnet Kalibrierung/Exit.
+  Die Kalibrierung verwendet stets die Baseline, prüft zehn gültige Läufe und
+  aktiviert einen Kandidaten erst nach expliziter Bestätigung und erfolgreichem
+  FIT-Speichern.
+- Session-ID 108 bleibt historisch reserviert und in Schema 12 inaktiv;
+  Session-ID 115 speichert den angewandten Faktor. Kadenzkorrelation und
+  Theil-Sen-Steigung sind reine Offline-Shadow-Evidenz.
+- Remote-Tester geben Original-FIT und Referenzformular manuell über einen
+  privaten Upload-only-Kanal zurück. App, Watch und Repository enthalten keine
+  Cloud-Upload-Architektur und kein GPS.
+- Das neue Buildziel lautet `-DistanceModel PersonalCalibrationBeta`. Es nutzt
+  dasselbe langfristige Garmin-Schlüsselpaar wie die Vorgängerversionen;
+  Schlüsselpfad und Schlüsselmaterial bleiben außerhalb des Repositorys.
+- Signierte Dateigrößen, SHA-256-Werte, Quellcommit und Hardware-/Connect-
+  Ergebnisse werden erst beim finalen Release-Gate eingetragen und bis dahin
+  nicht als bestanden behauptet.
+
 ## 2026-09-15 – Projektanlage und Produktdesign
 
 - Kanonischer Projektordner angelegt; sein lokaler absoluter Pfad bleibt privat.

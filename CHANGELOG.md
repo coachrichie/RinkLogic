@@ -8,6 +8,14 @@ dokumentiert. Das detaillierte Entwicklungsjournal befindet sich in
 
 ### Added
 
+- Beta 6: geführte lokale Kalibrierung für Eis/Inline über 20, 22, 25 oder
+  30 m mit zehn gültigen Läufen, expliziter Aktivierung und sicherem
+  Basismodell-Rückfall.
+- FIT-Schema 12 mit Session-Feld 115 für den tatsächlich verwendeten
+  persönlichen Faktor sowie offline reproduzierbarer Kadenz-/Schrittlängen-
+  Shadow-Auswertung.
+- Manueller Remote-Testprozess mit pseudonymer Kennung, privater
+  Original-FIT-Rückgabe und ohne Cloud-Komponente in der App.
 - Isolierter `0.2.0-beta.4`-Build mit evidenzbegrenzter Höhenbaseline und dem
   lokalen persönlichen Testfaktor `220/292,5`; kein GPS, Upload oder globales
   Modell.
@@ -30,6 +38,11 @@ dokumentiert. Das detaillierte Entwicklungsjournal befindet sich in
 
 ### Changed
 
+- Ready-Steuerung: untere Taste startet Training, obere Taste öffnet
+  `KALIBRIERUNG` / `EXIT`; Touch bleibt als direkter Menüpfad verfügbar.
+- Schema 12 reserviert das frühere Feld 108 unverändert, legt es aber nicht
+  mehr aktiv an. Zeit über 90 % HFmax wird bei deklariertem HFmax optional
+  offline aus nativen HR-Records berechnet.
 - Alle von RinkLogic dargestellten Zeitwerte auf der Uhr verwenden
   Dezimalminuten; Gesamt-/Eis-/Bankzeit mit einer und Shiftzeiten mit zwei
   Nachkommastellen.
