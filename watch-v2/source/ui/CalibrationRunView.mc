@@ -11,11 +11,15 @@ class CalibrationRunView extends WatchUi.View {
     private var mRepetition = 1;
     private var mLastDurationMinutes = null;
     private var mRunStartedAt = null;
+    private var mPromptCondition;
+    private var mPromptPace;
 
     function initialize(target, controller) {
         View.initialize();
         mTarget = target;
         mController = controller;
+        mPromptCondition = mController.currentCondition();
+        mPromptPace = mController.currentPace();
     }
 
     function getState() as Lang.Symbol {
@@ -26,8 +30,8 @@ class CalibrationRunView extends WatchUi.View {
     function setCoordinator(coordinator) as Void { mCoordinator = coordinator; }
 
     function prompt() as Lang.Dictionary {
-        return {:condition=>mController.currentCondition(),
-            :pace=>mController.currentPace(), :repetition=>mController.validCount() + 1,
+        return {:condition=>mPromptCondition,
+            :pace=>mPromptPace, :repetition=>mController.validCount() + 1,
             :durationMinutes=>mLastDurationMinutes};
     }
 
@@ -66,10 +70,27 @@ class CalibrationRunView extends WatchUi.View {
         mRepetition += 1;
         mLastDurationMinutes = null;
         mRunStartedAt = null;
+        mPromptCondition = mController.currentCondition();
+        mPromptPace = mController.currentPace();
         WatchUi.requestUpdate();
     }
 
     function requestCancel() as Void { mController.abort(); mTarget.cancelCalibration(); }
+
+    function conditionLabel(condition) as Lang.String {
+        return condition == :puck_stickhandling ? "PUCK + STICK" : "SKATE ONLY";
+    }
+
+    function paceLabel(pace) as Lang.String {
+        if (pace == :fast) { return "FAST"; }
+        if (pace == :normal) { return "NORMAL"; }
+        return "SLOW";
+    }
+
+    function durationLabel() as Lang.String {
+        return mLastDurationMinutes == null ? "-- MIN" :
+            mLastDurationMinutes.format("%.2f") + " MIN";
+    }
 
     function onUpdate(dc as Graphics.Dc) as Void {
         var centerX = dc.getWidth() / 2;
@@ -78,6 +99,12 @@ class CalibrationRunView extends WatchUi.View {
         dc.setColor(0xC8E5F4, Graphics.COLOR_TRANSPARENT);
         dc.drawText(centerX, 60, Graphics.FONT_LARGE,
             WatchUi.loadResource(Rez.Strings.CalibrationTitle),
+            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(centerX, 112, Graphics.FONT_XTINY,
+            conditionLabel(mPromptCondition) + " · " + paceLabel(mPromptPace),
+            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.drawText(centerX, 137, Graphics.FONT_XTINY, durationLabel(),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(mEnded ? 0xF6C246 : (mStarted ? 0x20D49A : 0x8FA6C1),
             Graphics.COLOR_TRANSPARENT);
@@ -91,7 +118,7 @@ class CalibrationRunView extends WatchUi.View {
             "REPETITION " + mRepetition.toString(),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.drawText(centerX, 310, Graphics.FONT_XTINY,
-            "LOWER: MARK · UPPER: SAVE",
+            "LOWER: MARK · UPPER: CANCEL",
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 }

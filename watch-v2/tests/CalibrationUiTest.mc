@@ -39,6 +39,15 @@ class CalibrationCoordinatorFake {
     }
 }
 
+class CalibrationSummaryTapEventFake extends WatchUi.ClickEvent {
+    private var mTapY;
+    function initialize(y) { mTapY = y; }
+    function getCoordinates() {
+        var settings = Toybox.System.getDeviceSettings();
+        return [settings.screenWidth / 2, mTapY];
+    }
+}
+
 (:test)
 function setupDefaultsUseInlineTwentyFiveMetres(logger as Test.Logger) as Lang.Boolean {
     var view = new CalibrationSetupView(new CalibrationTargetFake());
@@ -99,13 +108,30 @@ function runViewForwardsMarkersToLiveCoordinator(logger as Test.Logger) as Lang.
 }
 
 (:test)
-function runViewUpperActionSavesCalibration(logger as Test.Logger) as Lang.Boolean {
+function runViewUpperActionCancelsCalibration(logger as Test.Logger) as Lang.Boolean {
     var target = new CalibrationTargetFake();
     var controller = new CalibrationController();
     controller.configureLegacy(:inline, :skate_only, 2500, 5);
     var view = new CalibrationRunView(target, controller);
     view.requestCancel();
     return target.cancels == 1;
+}
+
+(:test)
+function runViewRendersConditionPaceDurationAndHonestUpperAction(logger as Test.Logger) as Lang.Boolean {
+    var controller = new CalibrationController();
+    controller.configure(:ice, 2500);
+    var view = new CalibrationRunView(new CalibrationTargetFake(), controller);
+    view.setCoordinator(new CalibrationCoordinatorFake());
+    if (!view.toggleMarker(1000) || !view.toggleMarker(11000)) { return false; }
+    var dc = new ReadyDcFake();
+    view.onUpdate(dc);
+    var joined = dc.texts.toString();
+    if (joined.find("SKATE ONLY") == null || joined.find("SLOW") == null ||
+        joined.find("0.17 MIN") == null || joined.find("UPPER: CANCEL") == null ||
+        joined.find("UPPER: SAVE") != null) { return false; }
+    view.nextRepetition();
+    return view.prompt()[:pace] == :fast;
 }
 
 (:test)
@@ -121,6 +147,31 @@ function calibrationReviewOffersExplicitActivateAndDiscard(logger as Test.Logger
     return view.selection() == :discard &&
         delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) &&
         target.discards == 1;
+}
+
+(:test)
+function calibrationReviewTouchExecutesTouchedOption(logger as Test.Logger) as Lang.Boolean {
+    var target = new CalibrationTargetFake();
+    var candidate = calibrationProfileCandidate(:ice, 1.0);
+    var view = new CalibrationSummaryView(target, candidate);
+    var delegate = new CalibrationSummaryInputDelegate(view);
+    if (!delegate.onTap(new CalibrationSummaryTapEventFake(265)) ||
+        target.discards != 1 || target.activations != 0) { return false; }
+
+    target = new CalibrationTargetFake();
+    view = new CalibrationSummaryView(target, candidate);
+    delegate = new CalibrationSummaryInputDelegate(view);
+    return delegate.onTap(new CalibrationSummaryTapEventFake(220)) &&
+        target.activations == 1 && target.discards == 0;
+}
+
+(:test)
+function calibrationReviewTouchOutsideOptionsDoesNothing(logger as Test.Logger) as Lang.Boolean {
+    var target = new CalibrationTargetFake();
+    var view = new CalibrationSummaryView(target, calibrationProfileCandidate(:ice, 1.0));
+    var delegate = new CalibrationSummaryInputDelegate(view);
+    return !delegate.onTap(new CalibrationSummaryTapEventFake(120)) &&
+        target.activations == 0 && target.discards == 0;
 }
 
 (:test)

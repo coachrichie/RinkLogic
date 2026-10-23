@@ -18,6 +18,12 @@ class CalibrationSummaryView extends WatchUi.View {
         if (mSelection == :activate) { mTarget.activateAndSaveCalibration(); }
         else { mTarget.discardCalibration(); }
     }
+    function confirmTouch(y) as Lang.Boolean {
+        if (y < 190 || y > 292) { return false; }
+        mSelection = y < 243 ? :activate : :discard;
+        confirmSelection();
+        return true;
+    }
     function onUpdate(dc as Graphics.Dc) as Void {
         var centerX = dc.getWidth() / 2;
         dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_BLACK); dc.clear();
@@ -50,7 +56,11 @@ class CalibrationSummaryInputDelegate extends WatchUi.InputDelegate {
         if (event.getKey() == WatchUi.KEY_ESC) { mView.confirmSelection(); return true; }
         return false;
     }
-    function onTap(event) as Lang.Boolean { mView.confirmSelection(); return true; }
+    function onTap(event) as Lang.Boolean {
+        var coordinates = event.getCoordinates();
+        if (coordinates == null || coordinates.size() < 2) { return false; }
+        return mView.confirmTouch(coordinates[1]);
+    }
 }
 
 class CalibrationOutcomeView extends WatchUi.View {

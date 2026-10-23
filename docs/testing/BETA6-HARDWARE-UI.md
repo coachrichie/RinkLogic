@@ -73,7 +73,10 @@ Ergebniskennzeichen:
 - [ ] Die Funktion der oberen Taste stimmt mit dem eingeblendeten Text überein. Eine Anzeige `UPPER: SAVE` darf nicht abbrechen oder verwerfen.
 - [ ] Nach der letzten gültigen Wiederholung öffnet sich genau einmal die Review-Seite.
 
-Quellstand-Hinweis vor dem Gerätetest: In `CalibrationRunView` werden Bedingung, Tempo und Minuten zwar im Datenmodell bereitgestellt, im aktuellen Zeichenpfad jedoch nicht ausgegeben. Außerdem zeigt der Hinweis `UPPER: SAVE`, während die obere Taste den Abbruchpfad aufruft. Diese Punkte gelten bis zum Nachweis am Build als P0-Fehler und nicht als bloße Dokumentationsabweichung.
+Quellstand-Hinweis: Bedingung, Tempo und Minuten werden nun gezeichnet; die
+obere Taste und der Hinweis lauten konsistent `UPPER: CANCEL`. Simulatorisch
+ist dies abgedeckt, die Lesbarkeit und das tatsächliche Tastenverhalten auf der
+Venu 2 Plus bleiben P0-Hardwareprüfungen.
 
 ## P0 – Review und Ergebnis
 
@@ -87,7 +90,10 @@ Quellstand-Hinweis vor dem Gerätetest: In `CalibrationRunView` werden Bedingung
 - [ ] Nach Verwerfen bleibt das bisherige Profil unverändert; ohne vorhandenes Profil erscheint weiterhin die Baseline-Anzeige.
 - [ ] Nach Auswahl und Tastendruck gibt es keinen zusätzlichen Bestätigungsdialog und keinen zweiten erforderlichen Tastendruck.
 
-Quellstand-Hinweis vor dem Gerätetest: `CalibrationSummaryView.onTap()` wertet aktuell keine Touch-Koordinaten aus, sondern bestätigt nur die bestehende Auswahl. Damit kann ein Touch auf **VERWERFEN** die markierte Aktion **AKTIVIEREN** ausführen. Dieser Punkt ist ein P0-Blocker, bis der konkrete Build das geforderte Direktverhalten nachweislich erfüllt.
+Quellstand-Hinweis: `CalibrationSummaryView.onTap()` wertet nun die vertikale
+Touchposition aus und führt die berührte Option aus. Beide Zielbereiche sind
+simulatorisch abgedeckt; die reale Treffergenauigkeit bleibt eine
+P0-Hardwareprüfung.
 
 ## P0 – Fehlermeldungen und sichere Zustände
 
@@ -144,4 +150,7 @@ Quellstand-Hinweis vor dem Gerätetest: `CalibrationSummaryView.onTap()` wertet 
 - [ ] Fehlermeldungen sind lesbar und führen in einen sicheren, nachvollziehbaren Zustand.
 - [ ] Offene P1-/P2-Beobachtungen sind dokumentiert und einer späteren Entscheidung zugeordnet.
 
-Solange einer der drei bereits auf Quellstand-Ebene sichtbaren P0-Konflikte – fehlende Run-Details, `UPPER: SAVE` versus Abbruch oder koordinatenloser Review-Touch – besteht, lautet die Hardware-UI-Freigabe **nicht bestanden**.
+Die drei zuvor auf Quellstand-Ebene sichtbaren P0-Konflikte sind im Code und in
+den Simulator-Tests behoben. Die Hardware-UI-Freigabe bleibt dennoch **offen**,
+bis Run-Details, `UPPER: CANCEL` und beide Review-Touchbereiche auf der echten
+Venu 2 Plus bestanden sind.

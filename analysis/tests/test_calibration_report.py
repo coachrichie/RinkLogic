@@ -48,6 +48,23 @@ class CalibrationReportTests(unittest.TestCase):
             "active_factor": "1.0", "hrmax_bpm": "200",
         }
 
+    def schema_twelve_fixture(self, estimated_m=25.0):
+        paces = ["slow", "fast", "normal", "slow", "fast"] * 2
+        conditions = ["skate_only"] * 5 + ["puck_stickhandling"] * 5
+        rows = []
+        for repetition, (condition, pace) in enumerate(zip(conditions, paces), 1):
+            row = self.row(repetition, condition=condition)
+            row["target_pace"] = pace
+            rows.append(row)
+        shifts = [{"at_ms": index * 10000, "duration_minutes": 0.2,
+                   "pushes": 10, "estimated_distance_m": estimated_m,
+                   "coverage_percent": 100}
+                  for index in range(1, 11)]
+        report = normalized_report(shifts)
+        report.update({"schema_version": 12, "personal_calibration_factor": 1.0,
+                       "records": []})
+        return rows, shifts, report
+
     def test_dependency_free_robust_statistics_handle_ties_and_degenerate_inputs(self):
         self.assertAlmostEqual(calibration_report.spearman_rho(
             [1, 2, 2, 4, 5], [1, 2, 2, 4, 5]), 1.0)
@@ -233,13 +250,45 @@ class CalibrationReportTests(unittest.TestCase):
         self.assertEqual(result["groups"]["inline/skate_only"]["profile_status"], "eligible")
         self.assertEqual(result["profile_status"], "provisional")
 
-    def test_report_identifies_factor_as_local_personal_test_only(self):
-        result = build_calibration_report_from_report(normalized_report([]), [])
+    def test_report_reconstructs_beta_six_factor_as_local_personal_test_only(self):
+        rows, _, report = self.schema_twelve_fixture(estimated_m=20.0)
+        result = build_calibration_report_from_report(
+            report, read_calibration_manifest(self.manifest(rows)))
         calibration = result["personal_test_calibration"]
-        self.assertAlmostEqual(calibration["factor"], 220.0 / 292.5)
+        self.assertEqual(calibration["factor"], 1.25)
+        self.assertEqual(calibration["valid_repetition_count"], 10)
+        self.assertEqual(calibration["condition_medians"], {
+            "skate_only": 1.25, "puck_stickhandling": 1.25,
+        })
         self.assertEqual(calibration["scope"], "local_personal_test")
         self.assertFalse(calibration["population_coefficient"])
         self.assertFalse(calibration["automatic_activation"])
+
+    def test_schema_twelve_rechecks_runtime_run_gates(self):
+        rows, shifts, report = self.schema_twelve_fixture()
+        invalid_cases = [
+            ("duration_minutes", 0.02, "duration_out_of_range"),
+            ("duration_minutes", 0.51, "duration_out_of_range"),
+            ("coverage_percent", 79, "insufficient_sensor_coverage"),
+            ("pushes", 0, "invalid_push_count"),
+            ("estimated_distance_m", 60.0, "factor_out_of_range"),
+        ]
+        for field, value, reason in invalid_cases:
+            with self.subTest(field=field, value=value):
+                candidate = [dict(shift) for shift in shifts]
+                candidate[0][field] = value
+                case_report = {**report, "push_metrics": {"manual_shifts": candidate}}
+                result = build_calibration_report_from_report(
+                    case_report, read_calibration_manifest(self.manifest(rows)))
+                self.assertFalse(result["trials"][0]["valid"])
+                self.assertEqual(result["trials"][0]["reason"], reason)
+                self.assertNotEqual(result["profile_status"], "eligible")
+
+    def test_schema_twelve_marks_fit_timebase_as_not_independently_verifiable(self):
+        rows, _, report = self.schema_twelve_fixture()
+        result = build_calibration_report_from_report(
+            report, read_calibration_manifest(self.manifest(rows)))
+        self.assertEqual(result["timebase_verification"], "not_exported_in_schema_12")
 
     def test_both_conditions_required_for_overall_eligibility(self):
         rows = [self.row(i) for i in range(1, 6)] + [

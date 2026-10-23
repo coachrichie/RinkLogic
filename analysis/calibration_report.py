@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 from datetime import datetime
+from decimal import Decimal, ROUND_HALF_UP
 from math import ceil
 from pathlib import Path
 from statistics import mean, median, stdev
@@ -19,6 +20,19 @@ MARKER_STATUSES = {"valid", "uncertain", "missing", "duplicate", "delayed"}
 PACES = {"slow", "normal", "fast"}
 PACE_ORDER = ["slow", "fast", "normal", "slow", "fast"] * 2
 CONDITION_ORDER = ["skate_only"] * 5 + ["puck_stickhandling"] * 5
+
+
+def _round_four_half_up(value):
+    return float(Decimal(str(value)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP))
+
+
+def _relative_mad(values):
+    if not values:
+        return None
+    center = median(values)
+    if center <= 0:
+        return None
+    return median(abs(value - center) for value in values) / center
 
 
 def _optional_float(value, *, minimum=None, maximum=None):
@@ -229,6 +243,7 @@ def build_calibration_report_from_report(report: dict, manifest: list[dict]) -> 
     shifts = report.get("push_metrics", {}).get("manual_shifts", [])
     if report.get("schema_version") == 12:
         _validate_schema_twelve_manifest(manifest, shifts)
+    schema_twelve = report.get("schema_version") == 12
     trials = []
     for row in manifest:
         index = row["repetition"] - 1
@@ -254,15 +269,32 @@ def build_calibration_report_from_report(report: dict, manifest: list[dict]) -> 
         elif (shift.get("estimated_distance_cm") is None and
               shift.get("estimated_distance_m") is None) or shift.get("pushes") is None:
             base["reason"] = "unknown_fit_value"
+        elif schema_twelve and (_optional_float(
+                shift.get("duration_minutes"), minimum=0) is None or
+                not 2.0 / 60.0 <= float(shift["duration_minutes"]) <= 30.0 / 60.0):
+            base["reason"] = "duration_out_of_range"
         elif shift.get("coverage_percent") is None:
             base["reason"] = "unknown_sensor_coverage"
+        elif schema_twelve and not 80 <= shift["coverage_percent"] <= 100:
+            base["coverage_percent"] = shift["coverage_percent"]
+            base["reason"] = "insufficient_sensor_coverage"
         elif not 0 < shift["coverage_percent"] <= 100:
             base["coverage_percent"] = shift["coverage_percent"]
             base["reason"] = "invalid_sensor_coverage"
+        elif schema_twelve and shift["pushes"] <= 0:
+            base["coverage_percent"] = shift["coverage_percent"]
+            base["reason"] = "invalid_push_count"
         else:
             estimated_m = (shift.get("estimated_distance_m") if
                            shift.get("estimated_distance_m") is not None else
                            shift["estimated_distance_cm"] / 100.0)
+            ratio = (base["reference_distance_m"] / estimated_m
+                     if estimated_m > 0 else None)
+            if schema_twelve and (ratio is None or not 0.50 <= ratio <= 1.50):
+                base["coverage_percent"] = shift["coverage_percent"]
+                base["reason"] = "factor_out_of_range"
+                trials.append(base)
+                continue
             base["coverage_percent"] = shift["coverage_percent"]
             base["distance_error_m"] = estimated_m - base["reference_distance_m"]
             base["distance_error_percent"] = (
@@ -277,8 +309,8 @@ def build_calibration_report_from_report(report: dict, manifest: list[dict]) -> 
             base["duration_minutes"] = duration
             if duration is not None and duration > 0 and shift["pushes"] > 0:
                 base["cadence_per_min"] = shift["pushes"] / duration
-            if estimated_m > 0:
-                base["baseline_factor"] = base["reference_distance_m"] / estimated_m
+            if ratio is not None:
+                base["baseline_factor"] = ratio
             base["baseline_distance_error_m"] = (
                 estimated_m - base["reference_distance_m"])
             factor = row.get("active_factor")
@@ -305,6 +337,34 @@ def build_calibration_report_from_report(report: dict, manifest: list[dict]) -> 
         profile_status = "provisional"
     else:
         profile_status = "ineligible"
+    valid_factors = [trial["baseline_factor"] for trial in trials
+                     if trial["valid"] and trial["baseline_factor"] is not None]
+    condition_factors = {
+        condition: [trial["baseline_factor"] for trial in trials
+                    if trial["valid"] and trial["condition"] == condition and
+                    trial["baseline_factor"] is not None]
+        for condition in CONDITIONS
+    }
+    condition_medians = {
+        condition: (median(values) if values else None)
+        for condition, values in condition_factors.items()
+    }
+    factor = (_round_four_half_up(median(valid_factors))
+              if len(valid_factors) == 10 else None)
+    calibration_consistent = factor is not None
+    if calibration_consistent:
+        calibration_consistent = all(
+            len(condition_factors[condition]) == 5 and
+            _relative_mad(condition_factors[condition]) <= 0.15
+            for condition in CONDITIONS)
+    if calibration_consistent:
+        left = condition_medians["skate_only"]
+        right = condition_medians["puck_stickhandling"]
+        midpoint = (left + right) / 2.0
+        calibration_consistent = midpoint > 0 and abs(left - right) / midpoint <= 0.15
+    if schema_twelve and profile_status == "eligible" and not calibration_consistent:
+        profile_status = "inconsistent"
+
     declared_factors = {row["active_factor"] for row in manifest
                         if row.get("active_factor") is not None}
     fit_factor = report.get("personal_calibration_factor")
@@ -312,6 +372,8 @@ def build_calibration_report_from_report(report: dict, manifest: list[dict]) -> 
     if fit_factor is not None and declared_factors:
         factor_mismatch = (len(declared_factors) != 1 or
                            abs(next(iter(declared_factors)) - fit_factor) > 0.00005)
+        if factor is not None:
+            factor_mismatch = factor_mismatch or abs(factor - fit_factor) > 0.00005
     hrmax_values = {row["hrmax_bpm"] for row in manifest
                     if row.get("hrmax_bpm") is not None}
     hrmax = next(iter(hrmax_values)) if len(hrmax_values) == 1 else None
@@ -325,9 +387,12 @@ def build_calibration_report_from_report(report: dict, manifest: list[dict]) -> 
         "profile_status": profile_status,
         "session_start": report.get("session_start"),
         "personal_test_calibration": {
-            "factor": 220.0 / 292.5,
-            "numerator_cm": 220.0,
-            "denominator_cm": 292.5,
+            "factor": factor if calibration_consistent else None,
+            "valid_repetition_count": len(valid_factors),
+            "condition_medians": {
+                key: (_round_four_half_up(value) if value is not None else None)
+                for key, value in condition_medians.items()
+            },
             "scope": "local_personal_test",
             "population_coefficient": False,
             "automatic_activation": False,
@@ -346,6 +411,8 @@ def build_calibration_report_from_report(report: dict, manifest: list[dict]) -> 
         "time_above_90_hrmax_minutes": _time_above_ninety(
             report.get("records", []), hrmax),
         "hrmax_source": "tester_manifest" if hrmax is not None else None,
+        "timebase_verification": (
+            "not_exported_in_schema_12" if schema_twelve else "not_applicable"),
     }
 
 

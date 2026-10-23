@@ -117,27 +117,37 @@ Plattformgrenze und kein bestandener Sichtbarkeitstest.
 | HF-Zonen 1–5 | [ ] | [ ] | |
 | Work-to-Rest-Verhältnis | [ ] | [ ] | |
 | Shift-Dichte | [ ] | [ ] | |
-| kürzester, längster und Median-Shift | [ ] | [ ] | |
+| Median-Shift | [ ] | [ ] | |
+| geschätzte Distanz | [ ] | [ ] | Entwicklerfeld 97; native Distanz darf 0,0 bleiben |
+| erkannte Anschübe | [ ] | [ ] | |
+| persönlicher Faktor | [ ] | [ ] | Feld 115 oder leer ohne aktives Profil |
 
 In der Aktivitätszusammenfassung werden erwartet:
 
 - [ ] Anzahl Shifts, Time on Ice, Bankzeit.
+- [ ] Aktivitätstyp beziehungsweise Titel erscheint als `Hockey`, nicht als
+      `Other`.
 - [ ] Ø Shiftdauer und Ø Herzfrequenz pro Shift.
 - [ ] Zeit in HF-Zone 1, 2, 3, 4 und 5.
 - [ ] Work-to-Rest-Verhältnis; der gespeicherte Ganzzahlwert trägt die Einheit
       `×0,1 Arbeit/Pause`.
 - [ ] Shift-Dichte in Shifts pro Stunde.
-- [ ] Kürzester, längster und Median-Shift.
+- [ ] Median-Shift. Kürzester und längster Shift werden auf der Uhr geprüft;
+      Schema 12 reserviert dafür keine aktiven Connect-Summary-Felder.
 - [ ] Die ersten fünf Entwicklerwerte stehen in der Reihenfolge Anzahl Shifts,
       Ø Shiftdauer, Ø Shift-HF, geschätzte Distanz, erkannte Anschübe.
 - [ ] Eis-/Bankzeit, HF-Zonen und Median tragen die Einheit
       `min`; Distanz trägt `≈` und `m`.
+- [ ] Geschätzte Distanz, erkannte Anschübe und persönlicher Faktor 115 sind
+      jeweils als eigene Entwicklerwerte sichtbar und plausibel.
 - [ ] Die Top 3 beziehungsweise intensivsten Shifts sind intern nach gültigem
       Durchschnittspuls ermittelt. Eine eigene Garmin-Connect-Anzeige wird nur
       als bestanden markiert, wenn tatsächlich ein geeignetes Feld sichtbar ist.
 - [ ] Die nativen Garmin-Overview-Karten werden nur beobachtet. Ein Ersatz von
       Distanz, Geschwindigkeit oder Anstieg durch Connect-IQ-Entwicklerfelder
       ist **nicht** Teil dieser Abnahme.
+- [ ] Garmins native Gesamtzeit darf weiterhin `HH:MM:SS` verwenden; die
+      Minutenpflicht gilt für RinkLogic-eigene Entwicklerfelder.
 
 In der Runden-/Lap-Tabelle werden erwartet:
 
@@ -146,6 +156,8 @@ In der Runden-/Lap-Tabelle werden erwartet:
       weiter; bei diesem Ablauf entstehen beim Speichern genau zehn Phasenrunden.
 - [ ] Jede Phase zeigt ihre Dauer in Minuten: `On-Ice` über Feld 113 und
       `Bench` über Feld 114. Pro Runde ist genau eines davon gültig.
+      Die beschrifteten Entwicklerwerte müssen sichtbar sein; eine Umbenennung
+      der gesamten nativen Garmin-Rundenzeile wird nicht vorausgesetzt.
       On-Ice-Runden zeigen zusätzlich
       die geschätzte Distanz in Metern und – bei ausreichenden Daten – Ø HF.
 - [ ] Bench-Runden enthalten keine erfundene Distanz, Shift-HF, Anschubzahl
@@ -156,7 +168,8 @@ In der Runden-/Lap-Tabelle werden erwartet:
 - [ ] Die letzte Phase erscheint nach Speichern genau einmal; ein Speicher-Retry
       erzeugt keine zusätzliche Schlussrunde.
 - [ ] Bei 15 On-Ice- und 15 Bench-Phasen stehen 29 explizite Runden plus die
-      native Schlussrunde im FIT, insgesamt 30 statt 31.
+      native Schlussrunde im FIT, insgesamt 30 statt 31. Dieses Verhalten ist
+      hardwareabhängig und muss auf der echten Uhr bestätigt werden.
 
 Screenshot-/Notizreferenzen für Summary und Phasen-Laps: ____________________
 
