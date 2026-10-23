@@ -83,6 +83,7 @@ PILOT_FIELD_NAMES = {
     112: "phase",
     113: "on_ice_phase_minutes",
     114: "bench_phase_minutes",
+    115: "personal_calibration_factor",
 }
 STATE_NAMES = {1: "ice", 2: "bench"}
 
@@ -418,12 +419,12 @@ def normalize_messages(messages):
     schema_version = session.get("shadow_schema_version") if session is not None else None
     if session is None:
         summary_record = next((m for m in messages if m.get("type") == "record"
-                               and m.get("summary_schema_version") in (7, 8, 9, 10, 11)), None)
+                               and m.get("summary_schema_version") in (7, 8, 9, 10, 11, 12)), None)
         if summary_record is not None and sessions:
             session = sessions[0]
             schema_version = summary_record["summary_schema_version"]
     if session is None:
-        raise ValueError("This activity has no ShiftSense schema 4 through 11")
+        raise ValueError("This activity has no ShiftSense schema 4 through 12")
     start = session.get("start_time")
     if schema_version <= 6:
         records = [m for m in messages if m.get("type") == "record"
@@ -503,6 +504,10 @@ def normalize_messages(messages):
             fit_gaps += max(skipped_sequence, skipped_time)
     time_metrics, raw_time_fields = _time_metrics(
         session, messages, schema_version)
+    personal_factor = _finite_nonnegative(
+        session.get("personal_calibration_factor"))
+    if personal_factor is not None and not 0.50 <= personal_factor <= 1.50:
+        personal_factor = None
     return {
         "schema_version": schema_version,
         "session_start": str(start) if start is not None else None,
@@ -519,13 +524,14 @@ def normalize_messages(messages):
         "time_metrics_minutes": time_metrics,
         "raw_time_fields": raw_time_fields,
         "raw_session": dict(session),
+        "personal_calibration_factor": personal_factor,
         "push_metrics": _push_metrics(session, records, messages, schema_version),
         "phase_intervals": _phase_intervals(messages, schema_version),
     }
 
 
 def load_pilot_fit(path):
-    """CRC-check one user-owned FIT file and decode schema 4 through 11."""
+    """CRC-check one user-owned FIT file and decode schema 4 through 12."""
     import fitdecode
     from fitdecode.types import DevFieldDefinition
 
@@ -568,7 +574,7 @@ def _read_reference_csv(path):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("fit", nargs="+", type=Path, help="local schema-4 through schema-11 FIT files")
+    parser.add_argument("fit", nargs="+", type=Path, help="local schema-4 through schema-12 FIT files")
     parser.add_argument("--reference", action="append", type=Path,
                         help="optional elapsed_ms,state CSV; repeat per FIT file")
     parser.add_argument("--output", type=Path, help="write local JSON report")

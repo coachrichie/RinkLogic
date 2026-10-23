@@ -1,12 +1,14 @@
 # 20–30-m-Bewegungs- und Distanztest
 
-Stand: 2026-10-13
+Stand: 2026-10-23
 
-Zweck: lokale Validierung der heuristischen Anschub-/Distanzschätzung von ShiftSense auf der Venu 2 Plus.
+Zweck: lokale Validierung der Anschub-/Distanzschätzung und der persönlichen
+Beta-6-Kalibrierung von RinkLogic auf der Venu 2 Plus.
 
 Dieses Protokoll mit mindestens fünf gültigen Wiederholungen je Bedingung
-dient der persönlichen Distanzprüfung. Es ist kein Kalibrierungsmodul und
-ändert keine App-Parameter. Auch `profile_status: eligible`
+dient der persönlichen Distanzprüfung. In Beta 6 kann ein Faktor erst nach
+einer gültigen Zehn-Läufe-Serie und ausdrücklicher Bestätigung lokal aktiviert
+werden. Auch `profile_status: eligible`
 ist keine Freigabe eines populationsweiten Höhenmodells. Dafür gelten die
 spielergruppengetrennten Kriterien in
 [`player-profile-distance-validation.md`](player-profile-distance-validation.md);
@@ -16,31 +18,40 @@ der normale Build bleibt bis zu deren Erfüllung bei `:fixed`.
 
 Die Uhr liefert hier **keine GPS-Distanz**. `estimated_distance_cm` ist ein experimenteller Modellwert aus Bewegungsmerkmalen und Anschüben. Eine hohe Sensorabdeckung beweist keine hohe Distanzgenauigkeit. Die Ergebnisse gelten zunächst nur für die getestete Person, Uhrposition und Bewegungsart.
 
-Die Beta `0.2.0-beta.4` verwendet als dokumentierte Ausgangsbasis die bereits
-vorliegende persönliche Testrelation `220/292,5`. Sie wird als zweite, lokale
-Schicht nach dem evidenzbegrenzten Höhenmodell angewandt. Sie ist keine
-Populationsaussage und wird weder automatisch aus neuen Läufen geschrieben
-noch für andere Nutzer aktiviert. Für diesen Test gibt es kein GPS, keinen
-Upload und kein globales Training.
+Die Beta `0.2.0-beta.6` startet ohne aktives Profil mit dem wissenschaftlich
+begrenzten Höhen-Basismodell. Eine gültige bekannte-Distanz-Kalibrierung kann
+einen ausschließlich lokalen persönlichen Faktor ergänzen. Sie ist keine
+Populationsaussage. Für diesen Test gibt es kein GPS, keinen Cloud-Upload und
+kein globales Training.
 
 ## Ablauf vor dem Training
 
-Im Testbuild wird vor **jedem** Training eine eigene kurze Testaufzeichnung
-über den normalen Start- und Shift-Ablauf angelegt. Der Ready-Bildschirm hat
-dafür keinen separaten Eintrag `Kalibrierung`: Eine echte Kalibrierung wird
-später als eigenständiges Modul entworfen und validiert.
+Die untere Taste startet auf dem Ready-Bildschirm ein normales Training. Die
+obere Taste öffnet `KALIBRIERUNG` / `EXIT`; im Menü wechselt die obere Taste
+die Auswahl und die untere bestätigt. Touch kann einen Menüpunkt direkt
+auswählen.
 
 1. Eine gerade, klar markierte Strecke von mindestens 20 m und höchstens 30 m auswählen und mit Maßband oder Hallenmarkierung bestimmen.
 2. Pro Versuch Start und Ende der Strecke unabhängig markieren (zweite Person, Video oder sichtbare Markierung). Die Distanz nicht aus der Uhr ablesen.
 3. ShiftSense starten und die Live-Seite mit den Bewegungswerten öffnen. Falls Anschübe oder Distanz als `--` erscheinen, den Versuch trotzdem durchführen und die fehlende Abdeckung notieren.
-4. Für jede Sportumgebung zwei getrennte Testbedingungen durchführen: **A = normales Skating ohne Puck** und **B = Skating mit Puck und Stickhandling**. Vor jedem Training sind mindestens fünf Wiederholungen je Bedingung erforderlich (also mindestens zehn pro Testaufzeichnung). Nicht zwischen den Sportarten mischen.
+4. Eine Sportumgebung wählen und nicht wechseln. Die App führt exakt fünf
+   Läufe **A = normales Skating ohne Puck** und danach exakt fünf Läufe
+   **B = Skating mit Puck und Stickhandling**. Die Tempi sind in beiden
+   Bedingungen zwingend `langsam, schnell, normal, langsam, schnell`.
 5. Für **jede** Wiederholung die untere Taste am Start drücken (Shift starten) und am Ende erneut (Shift beenden). Zwischen den Wiederholungen kurz auf die Bank zurückkehren. Die Reihenfolge der vollständigen manuellen Shifts muss der Reihenfolge im CSV-Protokoll entsprechen.
 6. Bewegungsform und Bedingung je Versuch notieren: `A: normales Skating ohne Puck` oder `B: Puck und Stickhandling`, zusätzlich `Antritt`, `Gleitphase` oder `Richtungswechsel`. Für die erste Distanzprüfung möglichst gerade Antritte priorisieren.
 7. Anschübe möglichst unabhängig zählen (zweite Person oder Video). Wenn das nicht möglich ist, `reference_pushes` leer lassen. Die Uhranzeige darf nicht als Referenzzählung verwendet werden.
 8. Während jedes Shifts die geschätzte Shift-Distanz und nach dem Shift die
    fortlaufende Gesamtdistanz mit `≈` notieren. Aufnahme mit der oberen Taste
-   stoppen und speichern. Original-FIT anschließend lokal unter
-   `analysis/private/` ablegen und niemals committen.
+   beenden. Den Kandidaten nur über `AKTIVIEREN` speichern oder über
+   `VERWERFEN` löschen. Original-FIT anschließend manuell an das Testteam
+   senden und ausschließlich lokal unter `analysis/private/` ablegen; niemals
+   committen. Es gibt keinen automatischen Upload.
+
+Alle protokollierten Zeitwerte werden in **Minuten** angegeben. Der
+Kalibrierungsbogen enthält außerdem `target_pace`, `activation_status`, den
+gegebenenfalls aktiven Faktor sowie optional einen ausdrücklich deklarierten
+`hrmax_bpm`. Fehlende Werte bleiben leer.
 
 ## Protokollvorlage
 
@@ -66,6 +77,12 @@ Für jeden gültigen Versuch:
 - Absoluter Fehler (m) = `abs(Distanzfehler)`
 - Prozentfehler = `100 × Distanzfehler / Referenzstrecke`
 - Anschubfehler = `Uhr-Anschübe − Referenz-Anschübe`, **nur** wenn eine unabhängige Referenzzählung vorliegt. Sonst bleibt der Fehler unbekannt, während die Distanzbewertung möglich bleibt.
+- Kadenz = `erkannte Anschübe / Dauer in Minuten`; effektive Schrittlänge =
+  `Referenzstrecke / erkannte Anschübe`. Die unabhängige Zählung bewertet
+  davon getrennt den Anschubzählfehler.
+- Spearman-Korrelation und Theil-Sen-Steigung werden je Bedingung erst ab fünf
+  vollständigen Wertepaaren berichtet. Sie sind in Beta 6 ausschließlich
+  deskriptive Shadow-Evidenz und verändern weder Faktor noch Live-Modell.
 
 Zusammengefasst werden Median, Mittelwert, Minimum/Maximum und 95%-Perzentil des absoluten Distanzfehlers sowie der Median des Prozentfehlers berichtet. Zusätzlich werden Anschubzählfehler und fehlende Werte separat berichtet. Eine einzelne gute Wiederholung reicht nicht für eine Freigabe oder Modelländerung.
 
@@ -107,16 +124,20 @@ Für die Distanzprüfung zuerst den Sitzungsbeginn aus genau dieser FIT-Datei au
 python -c "from analysis.shift_pilot import load_pilot_fit; print(load_pilot_fit('analysis/private/<datei>.fit')['session_start'])"
 ```
 
-Die ausgegebene Zeit als `session_id` in jeder Zeile des lokalen CSV-Protokolls verwenden. Die Spalte `reference_pushes` bleibt vorhanden, ihr Wert darf aber leer sein. `repetition` zählt die **manuellen Shifts in dieser Aufnahme** ab 1, auch wenn ein Versuch als `uncertain` ausgeschlossen werden muss. Beispiel für einen 20-m-Versuch ohne unabhängige Anschubzählung:
+Die ausgegebene Zeit als `session_id` in jeder Zeile des lokalen CSV-Protokolls verwenden. Die Spalte `reference_pushes` bleibt vorhanden, ihr Wert darf aber leer sein. `repetition` zählt die **manuellen Shifts in dieser Aufnahme** ab 1, auch wenn ein Versuch als `uncertain` ausgeschlossen werden muss.
+
+Nach einem verworfenen Versuch erhält auch dessen technischer FIT-Lap eine
+eigene Formularzeile. Daher kann das Formular mehr als zehn Zeilen enthalten;
+es muss aber genau zehn `valid`-Zeilen in der vorgegebenen Bedingungs- und
+Temporeihenfolge enthalten und jede Zeile muss positionsgenau einem FIT-Lap
+entsprechen. Beispiel für einen 20-m-Versuch ohne unabhängige Anschubzählung:
 
 ```csv
-session_id,repetition,sport,condition,reference_distance_cm,reference_pushes,marker_status
-2026-10-13 10:30:00+00:00,1,inline,skate_only,2000,,valid
+session_id,repetition,sport,condition,target_pace,reference_distance_cm,reference_pushes,marker_status,activation_status,active_factor,hrmax_bpm
+2099-01-01T00:00:00+00:00,1,inline,skate_only,slow,2000,,valid,pending,,
 ```
 
-Dann den Vergleich lokal starten. `--calibration-manifest` und die Dateinamen
-mit `calibration` sind bestehende interne CLI-Bezeichnungen; sie bedeuten
-nicht, dass die App ein Kalibrierungsmodul ausführt oder Parameter ändert:
+Dann den Vergleich lokal starten:
 
 ```text
 python -m analysis.shift_pilot analysis/private/<datei>.fit --calibration-manifest analysis/private/<datei>-calibration.csv --output analysis/private/<datei>-calibration-report.json

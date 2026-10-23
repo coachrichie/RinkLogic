@@ -1,0 +1,11 @@
+session_id,repetition,sport,condition,target_pace,reference_distance_cm,reference_pushes,marker_status,activation_status,active_factor,hrmax_bpm
+2099-01-01T00:00:00+00:00,1,inline,skate_only,slow,2500,,valid,pending,,
+2099-01-01T00:00:00+00:00,2,inline,skate_only,fast,2500,,valid,pending,,
+2099-01-01T00:00:00+00:00,3,inline,skate_only,normal,2500,,valid,pending,,
+2099-01-01T00:00:00+00:00,4,inline,skate_only,slow,2500,,valid,pending,,
+2099-01-01T00:00:00+00:00,5,inline,skate_only,fast,2500,,valid,pending,,
+2099-01-01T00:00:00+00:00,6,inline,puck_stickhandling,slow,2500,,valid,pending,,
+2099-01-01T00:00:00+00:00,7,inline,puck_stickhandling,fast,2500,,valid,pending,,
+2099-01-01T00:00:00+00:00,8,inline,puck_stickhandling,normal,2500,,valid,pending,,
+2099-01-01T00:00:00+00:00,9,inline,puck_stickhandling,slow,2500,,valid,pending,,
+2099-01-01T00:00:00+00:00,10,inline,puck_stickhandling,fast,2500,,valid,pending,,

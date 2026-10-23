@@ -7,6 +7,21 @@ from analysis.shift_pilot import load_pilot_fit, normalize_messages, score_bound
 
 
 class PilotReportTests(unittest.TestCase):
+    def test_schema_twelve_parses_only_valid_personal_calibration_factor(self):
+        base = [
+            {"type": "session", "total_elapsed_time": 60},
+            {"type": "record", "summary_schema_version": 12},
+        ]
+        for value, expected in ((1.125, 1.125), (None, None),
+                                (float("nan"), None), (0.49, None), (1.51, None)):
+            with self.subTest(value=value):
+                messages = [dict(item) for item in base]
+                if value is not None:
+                    messages[0]["personal_calibration_factor"] = value
+                report = normalize_messages(messages)
+                self.assertEqual(report["schema_version"], 12)
+                self.assertEqual(report["personal_calibration_factor"], expected)
+
     def test_schema_eleven_reads_exclusive_phase_minutes_and_preserves_schema_ten(self):
         report = normalize_messages([
             {"type": "session", "total_elapsed_time": 150,
