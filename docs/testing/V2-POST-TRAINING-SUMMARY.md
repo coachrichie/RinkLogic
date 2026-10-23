@@ -41,7 +41,7 @@ Beta 4 bleibt unangetastet als Rollback; ihr signiertes IQ-Paket wird nicht
   SHA-256 `9D3A8988C1DD7AD48E4724D132D63E3A713590FBA4E65CA9DDE21DC4538C0372`
 - SDK 9.2.0, Gerät `venu2plus`
 - Distanzmodus: `PersonalCalibrationBeta`
-- Automatisierte Prüfergebnisse: 247/247 Watch-Tests; 89 Python-Tests plus
+- Automatisierte Prüfergebnisse: 247/247 Watch-Tests; 90 Python-Tests plus
   34 Subtests (vor finaler Dokumentationsprüfung erneut auszuführen)
 
 ## Beobachtete Beta-Abnahme

@@ -310,6 +310,35 @@ class CalibrationReportTests(unittest.TestCase):
             build_calibration_report_from_report(
                 report, read_calibration_manifest(self.manifest(rows)))
 
+    def test_schema_twelve_discarded_retry_keeps_session_and_prompt_invariants(self):
+        rows, shifts, report = self.schema_twelve_fixture()
+        retry = dict(rows[0])
+        retry["marker_status"] = "uncertain"
+        retry["repetition"] = "1"
+        rows = [retry] + rows
+        for repetition, row in enumerate(rows, 1):
+            row["repetition"] = str(repetition)
+        shifts = [dict(shifts[0])] + shifts
+        report = {**report, "push_metrics": {"manual_shifts": shifts}}
+
+        bad_distance = [dict(row) for row in rows]
+        bad_distance[0]["reference_distance_cm"] = "3000"
+        with self.assertRaisesRegex(ValueError, "one reference distance"):
+            build_calibration_report_from_report(
+                report, read_calibration_manifest(self.manifest(bad_distance)))
+
+        bad_sport = [dict(row) for row in rows]
+        bad_sport[0]["sport"] = "ice"
+        with self.assertRaisesRegex(ValueError, "one sport"):
+            build_calibration_report_from_report(
+                report, read_calibration_manifest(self.manifest(bad_sport)))
+
+        bad_prompt = [dict(row) for row in rows]
+        bad_prompt[0]["target_pace"] = "fast"
+        with self.assertRaisesRegex(ValueError, "retry prompt"):
+            build_calibration_report_from_report(
+                report, read_calibration_manifest(self.manifest(bad_prompt)))
+
     def test_schema_twelve_factor_identity_fails_closed_and_quarantines(self):
         rows, _, report = self.schema_twelve_fixture()
         for row in rows:

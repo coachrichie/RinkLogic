@@ -196,20 +196,29 @@ def _validate_schema_twelve_manifest(manifest, shifts):
         raise ValueError("Schema 12 calibration repetitions must match FIT lap order")
     if len(shifts) != len(manifest):
         raise ValueError("Schema 12 calibration requires one manifest row per FIT lap")
-    valid = [row for row in manifest if row["marker_status"] == "valid"]
-    if len(valid) != 10:
-        raise ValueError("Schema 12 calibration requires exactly ten valid laps")
-    if [row["condition"] for row in valid] != CONDITION_ORDER:
-        raise ValueError("Schema 12 calibration condition order is invalid")
-    if [row["target_pace"] for row in valid] != PACE_ORDER:
-        raise ValueError("Schema 12 calibration pace order is invalid")
-    if len({row["sport"] for row in valid}) != 1:
+    if len({row["sport"] for row in manifest}) != 1:
         raise ValueError("Schema 12 calibration requires one sport per session")
-    distances = {row["reference_distance_cm"] for row in valid}
+    distances = {row["reference_distance_cm"] for row in manifest}
     if len(distances) != 1:
         raise ValueError("Schema 12 calibration requires one reference distance per session")
     if next(iter(distances)) not in {2000.0, 2200.0, 2500.0, 3000.0}:
         raise ValueError("Schema 12 reference distance must be 20, 22, 25, or 30 metres")
+
+    valid = [row for row in manifest if row["marker_status"] == "valid"]
+    if len(valid) != 10:
+        raise ValueError("Schema 12 calibration requires exactly ten valid laps")
+    expected_index = 0
+    for row in manifest:
+        if expected_index >= len(CONDITION_ORDER) or (
+                row["condition"] != CONDITION_ORDER[expected_index] or
+                row["target_pace"] != PACE_ORDER[expected_index]):
+            raise ValueError("Schema 12 calibration pace order or retry prompt is invalid")
+        if row["marker_status"] == "valid":
+            expected_index += 1
+    if [row["condition"] for row in valid] != CONDITION_ORDER:
+        raise ValueError("Schema 12 calibration condition order is invalid")
+    if [row["target_pace"] for row in valid] != PACE_ORDER:
+        raise ValueError("Schema 12 calibration pace order is invalid")
 
 
 def _time_above_ninety(records, hrmax):
