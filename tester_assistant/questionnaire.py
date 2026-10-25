@@ -7,6 +7,7 @@ import json
 from importlib import resources
 from types import MappingProxyType
 from typing import Mapping
+import unicodedata
 
 
 class QuestionnaireError(ValueError):
@@ -31,25 +32,35 @@ class FeedbackAnswers:
 
     answers: Mapping[str, object]
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.answers, Mapping):
+            raise TypeError("answers must be a mapping")
+        object.__setattr__(self, "answers", MappingProxyType(dict(self.answers)))
+
     def to_safe_dict(self) -> dict[str, object]:
         """Return plain JSON-compatible data with free text left uninterpreted."""
         return dict(self.answers)
 
 
-QUESTION_IDS = (
-    "installation_ease",
-    "instructions_clarity",
-    "status_readability",
-    "controls_reliability",
-    "manual_shift_flow",
-    "calibration_flow",
-    "distance_explanation",
-    "stability",
-    "export_ease",
-    "priority_improvement",
+_EXPECTED_QUESTIONS = (
+    ("installation_ease", "Wie einfach war die Installation der Beta-App?"),
+    ("instructions_clarity", "Wie verständlich waren die Testanweisungen?"),
+    ("status_readability", "Wie gut waren Status, Version und Hinweise auf der Uhr lesbar?"),
+    ("controls_reliability", "Wie zuverlässig funktionierten Tasten und Touch während des Tests?"),
+    ("manual_shift_flow", "Wie verständlich und zuverlässig war das manuelle Markieren von Eis- und Bankphasen?"),
+    ("calibration_flow", "Wie verständlich war der Kalibrierungsablauf?"),
+    ("distance_explanation", "Wie verständlich war die Kennzeichnung der Distanz als experimentelle Schätzung?"),
+    ("stability", "Wie stabil lief die App ohne Absturz, IQ!-Fehler oder Datenverlust?"),
+    ("export_ease", "Wie einfach war der Export der Originaldatei aus Garmin Connect?"),
+    ("priority_improvement", "Welche eine Verbesserung ist für dich am wichtigsten?"),
 )
+QUESTION_IDS = tuple(question_id for question_id, _ in _EXPECTED_QUESTIONS)
 _RATING_CHOICES: tuple[int | str, ...] = (1, 2, 3, 4, 5, "not_applicable")
 _OPTIONAL_ANSWER_ID = "problem_details"
+_EXPECTED_PRIVACY_WARNING = (
+    "Bitte gib in Freitext keine Namen, E-Mail-Adressen, Gesundheitsangaben "
+    "oder sonstigen Informationen über Dritte an."
+)
 
 
 def _load_resource() -> tuple[tuple[QuestionDefinition, ...], str]:
@@ -69,24 +80,29 @@ def _load_resource() -> tuple[tuple[QuestionDefinition, ...], str]:
     if type(raw["schema_version"]) is not int or raw["schema_version"] != 1:
         raise QuestionnaireError("Questionnaire resource version is unsupported")
     warning = raw["privacy_warning"]
-    if not isinstance(warning, str) or not warning.strip():
-        raise QuestionnaireError("Questionnaire privacy warning is missing")
+    if warning != _EXPECTED_PRIVACY_WARNING:
+        raise QuestionnaireError("Questionnaire privacy warning is invalid")
     raw_questions = raw["questions"]
     if not isinstance(raw_questions, list) or len(raw_questions) != len(QUESTION_IDS):
         raise QuestionnaireError("Questionnaire must define exactly ten questions")
 
     questions: list[QuestionDefinition] = []
     for index, item in enumerate(raw_questions):
-        expected_id = QUESTION_IDS[index]
+        expected_id, expected_prompt = _EXPECTED_QUESTIONS[index]
         if not isinstance(item, dict) or item.get("id") != expected_id:
             raise QuestionnaireError("Questionnaire IDs are invalid or out of order")
         question_id = item["id"]
         prompt = item.get("prompt")
-        if not isinstance(prompt, str) or not prompt.strip():
-            raise QuestionnaireError("Question prompt is missing")
+        if prompt != expected_prompt:
+            raise QuestionnaireError("Question prompt does not match the approved wording")
         choices = item.get("choices")
         if index < 9:
-            if set(item) != {"id", "prompt", "choices"} or choices != list(_RATING_CHOICES):
+            if (
+                set(item) != {"id", "prompt", "choices"}
+                or choices != list(_RATING_CHOICES)
+                or any(type(choice) is not int for choice in choices[:5])
+                or type(choices[5]) is not str
+            ):
                 raise QuestionnaireError("Rating question schema is invalid")
             frozen_choices = _RATING_CHOICES
             minimum = maximum = None
@@ -127,11 +143,12 @@ def load_questions() -> tuple[QuestionDefinition, ...]:
 def _normalized_text(value: object, field: str, maximum: int) -> str:
     if not isinstance(value, str):
         raise QuestionnaireError(f"{field} must be text")
-    normalized = value.replace("\r\n", "\n").replace("\r", "\n").strip()
+    normalized = value.replace("\r\n", "\n").replace("\r", "\n")
+    if any(unicodedata.category(char) == "Cc" and char != "\n" for char in normalized):
+        raise QuestionnaireError(f"{field} contains control characters")
+    normalized = normalized.strip()
     if len(normalized) > maximum:
         raise QuestionnaireError(f"{field} is too long")
-    if any((ord(char) < 32 and char != "\n") or ord(char) == 127 for char in normalized):
-        raise QuestionnaireError(f"{field} contains control characters")
     return normalized
 
 

@@ -1,8 +1,14 @@
 """Behavioral contract tests for the ten-question beta feedback form."""
 
+import json
+from pathlib import Path
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 
+from tester_assistant import questionnaire
 from tester_assistant.questionnaire import (
+    FeedbackAnswers,
     QUESTION_IDS,
     QuestionnaireError,
     load_questions,
@@ -22,6 +28,10 @@ EXPECTED_QUESTIONS = (
     ("export_ease", "Wie einfach war der Export der Originaldatei aus Garmin Connect?"),
     ("priority_improvement", "Welche eine Verbesserung ist für dich am wichtigsten?"),
 )
+EXPECTED_PRIVACY_WARNING = (
+    "Bitte gib in Freitext keine Namen, E-Mail-Adressen, Gesundheitsangaben "
+    "oder sonstigen Informationen über Dritte an."
+)
 
 
 def valid_answers() -> dict[str, object]:
@@ -32,6 +42,21 @@ def valid_answers() -> dict[str, object]:
 
 
 class QuestionnaireTests(unittest.TestCase):
+    def _resource_data(self):
+        path = Path(__file__).parents[1] / "tester_assistant" / "resources" / "questionnaire.de.json"
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def _assert_resource_rejected(self, raw):
+        encoded = json.dumps(raw)
+        resource = SimpleNamespace(
+            joinpath=lambda _name: SimpleNamespace(
+                read_text=lambda encoding: encoded
+            )
+        )
+        with patch("tester_assistant.questionnaire.resources.files", return_value=resource):
+            with self.assertRaises(QuestionnaireError):
+                questionnaire._load_resource()
+
     def test_loads_exactly_ten_questions_in_the_required_order_and_wording(self):
         questions = load_questions()
 
@@ -45,7 +70,32 @@ class QuestionnaireTests(unittest.TestCase):
         for question in questions[:9]:
             self.assertEqual(question.choices, (1, 2, 3, 4, 5, "not_applicable"))
         self.assertIsNone(questions[9].choices)
-        self.assertIn("Namen", questions[0].privacy_warning)
+        self.assertEqual(questions[0].privacy_warning, EXPECTED_PRIVACY_WARNING)
+
+    def test_rejects_changed_prompt_or_incomplete_privacy_warning_resource(self):
+        changed_prompt = self._resource_data()
+        changed_prompt["questions"][0]["prompt"] = "Geänderte Frage?"
+        self._assert_resource_rejected(changed_prompt)
+
+        changed_warning = self._resource_data()
+        changed_warning["privacy_warning"] = "Bitte gib keine Namen an."
+        self._assert_resource_rejected(changed_warning)
+
+    def test_rejects_boolean_rating_choice_in_resource(self):
+        raw = self._resource_data()
+        raw["questions"][0]["choices"][0] = True
+
+        self._assert_resource_rejected(raw)
+
+    def test_feedback_answers_defensively_copy_mutable_input(self):
+        original = {"installation_ease": 4}
+        answers = FeedbackAnswers(original)
+        original["installation_ease"] = 1
+        original["added_later"] = "not accepted"
+
+        self.assertEqual(answers.to_safe_dict(), {"installation_ease": 4})
+        with self.assertRaises(TypeError):
+            answers.answers["installation_ease"] = 2
 
     def test_validates_and_normalizes_answers_without_contact_fields(self):
         raw = valid_answers()
@@ -103,6 +153,13 @@ class QuestionnaireTests(unittest.TestCase):
 
     def test_rejects_nul_and_disallowed_control_characters(self):
         for value in ("Verbesserung\x00", "Fehler\x1bbericht", "Fehler\x7fbericht"):
+            raw = valid_answers()
+            raw["priority_improvement"] = value
+            with self.subTest(value=repr(value)), self.assertRaises(QuestionnaireError):
+                validate_answers(raw)
+
+    def test_rejects_leading_trailing_and_unicode_c1_controls_before_stripping(self):
+        for value in ("\tVerbesserung", "Verbesserung\t", "Verbesserung\u0085weiter"):
             raw = valid_answers()
             raw["priority_improvement"] = value
             with self.subTest(value=repr(value)), self.assertRaises(QuestionnaireError):
