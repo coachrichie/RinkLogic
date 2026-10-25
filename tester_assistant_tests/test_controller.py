@@ -68,13 +68,14 @@ class ControllerTests(unittest.TestCase):
         bad_original = self.root / "C-Users-secret_original.fit"
         bad_original.write_bytes(b"private content")
         state = self.controller.select_original(bad_original)
-        self.assertEqual(state.step, WizardStep.DIAGNOSTICS)
+        self.assertEqual(state.step, WizardStep.EXPORT)
         self.assertEqual(state.diagnostic_code, "original_name_mismatch")
         self.assertIsNone(state.diagnostics)
         self.assertEqual(state.status_key, "diagnostics_failed")
         self.assertNotIn(str(self.root), state.status_summary)
-        self.assertEqual(self.controller.continue_to_questionnaire().step, WizardStep.DIAGNOSTICS)
-        self.assertEqual(self.controller.create_bundle(self.destination).step, WizardStep.DIAGNOSTICS)
+        self.assertEqual(self.controller.continue_to_questionnaire().step, WizardStep.EXPORT)
+        self.assertEqual(self.controller.state_snapshot().status_key, "step_blocked")
+        self.assertEqual(self.controller.create_bundle(self.destination).step, WizardStep.EXPORT)
         self.assertEqual(list(self.destination.iterdir()), [])
 
     def test_unexpected_diagnostic_exception_is_redacted(self):
@@ -141,7 +142,7 @@ class ControllerTests(unittest.TestCase):
         other = self.root / beta6_original_name("zip")
         other.write_bytes(b"not a ZIP")
         state = self.controller.select_original(other)
-        self.assertEqual(state.step, WizardStep.DIAGNOSTICS)
+        self.assertEqual(state.step, WizardStep.EXPORT)
         self.assertEqual(state.diagnostic_code, "corrupt_zip")
         self.assertIsNone(state.diagnostics)
         self.assertIsNone(state.answers)
@@ -154,7 +155,7 @@ class ControllerTests(unittest.TestCase):
         self.controller.submit_answers(self._answers())
         self.controller.create_bundle(self.destination)
         state = self.controller.select_original(object())
-        self.assertEqual(state.step, WizardStep.DIAGNOSTICS)
+        self.assertEqual(state.step, WizardStep.EXPORT)
         self.assertEqual(state.diagnostic_code, "diagnostic_error")
         self.assertIsNone(state.original_path)
         self.assertIsNone(state.diagnostics)
@@ -166,9 +167,12 @@ class ControllerTests(unittest.TestCase):
         self.controller.load_assignment(self.assignment_path)
         invalid = self.root / "wrong.fit"
         invalid.write_bytes(b"invalid")
-        self.assertEqual(self.controller.select_original(invalid).diagnostic_code,
-                         "original_name_mismatch")
-        self.assertEqual(self.controller.select_original(self.original).diagnostic_code, None)
+        failed = self.controller.select_original(invalid)
+        self.assertEqual(failed.step, WizardStep.EXPORT)
+        self.assertEqual(failed.diagnostic_code, "original_name_mismatch")
+        retried = self.controller.select_original(self.original)
+        self.assertEqual(retried.step, WizardStep.DIAGNOSTICS)
+        self.assertIsNone(retried.diagnostic_code)
         self.controller.continue_to_questionnaire()
         bad_answers = self._answers()
         bad_answers["installation_ease"] = 9

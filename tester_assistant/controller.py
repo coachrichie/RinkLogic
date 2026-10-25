@@ -98,7 +98,7 @@ class BetaTestController:
             return self._state
         if self._state.assignment is None:
             return self._status("step_blocked")
-        self._state = replace(self._state, step=WizardStep.DIAGNOSTICS,
+        self._state = replace(self._state, step=WizardStep.EXPORT,
                               original_path=None, calibration_reference=None,
                               diagnostics=None, diagnostic_code=None, answers=None,
                               bundle=None)
@@ -120,7 +120,8 @@ class BetaTestController:
         if report.status != "pass" or report.codes:
             self._state = replace(self._state, diagnostic_code="diagnostic_error")
             return self._status("diagnostics_failed")
-        self._state = replace(self._state, diagnostics=report)
+        self._state = replace(self._state, step=WizardStep.DIAGNOSTICS,
+                              diagnostics=report)
         return self._status("diagnostics_passed")
 
     def continue_to_questionnaire(self) -> WizardState:
