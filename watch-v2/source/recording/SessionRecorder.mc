@@ -22,13 +22,28 @@ class SessionRecorder {
         if (mState == :idle) { mShadowWriterFactory = factory; }
     }
 
-    function start() as Lang.Boolean {
-        return startWithOptions(null);
+    function start(sport) as Lang.Boolean {
+        if (!CalibrationTypes.validSport(sport)) { return false; }
+        return startWithOptions({
+            :name=>sport == :ice ? "RinkLogic Ice Hockey" :
+                "RinkLogic Inline Hockey",
+            :sport=>Activity.SPORT_HOCKEY
+        });
     }
 
     function startCalibration(calibrationOptions) as Lang.Boolean {
-        return startWithOptions({:name=>"ShiftSense Hockey Calibration",
+        if (!validCalibrationOptions(calibrationOptions)) { return false; }
+        return startWithOptions({:name=>"RinkLogic Hockey Calibration",
             :sport=>Activity.SPORT_HOCKEY, :calibration=>calibrationOptions});
+    }
+
+    private function validCalibrationOptions(options) as Lang.Boolean {
+        try {
+            return options instanceof Lang.Dictionary && options.hasKey(:sport) &&
+                CalibrationTypes.validSport(options[:sport]) &&
+                options.hasKey(:referenceDistanceCm) &&
+                options[:referenceDistanceCm] == 2000;
+        } catch (ex) { return false; }
     }
 
     private function startWithOptions(options) as Lang.Boolean {

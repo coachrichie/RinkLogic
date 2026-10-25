@@ -2,15 +2,30 @@ using Toybox.Lang;
 
 class StoredDistanceModelConfig {
     private var mBase;
+    private var mProfileStore;
     private var mActive = null;
+    private var mSelectedSport = null;
 
     function initialize(baseConfig, profileStore) {
         mBase = baseConfig;
-        try {
-            var loaded = profileStore == null ? null : profileStore.loadActive();
-            if (validProfile(loaded)) { mActive = copyProfile(loaded); }
-        } catch (ex) { mActive = null; }
+        mProfileStore = profileStore;
     }
+
+    function selectSport(sport) as Lang.Boolean {
+        mActive = null;
+        mSelectedSport = null;
+        if (!CalibrationTypes.validSport(sport)) { return false; }
+        mSelectedSport = sport;
+        try {
+            var loaded = mProfileStore == null ? null : mProfileStore.loadForSport(sport);
+            if (validProfile(loaded) && loaded[:sport] == sport) {
+                mActive = copyProfile(loaded);
+            }
+        } catch (ex) { mActive = null; }
+        return true;
+    }
+
+    function selectedSport() { return mSelectedSport; }
 
     function mode() as Lang.Symbol {
         return mActive == null ? baselineMode() : :calibrated_profile_test;

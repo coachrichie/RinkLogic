@@ -35,6 +35,7 @@ class RecordingCoordinator {
     private var mPhaseLapTracker;
     private var mLastManualToggleAt = null;
     private var mSessionCalibrationFactor = null;
+    private var mSelectedSport = null;
 
     function initialize(recorder, clock) {
         mRecorder = recorder;
@@ -64,16 +65,34 @@ class RecordingCoordinator {
         return true;
     }
 
-    function start() as Lang.Boolean {
+    function start(sport) as Lang.Boolean {
+        if (!CalibrationTypes.validSport(sport)) { return false; }
+        if (mDistanceModelConfig instanceof StoredDistanceModelConfig) {
+            try {
+                if (!mDistanceModelConfig.selectSport(sport)) { return false; }
+            } catch (sportEx) { return false; }
+        }
+        mSelectedSport = sport;
         mCalibrationOptions = null;
         mSessionCalibrationFactor = null;
         return startInternal();
     }
 
     function startCalibration(options) as Lang.Boolean {
+        if (!validCalibrationOptions(options)) { return false; }
+        mSelectedSport = options[:sport];
         mCalibrationOptions = options;
         mSessionCalibrationFactor = null;
         return startInternal();
+    }
+
+    private function validCalibrationOptions(options) as Lang.Boolean {
+        try {
+            return options instanceof Lang.Dictionary && options.hasKey(:sport) &&
+                CalibrationTypes.validSport(options[:sport]) &&
+                options.hasKey(:referenceDistanceCm) &&
+                options[:referenceDistanceCm] == 2000;
+        } catch (ex) { return false; }
     }
 
     function setSessionCalibrationFactor(factor) as Lang.Boolean {
@@ -126,7 +145,7 @@ class RecordingCoordinator {
             try { mHeartRateSourceStarted = mHeartRateSource.start(method(:onHeartRate)); }
             catch (ex) { mHeartRateSourceStarted = false; }
         }
-        var started = mCalibrationOptions == null ? mRecorder.start() :
+        var started = mCalibrationOptions == null ? mRecorder.start(mSelectedSport) :
             mRecorder.startCalibration(mCalibrationOptions);
         if (!started) {
             releaseHeartRateSource();

@@ -66,7 +66,7 @@ function dialContainsText(dc as DialDcFake, value as Lang.String) as Lang.Boolea
 function primaryDialShowsShiftAverageInsteadOfSessionAverage(logger as Test.Logger) as Lang.Boolean {
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
-    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    if (!coordinator.start(:ice) || !coordinator.toggleShift()) { return false; }
     coordinator.onHeartRate({:heartRate=>145});
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
@@ -78,7 +78,7 @@ function primaryDialShowsShiftAverageInsteadOfSessionAverage(logger as Test.Logg
 function horizontalSwipeShowsSessionAverageWithoutChangingShift(logger as Test.Logger) as Lang.Boolean {
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     coordinator.onHeartRate({:heartRate=>80});
     if (!coordinator.toggleShift()) { return false; }
     coordinator.onHeartRate({:heartRate=>160});
@@ -99,7 +99,7 @@ function horizontalSwipeShowsSessionAverageWithoutChangingShift(logger as Test.L
 function dialShowsExactTimeOnIceLabel(logger as Test.Logger) as Lang.Boolean {
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
     for (var i = 0; i < dc.texts.size(); i += 1) {
@@ -112,7 +112,7 @@ function dialShowsExactTimeOnIceLabel(logger as Test.Logger) as Lang.Boolean {
 function dialDrawsCircularLightFace(logger as Test.Logger) as Lang.Boolean {
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
     return dc.circleCount == 1;
@@ -122,7 +122,7 @@ function dialDrawsCircularLightFace(logger as Test.Logger) as Lang.Boolean {
 function dialShowsSixZoneRingSegments(logger as Test.Logger) as Lang.Boolean {
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
     return dc.arcCount == 6;
@@ -132,7 +132,7 @@ function dialShowsSixZoneRingSegments(logger as Test.Logger) as Lang.Boolean {
 function dialSeparatesPairedMetrics(logger as Test.Logger) as Lang.Boolean {
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
     return dc.lineCount >= 3;
@@ -143,7 +143,7 @@ function dialDistinguishesBeforeFirstShiftFromBench(logger as Test.Logger) as La
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), clock);
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
     var beforeFirstShift = false;
@@ -169,7 +169,7 @@ function dialDistinguishesBeforeFirstShiftFromBench(logger as Test.Logger) as La
 function dialRingUsesSixShortNonOverlappingArcs(logger as Test.Logger) as Lang.Boolean {
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
     if (dc.arcCount != 6) { return false; }
@@ -185,7 +185,7 @@ function dialHighlightsFirstAndLastGarminZones(logger as Test.Logger) as Lang.Bo
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     coordinator.setDataSources(new ProfileSourceFake(), new HeartRateSourceFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     coordinator.onHeartRate({:heartRate=>80, :quality=>:active});
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
@@ -201,7 +201,7 @@ function dialEmphasizesCurrentZoneAndDimsOtherSegments(logger as Test.Logger) as
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     coordinator.setDataSources(new ProfileSourceFake(), new HeartRateSourceFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     coordinator.onHeartRate({:heartRate=>130, :quality=>:active});
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
@@ -215,7 +215,7 @@ function dialColorsZoneLabelAndLivePulseToMatchRingHue(logger as Test.Logger) as
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     coordinator.setDataSources(new ProfileSourceFake(), new HeartRateSourceFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     coordinator.onHeartRate({:heartRate=>130, :quality=>:active});
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
@@ -235,7 +235,7 @@ function dialKeepsZoneClearOfMetricHeadings(logger as Test.Logger) as Lang.Boole
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     coordinator.setDataSources(new ProfileSourceFake(), new HeartRateSourceFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     coordinator.onHeartRate({:heartRate=>80, :quality=>:active});
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
@@ -257,7 +257,7 @@ function dialKeepsZoneClearOfMetricHeadings(logger as Test.Logger) as Lang.Boole
 function dialKeepsElapsedClearOfSaveHint(logger as Test.Logger) as Lang.Boolean {
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
     var elapsedBottom = null;
@@ -283,7 +283,7 @@ function dialKeepsSensorWarningClearOfMetricHeadings(logger as Test.Logger) as L
     var heartRateSource = new HeartRateSourceFake();
     heartRateSource.startResult = false;
     coordinator.setDataSources(new ProfileSourceFake(), heartRateSource);
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var dc = new DialDcFake();
     new LiveView(coordinator).onUpdate(dc);
     var warningBottom = null;
@@ -306,7 +306,7 @@ function dialKeepsSensorWarningClearOfMetricHeadings(logger as Test.Logger) as L
 function movementPageCyclesAfterOriginalTwoPages(logger as Test.Logger) as Lang.Boolean {
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var view = new LiveView(coordinator);
     var dc = new DialDcFake();
     view.onUpdate(dc);
@@ -334,7 +334,7 @@ function movementPageSeparatesNoShiftFromValidZero(logger as Test.Logger) as Lan
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), clock);
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var view = new LiveView(coordinator);
     view.requestPage(WatchUi.SWIPE_LEFT);
     view.requestPage(WatchUi.SWIPE_LEFT);
@@ -359,7 +359,7 @@ function movementPageRetainsLastShiftAndShowsEstimatedDistance(logger as Test.Lo
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), clock);
-    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    if (!coordinator.start(:ice) || !coordinator.toggleShift()) { return false; }
     var estimator = new DistanceEstimator();
     estimator.beginShift(0);
     var times = [100, 700, 1300, 1900, 2500, 3100];
@@ -385,7 +385,7 @@ function movementPageKeepsPhysicalShiftAndSaveButtons(logger as Test.Logger) as 
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), clock);
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var view = new LiveView(coordinator);
     view.requestPage(WatchUi.SWIPE_LEFT);
     view.requestPage(WatchUi.SWIPE_LEFT);
@@ -401,7 +401,7 @@ function estimatedSensorTimebaseMarksLiveDistanceAsApproximate(logger as Test.Lo
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), clock);
-    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    if (!coordinator.start(:ice) || !coordinator.toggleShift()) { return false; }
     var estimator = new DistanceEstimator();
     estimator.beginShift(0);
     var result = distanceResult(1000, [pushAt(300, true)],

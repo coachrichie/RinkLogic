@@ -56,6 +56,16 @@ class RecordingFactoryFake {
     function createSession(options) { creates += 1; lastOptions = options; return session; }
 }
 
+class SessionRecorderSportSpy {
+    var normalSport = null;
+    var calibrationOptions = null;
+    function start(sport) as Lang.Boolean { normalSport = sport; return true; }
+    function startCalibration(options) as Lang.Boolean {
+        calibrationOptions = options;
+        return true;
+    }
+}
+
 class ClockFake {
     var now = 1000;
     function nowMs() as Lang.Number { return now; }
@@ -167,7 +177,7 @@ function coordinatorPassesCalibratedDistanceConfigBeforeStart(logger as Test.Log
     var estimator = new DistanceEstimatorConfigSpy();
     coordinator.setDistanceEstimator(estimator);
     coordinator.setDataSources(profile, null);
-    if (!coordinator.setDistanceModelConfig(config) || !coordinator.start()) {
+    if (!coordinator.setDistanceModelConfig(config) || !coordinator.start(:ice)) {
         return false;
     }
     var data = coordinator.getDashboard();
@@ -192,7 +202,7 @@ function coordinatorFallsBackWhenCalibrationConfigThrows(logger as Test.Logger) 
             new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
         var estimator = new DistanceEstimatorConfigSpy();
         coordinator.setDistanceEstimator(estimator);
-        if (!coordinator.setDistanceModelConfig(config) || !coordinator.start()) {
+        if (!coordinator.setDistanceModelConfig(config) || !coordinator.start(:ice)) {
             return false;
         }
         if (estimator.configureCalls != 1 ||
@@ -235,10 +245,10 @@ function coordinatorConfiguresDistanceFromHeightBeforeFirstShift(logger as Test.
     if (!(coordinator has :setDistanceModelConfig)) { return false; }
     if (coordinator.setDistanceModelConfig(null) ||
         !coordinator.setDistanceModelConfig(new DistanceModelConfigFake()) ||
-        !coordinator.start()) { return false; }
+        !coordinator.start(:ice)) { return false; }
     var replacement = new DistanceModelConfigFake();
     replacement.selectedMode = :fixed;
-    if (coordinator.setDistanceModelConfig(replacement) || coordinator.start() ||
+    if (coordinator.setDistanceModelConfig(replacement) || coordinator.start(:ice) ||
         !coordinator.toggleShift()) { return false; }
     return estimator.configureCalls == 1 && estimator.configuredMode == :profile_height &&
         estimator.configuredHeight == 200 && estimator.calls.size() == 2 &&
@@ -261,7 +271,7 @@ function coordinatorKeepsRecordingWhenDistanceProfileIsUnavailable(logger as Tes
         coordinator.setDistanceEstimator(estimator);
         coordinator.setDataSources(profile, null);
         if (!(coordinator has :setDistanceModelConfig)) { return false; }
-        if (!coordinator.setDistanceModelConfig(config) || !coordinator.start()) { return false; }
+        if (!coordinator.setDistanceModelConfig(config) || !coordinator.start(:ice)) { return false; }
         if (caseIndex < 2 && (estimator.configureCalls != 1 ||
             estimator.configuredHeight != null)) { return false; }
         if (caseIndex == 3 && (estimator.configureCalls != 1 ||
@@ -285,7 +295,7 @@ function coordinatorDashboardReportsDistanceModelSourceInMemory(logger as Test.L
     coordinator.setDataSources(profile, null);
     if (!(coordinator has :setDistanceModelConfig)) { return false; }
     if (!coordinator.setDistanceModelConfig(new DistanceModelConfigFake()) ||
-        !coordinator.start()) { return false; }
+        !coordinator.start(:ice)) { return false; }
     var data = coordinator.getDashboard();
     return data.hasKey(:distanceModelSource) && data[:distanceModelSource] == :profile_height &&
         data.hasKey(:distanceCalibrationSource) && data[:distanceCalibrationSource] == :none &&
@@ -389,7 +399,46 @@ function confirmationReturnReleasesReadySensorBeforeLiveStart(logger as Test.Log
 function standardRecordingStartsOnlyOnce(logger as Test.Logger) as Lang.Boolean {
     var factory = new RecordingFactoryFake();
     var recorder = new SessionRecorder(factory);
-    return recorder.start() && !recorder.start() && factory.creates == 1 && factory.session.starts == 1;
+    return recorder.start(:ice) && !recorder.start(:ice) && factory.creates == 1 && factory.session.starts == 1;
+}
+
+(:test)
+function sportRecordingUsesDistinctNamesAndRejectsInvalidBeforeCreate(logger as Test.Logger) as Lang.Boolean {
+    var invalidFactory = new RecordingFactoryFake();
+    var invalidRecorder = new SessionRecorder(invalidFactory);
+    if (invalidRecorder.start(:run) || invalidFactory.creates != 0) { return false; }
+    var iceFactory = new RecordingFactoryFake();
+    var iceRecorder = new SessionRecorder(iceFactory);
+    if (!iceRecorder.start(:ice) ||
+        !iceFactory.lastOptions[:name].equals("RinkLogic Ice Hockey")) { return false; }
+    var inlineFactory = new RecordingFactoryFake();
+    var inlineRecorder = new SessionRecorder(inlineFactory);
+    return inlineRecorder.start(:inline) &&
+        inlineFactory.lastOptions[:name].equals("RinkLogic Inline Hockey") &&
+        inlineFactory.lastOptions[:sport] == Activity.SPORT_HOCKEY;
+}
+
+(:test)
+function coordinatorValidatesSportBeforeCreatingSession(logger as Test.Logger) as Lang.Boolean {
+    var factory = new RecordingFactoryFake();
+    var coordinator = new RecordingCoordinator(new SessionRecorder(factory), new ClockFake());
+    return !coordinator.start(:run) && factory.creates == 0 &&
+        coordinator.start(:inline) && factory.creates == 1 &&
+        factory.lastOptions[:name].equals("RinkLogic Inline Hockey");
+}
+
+(:test)
+function calibrationStartRetainsSportAndFixedTwentyMetreReference(logger as Test.Logger) as Lang.Boolean {
+    var recorder = new SessionRecorderSportSpy();
+    var coordinator = new RecordingCoordinator(recorder, new ClockFake());
+    if (coordinator.startCalibration({:sport=>:inline, :referenceDistanceCm=>2500})) {
+        return false;
+    }
+    if (!coordinator.startCalibration({:sport=>:inline, :referenceDistanceCm=>2000})) {
+        return false;
+    }
+    return recorder.calibrationOptions[:sport] == :inline &&
+        recorder.calibrationOptions[:referenceDistanceCm] == 2000;
 }
 
 (:test)
@@ -397,8 +446,8 @@ function calibrationRecordingUsesSeparateSessionName(logger as Test.Logger) as L
     var factory = new RecordingFactoryFake();
     var recorder = new SessionRecorder(factory);
     if (!recorder.startCalibration({:sport=>:inline, :condition=>:skate_only,
-        :referenceDistanceCm=>2500})) { return false; }
-    return factory.lastOptions[:name].equals("ShiftSense Hockey Calibration") &&
+        :referenceDistanceCm=>2000})) { return false; }
+    return factory.lastOptions[:name].equals("RinkLogic Hockey Calibration") &&
         factory.lastOptions[:sport] == Activity.SPORT_HOCKEY;
 }
 
@@ -407,14 +456,14 @@ function coordinatorCalibrationStartsASeparateRecording(logger as Test.Logger) a
     var factory = new RecordingFactoryFake();
     var coordinator = new RecordingCoordinator(new SessionRecorder(factory), new ClockFake());
     if (!coordinator.startCalibration({:sport=>:inline, :condition=>:skate_only,
-        :referenceDistanceCm=>2500})) { return false; }
-    return factory.lastOptions[:name].equals("ShiftSense Hockey Calibration");
+        :referenceDistanceCm=>2000})) { return false; }
+    return factory.lastOptions[:name].equals("RinkLogic Hockey Calibration");
 }
 
 (:test)
 function calibrationRecordingBypassesStoredPersonalFactor(logger as Test.Logger) as Lang.Boolean {
     var store = new StoredProfileStoreFake();
-    store.profile = {:schemaVersion=>1, :sport=>:ice, :factor=>0.8,
+    store.iceProfile = {:schemaVersion=>1, :sport=>:ice, :factor=>0.8,
         :source=>:local_known_distance, :referenceDistanceCm=>2500,
         :conditionMedians=>{:skate_only=>0.8, :puck_stickhandling=>0.8}};
     var coordinator = new RecordingCoordinator(
@@ -423,7 +472,7 @@ function calibrationRecordingBypassesStoredPersonalFactor(logger as Test.Logger)
     coordinator.setDistanceEstimator(estimator);
     coordinator.setDistanceModelConfig(new StoredDistanceModelConfig(
         new DistanceModelConfigFake(), store));
-    if (!coordinator.startCalibration({:sport=>:ice, :referenceDistanceCm=>2500})) {
+    if (!coordinator.startCalibration({:sport=>:ice, :referenceDistanceCm=>2000})) {
         return false;
     }
     return estimator.configuredMode == :profile_height &&
@@ -434,15 +483,15 @@ function calibrationRecordingBypassesStoredPersonalFactor(logger as Test.Logger)
 (:test)
 function normalRecordingFreezesStoredFactorInSummary(logger as Test.Logger) as Lang.Boolean {
     var store = new StoredProfileStoreFake();
-    store.profile = {:schemaVersion=>1, :sport=>:ice, :factor=>0.875,
+    store.iceProfile = {:schemaVersion=>1, :sport=>:ice, :factor=>0.875,
         :source=>:local_known_distance, :referenceDistanceCm=>2500,
         :conditionMedians=>{:skate_only=>0.875, :puck_stickhandling=>0.875}};
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     coordinator.setDistanceModelConfig(new StoredDistanceModelConfig(
         new DistanceModelConfigFake(), store));
-    if (!coordinator.start()) { return false; }
-    store.profile[:factor] = 1.25;
+    if (!coordinator.start(:ice)) { return false; }
+    store.iceProfile[:factor] = 1.25;
     if (!coordinator.stopAndSave()) { return false; }
     return coordinator.getSessionSummary()[:personalCalibrationFactor] == 0.875;
 }
@@ -452,7 +501,7 @@ function calibrationSessionAcceptsOnlyValidExplicitFactor(logger as Test.Logger)
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     if (coordinator.setSessionCalibrationFactor(1.0) ||
-        !coordinator.startCalibration({:sport=>:inline, :referenceDistanceCm=>2500}) ||
+        !coordinator.startCalibration({:sport=>:inline, :referenceDistanceCm=>2000}) ||
         coordinator.setSessionCalibrationFactor(0.49) ||
         coordinator.setSessionCalibrationFactor(1.51) ||
         !coordinator.setSessionCalibrationFactor(1.125) ||
@@ -465,7 +514,7 @@ function normalSessionRejectsExplicitCalibrationFactor(logger as Test.Logger) as
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     return coordinator.setDistanceModelConfig(new DistanceModelConfigFake()) &&
-        coordinator.start() && !coordinator.setSessionCalibrationFactor(1.0) &&
+        coordinator.start(:ice) && !coordinator.setSessionCalibrationFactor(1.0) &&
         coordinator.stopAndSave() &&
         !coordinator.getSessionSummary().hasKey(:personalCalibrationFactor);
 }
@@ -474,7 +523,7 @@ function normalSessionRejectsExplicitCalibrationFactor(logger as Test.Logger) as
 function recordingIsSavedAsHockeyInsteadOfOther(logger as Test.Logger) as Lang.Boolean {
     var factory = new RecordingFactoryFake();
     var recorder = new SessionRecorder(factory);
-    return recorder.start() && factory.lastOptions != null &&
+    return recorder.start(:ice) && factory.lastOptions != null &&
         factory.lastOptions[:sport] == Toybox.Activity.SPORT_HOCKEY;
 }
 
@@ -483,7 +532,7 @@ function liveElapsedTimeStartsAtZeroAndAdvances(logger as Test.Logger) as Lang.B
     var factory = new RecordingFactoryFake();
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(new SessionRecorder(factory), clock);
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var initial = coordinator.getElapsedMs() == 0;
     clock.now = 6500;
     return initial && coordinator.getElapsedMs() == 5500;
@@ -493,7 +542,7 @@ function liveElapsedTimeStartsAtZeroAndAdvances(logger as Test.Logger) as Lang.B
 function stopAndSaveClosesSessionOnce(logger as Test.Logger) as Lang.Boolean {
     var factory = new RecordingFactoryFake();
     var coordinator = new RecordingCoordinator(new SessionRecorder(factory), new ClockFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     return coordinator.stopAndSave() && !coordinator.stopAndSave() &&
         factory.session.stops == 1 && factory.session.saves == 1 &&
         coordinator.getState() == :saved;
@@ -504,7 +553,7 @@ function failedSaveCanRetryWithoutStoppingAgain(logger as Test.Logger) as Lang.B
     var factory = new RecordingFactoryFake();
     factory.session.saveResult = false;
     var coordinator = new RecordingCoordinator(new SessionRecorder(factory), new ClockFake());
-    if (!coordinator.start() || coordinator.stopAndSave()) { return false; }
+    if (!coordinator.start(:ice) || coordinator.stopAndSave()) { return false; }
     factory.session.saveResult = true;
     return coordinator.getState() == :stopped && coordinator.retrySave() &&
         factory.session.stops == 1 && factory.session.saves == 2;
@@ -516,7 +565,7 @@ function coordinatorPreservesFrozenSessionSummaryAfterSave(logger as Test.Logger
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), clock);
     coordinator.setDataSources(new ProfileSourceFake(), new HeartRateSourceFake());
-    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    if (!coordinator.start(:ice) || !coordinator.toggleShift()) { return false; }
     for (var second = 0; second < 10; second += 1) {
         clock.now = 1100 + second * 1000;
         coordinator.onHeartRate({:heartRate=>150});
@@ -536,7 +585,7 @@ function coordinatorClosesOpenSummaryShiftExactlyOnce(logger as Test.Logger) as 
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), clock);
-    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    if (!coordinator.start(:ice) || !coordinator.toggleShift()) { return false; }
     clock.now = 11000;
     if (!coordinator.stopAndSave()) { return false; }
     var summary = coordinator.getSessionSummary();
@@ -550,7 +599,7 @@ function saveRetryReusesIdenticalFrozenSummary(logger as Test.Logger) as Lang.Bo
     factory.session.saveResult = false;
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(new SessionRecorder(factory), clock);
-    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    if (!coordinator.start(:ice) || !coordinator.toggleShift()) { return false; }
     clock.now = 11000;
     if (coordinator.stopAndSave()) { return false; }
     var before = coordinator.getSessionSummary();
@@ -564,7 +613,7 @@ function lowerButtonStartsShiftWithoutStoppingRecording(logger as Test.Logger) a
     var factory = new RecordingFactoryFake();
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(new SessionRecorder(factory), clock);
-    coordinator.start();
+    coordinator.start(:ice);
     var view = new LiveView(coordinator);
     var delegate = new LiveInputDelegate(view);
     if (!delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC))) { return false; }
@@ -578,7 +627,7 @@ function lowerButtonStartsShiftWithoutStoppingRecording(logger as Test.Logger) a
 function completedShiftsTrackLastAverageAndIceTime(logger as Test.Logger) as Lang.Boolean {
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(new SessionRecorder(new RecordingFactoryFake()), clock);
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var button = new LiveInputDelegate(new LiveView(coordinator));
     if (!button.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC))) { return false; }
     clock.now = 31000;
@@ -597,7 +646,7 @@ function completedShiftsTrackLastAverageAndIceTime(logger as Test.Logger) as Lan
 function saveClosesRunningShiftAndFreezesDurations(logger as Test.Logger) as Lang.Boolean {
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(new SessionRecorder(new RecordingFactoryFake()), clock);
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var live = new LiveView(coordinator);
     if (!new LiveInputDelegate(live).onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC))) { return false; }
     clock.now = 21000;
@@ -613,7 +662,7 @@ function saveClosesRunningShiftAndFreezesDurations(logger as Test.Logger) as Lan
 function liveDashboardTouchCannotStopRecording(logger as Test.Logger) as Lang.Boolean {
     var factory = new RecordingFactoryFake();
     var coordinator = new RecordingCoordinator(new SessionRecorder(factory), new ClockFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var delegate = new LiveInputDelegate(new LiveView(coordinator));
     return delegate.onTap(new TapEventFake()) && coordinator.getState() == :recording &&
         factory.session.stops == 0;
@@ -623,7 +672,7 @@ function liveDashboardTouchCannotStopRecording(logger as Test.Logger) as Lang.Bo
 function rawLowerPhysicalKeyStartsShift(logger as Test.Logger) as Lang.Boolean {
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var delegate = new LiveInputDelegate(new LiveView(coordinator));
     return delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) &&
         coordinator.getDashboard()[:shiftCount] == 1 && coordinator.getState() == :recording;
@@ -633,7 +682,7 @@ function rawLowerPhysicalKeyStartsShift(logger as Test.Logger) as Lang.Boolean {
 function rawUpperPhysicalKeySavesRecording(logger as Test.Logger) as Lang.Boolean {
     var factory = new RecordingFactoryFake();
     var coordinator = new RecordingCoordinator(new SessionRecorder(factory), new ClockFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var delegate = new LiveInputDelegate(new LiveView(coordinator));
     return delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ENTER)) &&
         coordinator.getState() == :saved && factory.session.stops == 1;
@@ -650,7 +699,7 @@ function liveInputHasNoTouchMappedBehaviorDelegate(logger as Test.Logger) as Lan
 function liveSwipeCannotChangeShiftOrRecording(logger as Test.Logger) as Lang.Boolean {
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var delegate = new LiveInputDelegate(new LiveView(coordinator));
     return delegate.onSwipe(new SwipeEventFake()) && coordinator.getDashboard()[:shiftCount] == 0 &&
         coordinator.getState() == :recording;
@@ -659,7 +708,7 @@ function liveSwipeCannotChangeShiftOrRecording(logger as Test.Logger) as Lang.Bo
 (:test)
 function realGarminSessionStartsStopsAndSaves(logger as Test.Logger) as Lang.Boolean {
     var recorder = new SessionRecorder(new SystemSessionFactory());
-    return recorder.start() && recorder.stopAndSave() && recorder.getState() == :saved;
+    return recorder.start(:ice) && recorder.stopAndSave() && recorder.getState() == :saved;
 }
 
 (:test)
@@ -667,7 +716,7 @@ function liveDashboardUsesValidHrSamplesAndProfileMaximum(logger as Test.Logger)
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(new SessionRecorder(new RecordingFactoryFake()), clock);
     coordinator.setDataSources(new ProfileSourceFake(), new HeartRateSourceFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     coordinator.onHeartRate({:heartRate=>100, :quality=>:active});
     coordinator.onHeartRate({:heartRate=>null, :quality=>:missing});
     coordinator.onHeartRate({:heartRate=>180, :quality=>:active});
@@ -680,7 +729,7 @@ function shiftAverageUsesOnlyValidSamplesInsideManualShift(logger as Test.Logger
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), clock);
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     coordinator.onHeartRate({:heartRate=>80});
     if (coordinator.getDashboard()[:shiftAverageHeartRate] != null ||
         !coordinator.toggleShift()) { return false; }
@@ -699,7 +748,7 @@ function newShiftClearsOldAverageAndSaveFreezesOpenShiftAverage(logger as Test.L
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), clock);
-    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    if (!coordinator.start(:ice) || !coordinator.toggleShift()) { return false; }
     coordinator.onHeartRate({:heartRate=>120});
     clock.now += 1;
     if (!coordinator.toggleShift()) { return false; }
@@ -716,7 +765,7 @@ function missingProfileMaximumLeavesZoneUnavailable(logger as Test.Logger) as La
     var profile = new ProfileSourceFake(); profile.maximum = null;
     var coordinator = new RecordingCoordinator(new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     coordinator.setDataSources(profile, new HeartRateSourceFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     coordinator.onHeartRate({:heartRate=>150, :quality=>:active});
     return coordinator.getDashboard()[:hrZone] == null;
 }
@@ -726,14 +775,14 @@ function stopReleasesHeartRateSource(logger as Test.Logger) as Lang.Boolean {
     var hr = new HeartRateSourceFake();
     var coordinator = new RecordingCoordinator(new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     coordinator.setDataSources(new ProfileSourceFake(), hr);
-    return coordinator.start() && coordinator.stopAndSave() && hr.startCalls == 1 && hr.stopCalls == 1;
+    return coordinator.start(:ice) && coordinator.stopAndSave() && hr.startCalls == 1 && hr.stopCalls == 1;
 }
 
 (:test)
 function liveScreenDisplaysMissingAndMeasuredHeartRate(logger as Test.Logger) as Lang.Boolean {
     var coordinator = new RecordingCoordinator(new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     coordinator.setDataSources(new ProfileSourceFake(), new HeartRateSourceFake());
-    coordinator.start();
+    coordinator.start(:ice);
     var live = new LiveView(coordinator);
     var empty = live.getDisplayValues();
     if (!empty[:heartRate].equals("--") || !empty[:averageHeartRate].equals("--") ||
@@ -749,7 +798,7 @@ function liveHeaderKeepsHeartRateZoneVisible(logger as Test.Logger) as Lang.Bool
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     coordinator.setDataSources(new ProfileSourceFake(), new HeartRateSourceFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     coordinator.onHeartRate({:heartRate=>180, :quality=>:active});
     var zoneText = new LiveView(coordinator).getDisplayValues()[:zoneText];
     return zoneText != null && zoneText.equals("ZONE 5");
@@ -760,7 +809,7 @@ function liveScreenFormatsAllSevenRequestedMetrics(logger as Test.Logger) as Lan
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(new SessionRecorder(new RecordingFactoryFake()), clock);
     coordinator.setDataSources(new ProfileSourceFake(), new HeartRateSourceFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     var live = new LiveView(coordinator);
     var initial = live.getDisplayValues();
     if (initial[:lastShift] == null || initial[:averageShift] == null ||
@@ -787,7 +836,7 @@ function failedStopCanRetryFromErrorView(logger as Test.Logger) as Lang.Boolean 
     var factory = new RecordingFactoryFake();
     factory.session.stopResult = false;
     var coordinator = new RecordingCoordinator(new SessionRecorder(factory), new ClockFake());
-    if (!coordinator.start() || coordinator.stopAndSave()) { return false; }
+    if (!coordinator.start(:ice) || coordinator.stopAndSave()) { return false; }
     var errorView = new ErrorView(coordinator.getErrorCode(), coordinator);
     factory.session.stopResult = true;
     return errorView.retryFinish() && factory.session.stops == 2 &&
@@ -799,7 +848,7 @@ function failedSaveCannotLeaveUnsavedSessionViaBack(logger as Test.Logger) as La
     var factory = new RecordingFactoryFake();
     factory.session.saveResult = false;
     var coordinator = new RecordingCoordinator(new SessionRecorder(factory), new ClockFake());
-    if (!coordinator.start() || coordinator.stopAndSave()) { return false; }
+    if (!coordinator.start(:ice) || coordinator.stopAndSave()) { return false; }
     var errorView = new ErrorView(coordinator.getErrorCode(), coordinator);
     return new ErrorInputDelegate(errorView).onBack() && coordinator.getState() == :stopped &&
         factory.session.discards == 0;
@@ -810,7 +859,7 @@ function failedStartDiscardsCreatedSession(logger as Test.Logger) as Lang.Boolea
     var factory = new RecordingFactoryFake();
     factory.session.startResult = false;
     var recorder = new SessionRecorder(factory);
-    return !recorder.start() && factory.session.discards == 1 &&
+    return !recorder.start(:ice) && factory.session.discards == 1 &&
         recorder.getState() == :failed;
 }
 
@@ -820,7 +869,7 @@ function customGarminZoneThresholdsTakePriority(logger as Test.Logger) as Lang.B
     profile.zones = [90, 120, 150, 170, 185, 200];
     var coordinator = new RecordingCoordinator(new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     coordinator.setDataSources(profile, new HeartRateSourceFake());
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     coordinator.onHeartRate({:heartRate=>150, :quality=>:active});
     return coordinator.getDashboard()[:hrZone] == 2;
 }
@@ -830,14 +879,14 @@ function sensorStartFailureIsVisibleWithoutStoppingRecording(logger as Test.Logg
     var hr = new HeartRateSourceFake(); hr.startResult = false;
     var coordinator = new RecordingCoordinator(new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     coordinator.setDataSources(new ProfileSourceFake(), hr);
-    return coordinator.start() && coordinator.getDashboard()[:sensorAvailable] == false &&
+    return coordinator.start(:ice) && coordinator.getDashboard()[:sensorAvailable] == false &&
         coordinator.getDashboard()[:heartRate] == null && coordinator.stopAndSave();
 }
 
 (:test)
 function realGarminSessionCanDiscardActiveRecording(logger as Test.Logger) as Lang.Boolean {
     var recorder = new SessionRecorder(new SystemSessionFactory());
-    return recorder.start() && recorder.discardSession() && recorder.getState() == :discarded;
+    return recorder.start(:ice) && recorder.discardSession() && recorder.getState() == :discarded;
 }
 
 (:test)
@@ -846,7 +895,7 @@ function failedStartRetainsCleanupRetryWhenDiscardInitiallyFails(logger as Test.
     factory.session.startResult = false;
     factory.session.discardResult = false;
     var recorder = new SessionRecorder(factory);
-    if (recorder.start() || !recorder.hasPendingSession()) { return false; }
+    if (recorder.start(:ice) || !recorder.hasPendingSession()) { return false; }
     factory.session.discardResult = true;
     return recorder.discardSession() && !recorder.hasPendingSession() &&
         factory.session.discards == 2;

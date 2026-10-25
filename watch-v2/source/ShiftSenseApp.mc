@@ -149,7 +149,7 @@ class ShiftSenseApp extends Application.AppBase {
         mCoordinator = new RecordingCoordinator(recorder, new AppClock());
         mCoordinator.setDataSources(new GarminProfileService(), new HeartRateService());
         mCoordinator.setMotionSource(new MotionSource(new SystemMotionPort()));
-        if (mCoordinator.start()) {
+        if (mCoordinator.start(:ice)) {
             var live = new LiveView(mCoordinator);
             WatchUi.switchToView(live, new LiveInputDelegate(live), WatchUi.SLIDE_IMMEDIATE);
         } else {

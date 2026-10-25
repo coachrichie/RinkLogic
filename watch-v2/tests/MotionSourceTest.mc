@@ -71,7 +71,7 @@ function coordinatorCountsHockeyPushesOnlyDuringManualShift(logger as Test.Logge
     var distanceConfig = new DistanceModelConfigFake();
     distanceConfig.selectedMode = :fixed;
     coordinator.setDistanceModelConfig(distanceConfig);
-    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    if (!coordinator.start(:ice) || !coordinator.toggleShift()) { return false; }
     clock.now = 2000;
     coordinator.onMotionFeature(motionFeatureWithBatch(detectorBatch(
         [0, 100, 200, 300, 400, 500, 600, 700, 800, 900], [100, 700])));
@@ -100,7 +100,7 @@ function delayedConfirmationFiltersEventsBeforeShiftStart(logger as Test.Logger)
     var distanceConfig = new DistanceModelConfigFake();
     distanceConfig.selectedMode = :fixed;
     coordinator.setDistanceModelConfig(distanceConfig);
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     clock.now = 2000;
     coordinator.onMotionFeature(motionFeatureWithBatch(detectorBatch(
         [0, 100, 200, 300, 400, 500, 600, 700, 800, 900], [100, 700])));
@@ -121,7 +121,7 @@ function failedPushAnalysisDoesNotStopHrShiftsOrSave(logger as Test.Logger) as L
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), clock);
     coordinator.setPushDetector(new ThrowingPushDetectorFake());
-    if (!coordinator.start() || !coordinator.toggleShift()) { return false; }
+    if (!coordinator.start(:ice) || !coordinator.toggleShift()) { return false; }
     coordinator.onHeartRate({:heartRate=>155});
     coordinator.onMotionFeature(motionFeatureWithBatch(null));
     var dashboard = coordinator.getDashboard();
@@ -265,7 +265,7 @@ function failedMotionStartKeepsManualRecording(logger as Test.Logger) as Lang.Bo
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), new ClockFake());
     coordinator.setMotionSource(new MotionSource(new MotionPortUnavailableFake()));
-    return coordinator.start() && coordinator.toggleShift() &&
+    return coordinator.start(:ice) && coordinator.toggleShift() &&
         coordinator.getDashboard()[:shiftCount] == 1 &&
         coordinator.stopAndSave();
 }
@@ -275,7 +275,7 @@ function shadowProposalsNeverChangeLiveShiftCount(logger as Test.Logger) as Lang
     var clock = new ClockFake();
     var coordinator = new RecordingCoordinator(
         new SessionRecorder(new RecordingFactoryFake()), clock);
-    if (!coordinator.start()) { return false; }
+    if (!coordinator.start(:ice)) { return false; }
     for (var i = 0; i < 10; i += 1) {
         clock.now = 1000 + i*1000;
         coordinator.onMotionFeature({:valid=>true, :motionMg=>220,

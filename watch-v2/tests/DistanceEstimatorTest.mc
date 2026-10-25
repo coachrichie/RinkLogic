@@ -18,11 +18,12 @@ function pushAt(atMs, startsBurst) as Lang.Dictionary {
 }
 
 class StoredProfileStoreFake {
-    var profile = null;
+    var iceProfile = null;
+    var inlineProfile = null;
     var throwOnLoad = false;
-    function loadActive() {
+    function loadForSport(sport) {
         if (throwOnLoad) { throw new Lang.Exception(); }
-        return profile;
+        return sport == :ice ? iceProfile : inlineProfile;
     }
 }
 
@@ -30,6 +31,7 @@ class StoredProfileStoreFake {
 function storedDistanceConfigFallsBackToHeightBaselineWithoutProfile(logger as Test.Logger) as Lang.Boolean {
     var wrapper = new StoredDistanceModelConfig(new DistanceModelConfigFake(),
         new StoredProfileStoreFake());
+    if (!wrapper.selectSport(:ice)) { return false; }
     return wrapper.mode() == :profile_height &&
         wrapper.personalCalibrationFactor() == 1.0 &&
         wrapper.calibrationSource() == :none && wrapper.activeProfile() == null;
@@ -38,10 +40,11 @@ function storedDistanceConfigFallsBackToHeightBaselineWithoutProfile(logger as T
 (:test)
 function storedDistanceConfigUsesValidLocalProfile(logger as Test.Logger) as Lang.Boolean {
     var store = new StoredProfileStoreFake();
-    store.profile = {:schemaVersion=>1, :sport=>:inline, :factor=>0.875,
+    store.inlineProfile = {:schemaVersion=>1, :sport=>:inline, :factor=>0.875,
         :source=>:local_known_distance, :referenceDistanceCm=>2500,
         :conditionMedians=>{:skate_only=>0.9, :puck_stickhandling=>0.85}};
     var wrapper = new StoredDistanceModelConfig(new DistanceModelConfigFake(), store);
+    if (!wrapper.selectSport(:inline)) { return false; }
     return wrapper.mode() == :calibrated_profile_test &&
         wrapper.personalCalibrationFactor() == 0.875 &&
         wrapper.calibrationSource() == :local_known_distance &&
@@ -53,6 +56,7 @@ function storedDistanceConfigFailsClosedOnCorruptStorage(logger as Test.Logger) 
     var store = new StoredProfileStoreFake();
     store.throwOnLoad = true;
     var wrapper = new StoredDistanceModelConfig(new DistanceModelConfigFake(), store);
+    if (!wrapper.selectSport(:ice)) { return false; }
     return wrapper.mode() == :profile_height &&
         wrapper.personalCalibrationFactor() == 1.0 &&
         wrapper.calibrationSource() == :none;
@@ -61,16 +65,51 @@ function storedDistanceConfigFailsClosedOnCorruptStorage(logger as Test.Logger) 
 (:test)
 function storedDistanceConfigAppliesHeightThenFactorWithExistingRounding(logger as Test.Logger) as Lang.Boolean {
     var store = new StoredProfileStoreFake();
-    store.profile = {:schemaVersion=>1, :sport=>:ice, :factor=>0.8,
+    store.iceProfile = {:schemaVersion=>1, :sport=>:ice, :factor=>0.8,
         :source=>:local_known_distance, :referenceDistanceCm=>2500,
         :conditionMedians=>{:skate_only=>0.8, :puck_stickhandling=>0.8}};
     var wrapper = new StoredDistanceModelConfig(new DistanceModelConfigFake(), store);
+    if (!wrapper.selectSport(:ice)) { return false; }
     var estimate = new DistanceEstimator();
     estimate.configure(wrapper.mode(), 250, wrapper.personalCalibrationFactor(),
         wrapper.calibrationSource());
     estimate.beginShift(0);
     estimate.observe(distanceResult(100, [pushAt(100, true)], 0, true, false));
     return estimate.endShift(200)[:distanceCm] == 106;
+}
+
+(:test)
+function storedDistanceConfigNeverCrossLoadsTheOtherSportProfile(logger as Test.Logger) as Lang.Boolean {
+    var store = new StoredProfileStoreFake();
+    store.iceProfile = {:schemaVersion=>1, :sport=>:ice, :factor=>1.2,
+        :source=>:local_known_distance, :referenceDistanceCm=>2000,
+        :conditionMedians=>{:skate_only=>1.2, :puck_stickhandling=>1.2}};
+    store.inlineProfile = {:schemaVersion=>1, :sport=>:inline, :factor=>0.8,
+        :source=>:local_known_distance, :referenceDistanceCm=>2000,
+        :conditionMedians=>{:skate_only=>0.8, :puck_stickhandling=>0.8}};
+    var wrapper = new StoredDistanceModelConfig(new DistanceModelConfigFake(), store);
+    if (!wrapper.selectSport(:ice) || wrapper.personalCalibrationFactor() != 1.2 ||
+        wrapper.selectedSport() != :ice) { return false; }
+    if (!wrapper.selectSport(:inline) || wrapper.personalCalibrationFactor() != 0.8 ||
+        wrapper.selectedSport() != :inline) { return false; }
+    store.inlineProfile = null;
+    return wrapper.selectSport(:inline) && wrapper.mode() == :profile_height &&
+        wrapper.personalCalibrationFactor() == 1.0 &&
+        wrapper.calibrationSource() == :none && wrapper.activeProfile() == null;
+}
+
+(:test)
+function storedDistanceConfigInvalidSportClearsPriorCalibration(logger as Test.Logger) as Lang.Boolean {
+    var store = new StoredProfileStoreFake();
+    store.iceProfile = {:schemaVersion=>1, :sport=>:ice, :factor=>1.1,
+        :source=>:local_known_distance, :referenceDistanceCm=>2000,
+        :conditionMedians=>{:skate_only=>1.1, :puck_stickhandling=>1.1}};
+    var wrapper = new StoredDistanceModelConfig(new DistanceModelConfigFake(), store);
+    if (!wrapper.selectSport(:ice) || wrapper.mode() != :calibrated_profile_test) {
+        return false;
+    }
+    return !wrapper.selectSport(:run) && wrapper.selectedSport() == null &&
+        wrapper.mode() == :profile_height && wrapper.personalCalibrationFactor() == 1.0;
 }
 
 function runSixPushDistanceBurst(modelMode, heightCm) as Lang.Dictionary {
