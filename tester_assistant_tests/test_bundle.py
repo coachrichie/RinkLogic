@@ -165,17 +165,31 @@ class BundleTests(unittest.TestCase):
                    side_effect=OSError("secret path C:/private/export.fit")):
             self._assert_clean_failure("bundle_write_failed")
 
+    def test_finalization_failure_after_publication_removes_final_and_temporary(self):
+        with patch("tester_assistant.bundle.BundleResult",
+                   side_effect=RuntimeError("failure after publication")):
+            self._assert_clean_failure("bundle_write_failed")
+
     def test_rejects_contact_or_local_path_in_feedback_text(self):
-        for text in ("Kontakt: person@example.invalid", r"Log: C:\Users\Tester\run.fit"):
+        for index, text in enumerate(("Kontakt: person@example.invalid",
+                                      r"Log: C:\Users\Tester\run.fit",
+                                      "path=/home/tester/run.fit",
+                                      "AWS_SECRET_ACCESS_KEY=abc123")):
             with self.subTest(text=text):
+                self.destination = self.root / f"feedback-{index}"
+                self.destination.mkdir()
                 raw = self.answers.to_safe_dict()
                 raw["priority_improvement"] = text
                 self._assert_clean_failure("unsafe_feedback", answers=validate_answers(raw))
 
     def test_rejects_local_path_in_calibration_reference(self):
-        for data in (b"run,note\n1,C:\\Users\\Tester\\run.fit\n",
-                     b"run,note\n1,/home/tester/run.fit\n"):
+        for index, data in enumerate((b"run,note\n1,C:\\Users\\Tester\\run.fit\n",
+                                      b"run,note\n1,/home/tester/run.fit\n",
+                                      b"run,note\n1,path=/home/tester/run.fit\n",
+                                      b"run,note\n1,AWS_SECRET_ACCESS_KEY=abc123\n")):
             with self.subTest(data=data):
+                self.destination = self.root / f"reference-{index}"
+                self.destination.mkdir()
                 self.reference.write_bytes(data)
                 self._assert_clean_failure("unsafe_reference")
 

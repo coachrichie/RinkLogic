@@ -20,10 +20,11 @@ from .questionnaire import FeedbackAnswers, QuestionnaireError, validate_answers
 _MAX_REFERENCE_BYTES = 1024 * 1024
 _UNSAFE_TEXT = re.compile(
     r"(?:[A-Za-z]:[\\/]|\\\\[^\\\s]+\\|"
-    r"(?:^|[\s,;\"'])/(?:[^\s/]+/)*[^\s/]+|"
+    r"(?:^|[\s,;\"'=])/(?:[^\s/]+/)*[^\s/]+|"
     r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}|"
     r"\bTraceback \(most recent call last\)|"
-    r"\b(?:OPENAI_API_KEY|HOME|USERPROFILE|APPDATA|PATH)\s*=|"
+    r"(?:^|[\s,;\"'])(?:[A-Z_][A-Z0-9_]{2,}|"
+    r"(?i:[a-z_][a-z0-9_]*(?:secret|token|password|credential|api_key)[a-z0-9_]*))\s*=|"
     r"\$\{?[A-Za-z_][A-Za-z_0-9]*\}?|"
     r"%[A-Za-z_][A-Za-z_0-9]*%|"
     r"\+\d[\d ()-]{7,}\d)"
@@ -193,6 +194,7 @@ def build_return_bundle(
 
     temporary_path: Path | None = None
     published = False
+    completed = False
     try:
         descriptor, temporary_name = tempfile.mkstemp(
             prefix=f".{name}.", suffix=".tmp", dir=destination_dir)
@@ -211,14 +213,16 @@ def build_return_bundle(
         published = True
         temporary_path.unlink()
         temporary_path = None
-        return BundleResult(output_path, bundle_sha256, bundle_size,
-                            tuple(member_name for member_name, _ in members))
+        result = BundleResult(output_path, bundle_sha256, bundle_size,
+                              tuple(member_name for member_name, _ in members))
+        completed = True
+        return result
     except BundleError:
         raise
     except Exception:
         raise BundleError("bundle_write_failed") from None
     finally:
+        if published and not completed:
+            output_path.unlink(missing_ok=True)
         if temporary_path is not None:
-            if published:
-                output_path.unlink(missing_ok=True)
             temporary_path.unlink(missing_ok=True)
