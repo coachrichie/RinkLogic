@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+import ipaddress
 import json
 from pathlib import Path
 import re
@@ -39,6 +40,31 @@ _TESTER_ID = re.compile(r"T[A-Z0-9]{5}\Z")
 _ASSIGNMENT_ID = re.compile(r"(?P<tester>T[A-Z0-9]{5})-R[0-4]-[0-9]{3}\Z")
 _RELEASE_ID = re.compile(r"RL-B6-[0-9]{8}-[A-F0-9]{7}\Z")
 _SHA256 = re.compile(r"[0-9a-fA-F]{64}\Z")
+_DNS_LABEL = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\Z")
+
+
+def _is_valid_upload_host(host: str) -> bool:
+    """Accept valid IP literals and DNS names, rejecting malformed host characters."""
+    if ":" in host:
+        try:
+            return ipaddress.ip_address(host).version == 6
+        except ValueError:
+            return False
+
+    try:
+        return ipaddress.ip_address(host).version == 4
+    except ValueError:
+        pass
+
+    try:
+        ascii_host = host.encode("idna").decode("ascii")
+    except UnicodeError:
+        return False
+    if ascii_host.endswith("."):
+        ascii_host = ascii_host[:-1]
+    if not ascii_host or len(ascii_host) > 253:
+        return False
+    return all(_DNS_LABEL.fullmatch(label) for label in ascii_host.split("."))
 
 
 @dataclass(frozen=True, slots=True)
@@ -167,6 +193,7 @@ class Assignment:
         if (
             parsed_url.scheme.lower() != "https"
             or not parsed_url.hostname
+            or not _is_valid_upload_host(parsed_url.hostname)
             or any(char.isspace() for char in upload_url)  # type: ignore[union-attr]
             or parsed_url.username is not None
             or parsed_url.password is not None

@@ -108,6 +108,8 @@ class AssignmentTests(unittest.TestCase):
             "",
             "https:///missing-host",
             "https://example.invalid:bad/upload",
+            "https://%",
+            "https://exa\\mple.invalid/upload",
         ):
             with self.subTest(value=value):
                 raw = beta6_assignment_dict()
