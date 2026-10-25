@@ -74,7 +74,7 @@ def questionnaire_items() -> tuple[tuple[int, QuestionDefinition], ...]:
 def button_state(state: WizardState) -> dict[str, bool]:
     """Return high-level capability gates; widgets may narrow them by displayed page."""
     return {
-        "back": state.step is not WizardStep.ASSIGNMENT,
+        "back": state.step not in (WizardStep.ASSIGNMENT, WizardStep.RETURN),
         "next": {
             WizardStep.ASSIGNMENT: state.assignment is not None,
             WizardStep.EXPORT: state.diagnostics is not None,
@@ -136,6 +136,24 @@ def validated_upload_url(bundle: BundleResult | None, url: str | None) -> str | 
     return url
 
 
+def bind_questionnaire_wheel(canvas: tk.Canvas, content: ttk.Frame) -> None:
+    """Scroll over every questionnaire child without changing app-wide bindings."""
+    def on_wheel(event: tk.Event) -> str:
+        delta = event.delta
+        if delta:
+            units = max(1, abs(delta) // 120)
+            canvas.yview_scroll(-units if delta > 0 else units, "units")
+        return "break"
+
+    def bind_tree(widget: tk.Widget) -> None:
+        widget.bind("<MouseWheel>", on_wheel)
+        for child in widget.winfo_children():
+            bind_tree(child)
+
+    bind_tree(canvas)
+    bind_tree(content)
+
+
 class BetaTestApp:
     """One-frame-per-step view bound only to the local controller API."""
 
@@ -179,7 +197,7 @@ class BetaTestApp:
         footer.grid(row=row, column=0, sticky="ew", pady=(16, 0))
         footer.columnconfigure(1, weight=1)
         back = None
-        if step is not WizardStep.ASSIGNMENT:
+        if step not in (WizardStep.ASSIGNMENT, WizardStep.RETURN):
             back = ttk.Button(footer, text="Zurück", command=self._back)
             back.grid(row=0, column=0, sticky="w")
         next_button = None
@@ -237,7 +255,6 @@ class BetaTestApp:
         window_id = canvas.create_window((0, 0), window=content, anchor="nw")
         content.bind("<Configure>", lambda _event: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.bind("<Configure>", lambda event: canvas.itemconfigure(window_id, width=event.width))
-        canvas.bind("<MouseWheel>", lambda event: canvas.yview_scroll(-int(event.delta / 120), "units"))
         canvas.bind("<Prior>", lambda _event: canvas.yview_scroll(-1, "pages"))
         canvas.bind("<Next>", lambda _event: canvas.yview_scroll(1, "pages"))
         ttk.Label(content, text=privacy_text(), wraplength=740, justify="left").grid(
@@ -267,6 +284,7 @@ class BetaTestApp:
         self.problem_details = tk.Text(content, height=4, width=70, wrap="word")
         self.problem_details.grid(row=23, column=0, sticky="ew")
         self.problem_details.bind("<FocusIn>", lambda _event: canvas.yview_moveto(1.0))
+        bind_questionnaire_wheel(canvas, content)
         self.reference_button = ttk.Button(page, text="Kalibrierungsreferenz auswählen …",
                                            command=self._choose_reference)
         self.reference_button.grid(row=3, column=0, sticky="w", pady=(12, 0))
@@ -348,7 +366,12 @@ class BetaTestApp:
         result: dict[str, object] = {}
         for question_id, variable in self.rating_vars.items():
             value = variable.get()
-            result[question_id] = "not_applicable" if value == rating_label("not_applicable") else value
+            if value == rating_label("not_applicable"):
+                result[question_id] = "not_applicable"
+            elif value in {"1", "2", "3", "4", "5"}:
+                result[question_id] = int(value)
+            else:
+                result[question_id] = value
         result["priority_improvement"] = self.improvement.get("1.0", "end-1c")
         details = self.problem_details.get("1.0", "end-1c")
         if details.strip():
@@ -360,6 +383,10 @@ class BetaTestApp:
         self._refresh()
 
     def _back(self) -> None:
+        if self.controller.state_snapshot().step is WizardStep.RETURN:
+            self.view_step = WizardStep.RETURN
+            self._refresh()
+            return
         steps = list(WizardStep)
         index = steps.index(self.view_step)
         if index > 0:
@@ -368,12 +395,17 @@ class BetaTestApp:
 
     def _next(self) -> None:
         state = self.controller.state_snapshot()
+        if state.step is WizardStep.RETURN:
+            self.view_step = WizardStep.RETURN
+            self._refresh()
+            return
         if self.view_step is WizardStep.ASSIGNMENT and state.assignment is not None:
             self.view_step = WizardStep.EXPORT
         elif self.view_step is WizardStep.EXPORT and state.diagnostics is not None:
             self.view_step = WizardStep.DIAGNOSTICS
         elif self.view_step is WizardStep.DIAGNOSTICS:
-            state = self.controller.continue_to_questionnaire()
+            if state.step is WizardStep.DIAGNOSTICS:
+                state = self.controller.continue_to_questionnaire()
             if state.step is WizardStep.QUESTIONNAIRE:
                 self.view_step = WizardStep.QUESTIONNAIRE
         elif self.view_step is WizardStep.QUESTIONNAIRE:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from io import StringIO
+import json
 import unittest
 from unittest.mock import patch
 
@@ -11,11 +12,13 @@ from tester_assistant.app import (
     button_state, diagnostic_message, diagnostic_rows, main, privacy_text,
     questionnaire_items, rating_label, step_title, validated_upload_url,
     selection_texts,
+    bind_questionnaire_wheel,
 )
 from tester_assistant.bundle import BundleResult
-from tester_assistant.controller import WizardState, WizardStep
+from tester_assistant.controller import BetaTestController, WizardState, WizardStep
 from tester_assistant.diagnostics import DiagnosticReport
-from tester_assistant.questionnaire import QUESTION_IDS
+from tester_assistant.questionnaire import QUESTION_IDS, validate_answers
+from tester_assistant_tests.fixtures import beta6_assignment_dict, beta6_original_name, pilot_result
 from pathlib import Path
 import tempfile
 
@@ -125,6 +128,99 @@ class AppContractTests(unittest.TestCase):
             app._next()
         self.assertEqual(controller.checked, {"priority_improvement": "edited value"})
         self.assertFalse(controller.created)
+
+    def test_rating_controls_produce_validated_integer_answers(self):
+        from tester_assistant.app import BetaTestApp
+
+        class Value:
+            def __init__(self, value):
+                self.value = value
+
+            def get(self, *_args):
+                return self.value
+
+        app = object.__new__(BetaTestApp)
+        app.rating_vars = {question_id: Value(str(index % 5 + 1))
+                           for index, question_id in enumerate(QUESTION_IDS[:9])}
+        app.rating_vars[QUESTION_IDS[2]] = Value("Nicht zutreffend")
+        app.improvement = Value("Bessere Statusanzeige")
+        app.problem_details = Value("")
+        raw = app._raw_answers()
+        self.assertEqual(raw[QUESTION_IDS[0]], 1)
+        self.assertEqual(raw[QUESTION_IDS[2]], "not_applicable")
+        self.assertEqual(validate_answers(raw).to_safe_dict(), raw)
+
+    def test_back_next_review_keeps_controller_and_page_in_sync(self):
+        from tester_assistant.app import BetaTestApp
+
+        with tempfile.TemporaryDirectory() as directory, \
+             patch("tester_assistant.diagnostics.load_pilot_fit", return_value=pilot_result()):
+            root = Path(directory)
+            assignment = beta6_assignment_dict()
+            assignment["protocol"] = "smoke"
+            assignment_path = root / "assignment.json"
+            assignment_path.write_text(json.dumps(assignment), encoding="utf-8")
+            original = root / beta6_original_name().replace("calibration", "smoke")
+            original.write_bytes(b"synthetic FIT bytes")
+            controller = BetaTestController()
+            controller.load_assignment(assignment_path)
+            controller.select_original(original)
+            controller.continue_to_questionnaire()
+            app = object.__new__(BetaTestApp)
+            app.controller = controller
+            app.view_step = WizardStep.QUESTIONNAIRE
+            app._refresh = lambda: None
+            app.root = object()
+
+            app._back()
+            self.assertEqual(app.view_step, WizardStep.DIAGNOSTICS)
+            with patch.object(controller, "continue_to_questionnaire", side_effect=AssertionError("duplicate transition")):
+                app._next()
+            self.assertEqual(app.view_step, WizardStep.QUESTIONNAIRE)
+            self.assertEqual(controller.state_snapshot().status_key, "questionnaire_ready")
+
+            answers = {question_id: 3 for question_id in QUESTION_IDS[:9]}
+            answers["priority_improvement"] = "Bessere Statusanzeige"
+            controller.submit_answers(answers)
+            state = controller.create_bundle(root)
+            self.assertEqual(state.step, WizardStep.RETURN)
+            app.view_step = WizardStep.RETURN
+            with patch("tester_assistant.app.filedialog.askdirectory", side_effect=AssertionError("duplicate bundle prompt")):
+                app._back()
+                app._next()
+            self.assertEqual(app.view_step, WizardStep.RETURN)
+            self.assertEqual(controller.state_snapshot().step, WizardStep.RETURN)
+
+    def test_wheel_scrolls_over_questionnaire_children_without_global_binding(self):
+        class Widget:
+            def __init__(self, *children):
+                self.children = children
+                self.bindings = {}
+                self.scrolls = []
+
+            def bind(self, sequence, callback):
+                self.bindings[sequence] = callback
+
+            def bind_all(self, *_args):
+                raise AssertionError("global wheel binding would leak")
+
+            def winfo_children(self):
+                return self.children
+
+            def yview_scroll(self, amount, unit):
+                self.scrolls.append((amount, unit))
+
+        control = Widget()
+        nested = Widget(control)
+        content = Widget(nested)
+        canvas = Widget()
+        outside = Widget()
+        bind_questionnaire_wheel(canvas, content)
+        self.assertNotIn("<MouseWheel>", outside.bindings)
+        self.assertIn("<MouseWheel>", control.bindings)
+        self.assertIn("<MouseWheel>", canvas.bindings)
+        control.bindings["<MouseWheel>"](type("Event", (), {"delta": -120})())
+        self.assertEqual(canvas.scrolls, [(1, "units")])
 
     def test_browser_handoff_requires_bundle_file_and_explicit_confirmation(self):
         from tester_assistant.app import BetaTestApp
