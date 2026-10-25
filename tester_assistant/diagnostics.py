@@ -17,6 +17,7 @@ from .assignment import Assignment, AssignmentError
 
 _MAX_FIT_BYTES = 64 * 1024 * 1024
 _ARCHIVE_SUFFIXES = frozenset({".zip", ".7z", ".rar", ".tar", ".gz", ".bz2", ".xz"})
+_EXECUTABLE_SUFFIXES = frozenset({".exe", ".bat", ".cmd", ".com", ".ps1", ".sh", ".msi", ".scr", ".js", ".vbs"})
 
 
 class DiagnosticError(ValueError):
@@ -57,7 +58,6 @@ class DiagnosticReport:
             "estimated_distance_m": self.estimated_distance_m,
             "personal_calibration_factor": self.personal_calibration_factor,
             "heart_rate_available": self.heart_rate_available,
-            "expected_prg_sha256": self.expected_prg_sha256,
         }
 
 
@@ -99,7 +99,7 @@ def _validate_member(info: zipfile.ZipInfo) -> None:
     suffix = path.suffix.lower()
     if suffix in _ARCHIVE_SUFFIXES:
         raise DiagnosticError("zip_nested_archive")
-    if suffix == ".exe":
+    if suffix in _EXECUTABLE_SUFFIXES:
         raise DiagnosticError("zip_executable_member")
 
 
@@ -115,6 +115,8 @@ def _read_zip_fit(path: Path) -> tuple[bytes, str]:
                 raise DiagnosticError("zip_no_fit")
             if len(fits) != 1:
                 raise DiagnosticError("zip_multiple_fit")
+            if any(not member.is_dir() and member not in fits for member in members):
+                raise DiagnosticError("zip_unexpected_member")
             member = fits[0]
             if member.file_size > _MAX_FIT_BYTES:
                 raise DiagnosticError("fit_too_large")
@@ -127,6 +129,8 @@ def _read_zip_fit(path: Path) -> tuple[bytes, str]:
             return data, member.filename
     except DiagnosticError:
         raise
+    except NotImplementedError:
+        raise DiagnosticError("unsupported_zip_compression") from None
     except (OSError, EOFError, RuntimeError, ValueError, zipfile.BadZipFile, zipfile.LargeZipFile):
         raise DiagnosticError("corrupt_zip") from None
 
@@ -184,7 +188,7 @@ def _report_from_pilot(
         if heart_rate is not None:
             heart_rate_available |= _finite_nonnegative(heart_rate) is not None
     return DiagnosticReport(
-        status="ready", codes=(), original_sha256=original_sha256,
+        status="pass", codes=(), original_sha256=original_sha256,
         fit_sha256=fit_sha256, original_name=original_name,
         fit_member_name=fit_member_name, schema_version=12,
         session_start=start, duration_minutes=duration_ms / 60000,
@@ -205,8 +209,10 @@ def inspect_original(path: Path, assignment: Assignment) -> DiagnosticReport:
                 else "original_name_mismatch")
         raise DiagnosticError(code) from None
 
-    original_sha256, _ = _hash_original(path)
+    original_sha256, original_size = _hash_original(path)
     if path.suffix == ".fit":
+        if original_size > _MAX_FIT_BYTES:
+            raise DiagnosticError("fit_too_large")
         try:
             pilot = load_pilot_fit(path)
         except Exception:

@@ -51,7 +51,7 @@ class DiagnosticsTests(unittest.TestCase):
         with patch("tester_assistant.diagnostics.load_pilot_fit", return_value=pilot_result()):
             report = inspect_original(path, self.assignment)
 
-        self.assertEqual(report.status, "ready")
+        self.assertEqual(report.status, "pass")
         self.assertEqual(report.codes, ())
         self.assertEqual(report.original_sha256, hashlib.sha256(FIT_BYTES).hexdigest())
         self.assertEqual(report.fit_sha256, report.original_sha256)
@@ -65,7 +65,8 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertEqual(report.personal_calibration_factor, 1.12)
         self.assertTrue(report.heart_rate_available)
         summary = report.safe_summary()
-        self.assertEqual(summary["expected_prg_sha256"], "0" * 64)
+        self.assertEqual(report.expected_prg_sha256, "0" * 64)
+        self.assertNotIn("expected_prg_sha256", summary)
         self.assertEqual(summary["manual_shift_count"], 1)
         self.assertNotIn("original_name", summary)
         self.assertNotIn("fit_member_name", summary)
@@ -109,6 +110,18 @@ class DiagnosticsTests(unittest.TestCase):
         path.write_bytes(FIT_BYTES)
         self.assert_code(path, "unsupported_extension")
 
+    def test_direct_fit_uses_the_same_64_mib_limit_as_zip_fit(self):
+        path = self.original(b"x")
+        with path.open("r+b") as output:
+            output.truncate(64 * 1024 * 1024)
+        with patch("tester_assistant.diagnostics.load_pilot_fit", return_value=pilot_result()):
+            self.assertEqual(inspect_original(path, self.assignment).schema_version, 12)
+        with path.open("r+b") as output:
+            output.truncate(64 * 1024 * 1024 + 1)
+        with patch("tester_assistant.diagnostics.load_pilot_fit") as parser:
+            self.assert_code(path, "fit_too_large")
+            parser.assert_not_called()
+
     def test_corrupt_zip_and_bad_member_sets_are_rejected(self):
         cases = (
             (b"not a zip", "corrupt_zip"),
@@ -116,12 +129,29 @@ class DiagnosticsTests(unittest.TestCase):
             (zip_bytes([("one.fit", FIT_BYTES), ("two.fit", FIT_BYTES)]), "zip_multiple_fit"),
             (zip_bytes([("activity.fit", FIT_BYTES), ("nested.zip", b"zip")]), "zip_nested_archive"),
             (zip_bytes([("activity.fit", FIT_BYTES), ("setup.exe", b"exe")]), "zip_executable_member"),
+            (zip_bytes([("activity.fit", FIT_BYTES), ("run.bat", b"bat")]), "zip_executable_member"),
+            (zip_bytes([("activity.fit", FIT_BYTES), ("notes.txt", b"text")]), "zip_unexpected_member"),
             (zip_bytes([("/activity.fit", FIT_BYTES)]), "zip_unsafe_member_name"),
             (zip_bytes([("../activity.fit", FIT_BYTES)]), "zip_unsafe_member_name"),
         )
         for data, code in cases:
             with self.subTest(code=code):
                 self.assert_code(self.original(data, "zip"), code)
+
+    def test_unsupported_zip_compression_has_stable_code(self):
+        data = bytearray(zip_bytes([("activity.fit", FIT_BYTES)]))
+        local_header = data.index(b"PK\x03\x04")
+        central_header = data.index(b"PK\x01\x02")
+        data[local_header + 8:local_header + 10] = (99).to_bytes(2, "little")
+        data[central_header + 10:central_header + 12] = (99).to_bytes(2, "little")
+        self.assert_code(self.original(bytes(data), "zip"), "unsupported_zip_compression")
+
+    def test_safe_summary_excludes_installation_hash(self):
+        path = self.original(FIT_BYTES)
+        with patch("tester_assistant.diagnostics.load_pilot_fit", return_value=pilot_result()):
+            report = inspect_original(path, self.assignment)
+        self.assertEqual(report.expected_prg_sha256, "0" * 64)
+        self.assertNotIn("expected_prg_sha256", report.safe_summary())
 
     def test_zip_member_is_read_without_extracting(self):
         path = self.original(zip_bytes([("activity.fit", FIT_BYTES)]), "zip")
