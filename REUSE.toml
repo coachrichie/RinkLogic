@@ -6,6 +6,7 @@ SPDX-PackageDownloadLocation = "https://github.com/coachrichie/RinkLogic"
 [[annotations]]
 path = [
   "**/*.py",
+  "**/*.pyc",
   "**/*.mc",
   "**/*.xml",
   "**/*.yml",
@@ -17,6 +18,7 @@ path = [
   ".gitignore",
   ".github/CODEOWNERS",
   "analysis/requirements.txt",
+  "docs/testing/beta-test-assignment.example.json",
   "docs/.nojekyll",
   "LICENSE",
   "NOTICE",
@@ -28,7 +30,7 @@ SPDX-FileCopyrightText = "2026 Richard Dominik Haimerl Schwarzwaldau"
 SPDX-License-Identifier = "Apache-2.0"
 
 [[annotations]]
-path = ["**/*.md", "**/*.html", "**/*.png"]
+path = ["**/*.md", "**/*.html", "**/*.png", "docs/testing/beta6-calibration-reference.csv"]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Richard Dominik Haimerl Schwarzwaldau"
 SPDX-License-Identifier = "CC-BY-4.0"
