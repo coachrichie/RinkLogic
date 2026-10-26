@@ -29,9 +29,11 @@ class ReadyStartTargetFake {
     var requests = 0;
     var calibrationRequests = 0;
     var menuRequests = 0;
+    var continueRequests = 0;
     function requestStart() as Void { requests += 1; }
     function requestCalibration() as Void { calibrationRequests += 1; }
     function requestStartMenu() as Void { menuRequests += 1; }
+    function requestContinue() as Void { continueRequests += 1; }
 }
 
 class RecordingSessionFake {
@@ -315,38 +317,38 @@ function appOpensReadyScreenBeforeRecordingConfirmation(logger as Test.Logger) a
 }
 
 (:test)
-function readyLowerKeyRequestsRecordingConfirmation(logger as Test.Logger) as Lang.Boolean {
+function readyLowerKeyDoesNotBypassTheStartMenu(logger as Test.Logger) as Lang.Boolean {
     var target = new ReadyStartTargetFake();
     var delegate = new ReadyInputDelegate(new ReadyView(target,
         new ReadyStatusSourceFake(), new HeartRateSourceFake(), new ClockFake()));
-    return delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) &&
-        target.requests == 1 && target.menuRequests == 0;
+    return !delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) &&
+        target.continueRequests == 0 && target.requests == 0;
 }
 
 (:test)
-function readyUpperKeyOpensStartMenu(logger as Test.Logger) as Lang.Boolean {
+function readyUpperKeyRequestsContinue(logger as Test.Logger) as Lang.Boolean {
     var target = new ReadyStartTargetFake();
     var delegate = new ReadyInputDelegate(new ReadyView(target,
         new ReadyStatusSourceFake(), new HeartRateSourceFake(), new ClockFake()));
     return delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ENTER)) &&
-        target.requests == 0 && target.menuRequests == 1;
+        target.continueRequests == 1 && target.requests == 0;
 }
 
 (:test)
-function readyStartAreaRequestsRecordingConfirmation(logger as Test.Logger) as Lang.Boolean {
+function readyContinueAreaOpensStartMenu(logger as Test.Logger) as Lang.Boolean {
     var target = new ReadyStartTargetFake();
     var delegate = new ReadyInputDelegate(new ReadyView(target,
         new ReadyStatusSourceFake(), new HeartRateSourceFake(), new ClockFake()));
-    return delegate.onTap(new TapEventFake()) && target.requests == 1;
+    return delegate.onTap(new TapEventFake()) && target.continueRequests == 1;
 }
 
 (:test)
-function readyMenuAreaOpensStartMenu(logger as Test.Logger) as Lang.Boolean {
+function readySideOfContinueAreaDoesNothing(logger as Test.Logger) as Lang.Boolean {
     var target = new ReadyStartTargetFake();
     var delegate = new ReadyInputDelegate(new ReadyView(target,
         new ReadyStatusSourceFake(), new HeartRateSourceFake(), new ClockFake()));
-    return delegate.onTap(new ReadyMenuTapEventFake()) &&
-        target.requests == 0 && target.menuRequests == 1;
+    return !delegate.onTap(new ReadyMenuTapEventFake()) &&
+        target.continueRequests == 0;
 }
 
 (:test)

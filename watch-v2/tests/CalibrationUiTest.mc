@@ -11,6 +11,10 @@ class CalibrationTargetFake {
     var discards = 0;
     var exits = 0;
     var menuRequests = 0;
+    var trainingRequests = 0;
+    var sportConfirms = 0;
+    var confirmedPurpose = null;
+    var confirmedSport = null;
     var last = null;
     function startCalibration(sport, distanceCm) as Void {
         starts += 1;
@@ -23,6 +27,12 @@ class CalibrationTargetFake {
     function discardCalibration() as Void { discards += 1; }
     function exitApp() as Void { exits += 1; }
     function requestCalibration() as Void { menuRequests += 1; }
+    function requestTraining() as Void { trainingRequests += 1; }
+    function confirmSport(purpose, sport) as Void {
+        sportConfirms += 1;
+        confirmedPurpose = purpose;
+        confirmedSport = sport;
+    }
 }
 
 class CalibrationCoordinatorFake {
@@ -71,15 +81,57 @@ function setupCyclesAllSurfacesAndKnownDistances(logger as Test.Logger) as Lang.
 }
 
 (:test)
-function startMenuUpperCyclesAndLowerConfirms(logger as Test.Logger) as Lang.Boolean {
+function startMenuDefaultsToTrainingLowerCyclesAndUpperConfirms(logger as Test.Logger) as Lang.Boolean {
     var target = new CalibrationTargetFake();
     var menu = new StartMenuView(target);
     var delegate = new StartMenuInputDelegate(menu);
-    if (menu.selection() != :calibration ||
-        !delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ENTER)) ||
+    if (menu.selection() != :training ||
+        !delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) ||
+        menu.selection() != :calibration ||
+        !delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) ||
         menu.selection() != :exit ||
-        !delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC))) { return false; }
-    return target.exits == 1 && target.menuRequests == 0;
+        !delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ENTER))) { return false; }
+    return target.exits == 1 && target.menuRequests == 0 &&
+        target.trainingRequests == 0;
+}
+
+(:test)
+function startMenuTouchSelectsAllThreeEntriesDirectly(logger as Test.Logger) as Lang.Boolean {
+    var training = new CalibrationTargetFake();
+    new StartMenuView(training).selectAt(100, 416);
+    var calibration = new CalibrationTargetFake();
+    new StartMenuView(calibration).selectAt(210, 416);
+    var exit = new CalibrationTargetFake();
+    new StartMenuView(exit).selectAt(330, 416);
+    return training.trainingRequests == 1 && calibration.menuRequests == 1 &&
+        exit.exits == 1;
+}
+
+(:test)
+function sportSelectorUsesRememberedSportAndSemanticButtons(logger as Test.Logger) as Lang.Boolean {
+    var target = new CalibrationTargetFake();
+    var view = new SportSelectionView(target, :training, :inline);
+    var delegate = new SportSelectionInputDelegate(view);
+    if (view.selection() != :inline ||
+        !delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) ||
+        view.selection() != :ice ||
+        !delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ENTER))) { return false; }
+    return target.sportConfirms == 1 && target.confirmedPurpose == :training &&
+        target.confirmedSport == :ice;
+}
+
+(:test)
+function sportSelectorTouchSelectsAndInvalidInputsDoNothing(logger as Test.Logger) as Lang.Boolean {
+    var target = new CalibrationTargetFake();
+    var view = new SportSelectionView(target, :calibration, :ice);
+    view.selectAt(300, 416);
+    if (target.sportConfirms != 1 || target.confirmedPurpose != :calibration ||
+        target.confirmedSport != :inline) { return false; }
+    var invalid = new SportSelectionView(target, :run, :hockey);
+    invalid.cycleSelection();
+    invalid.confirmSelection();
+    invalid.selectAt(100, 416);
+    return invalid.selection() == null && target.sportConfirms == 1;
 }
 
 (:test)

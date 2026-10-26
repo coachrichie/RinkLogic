@@ -7,9 +7,15 @@
     <string id="PulseSourceUnknown">QUELLE UNBEKANNT</string>
     <string id="ReadyStart">START</string>
     <string id="ReadyMenu">MENÜ</string>
+    <string id="ReadyContinue">WEITER</string>
+    <string id="MenuTraining">TRAINING</string>
     <string id="MenuCalibration">KALIBRIERUNG</string>
     <string id="MenuExit">BEENDEN</string>
-    <string id="MenuHint">OBEN: WECHSELN · UNTEN: WÄHLEN</string>
+    <string id="MenuHint">UNTEN: WECHSELN · OBEN: WÄHLEN</string>
+    <string id="SportIce">EIS</string>
+    <string id="SportInline">INLINE</string>
+    <string id="SelectTrainingSport">TRAINING WÄHLEN</string>
+    <string id="SelectCalibrationSport">KALIBRIERUNG WÄHLEN</string>
     <string id="CalibrationBaseline">BASISMODELL · KEIN PERSÖNLICHER FAKTOR</string>
     <string id="CalibrationTitle">KALIBRIERUNG</string>
     <string id="CalibrationReady">BEREIT · UNTEN: START</string>

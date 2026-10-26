@@ -54,6 +54,8 @@ class ShiftSenseApp extends Application.AppBase {
             WatchUi.SLIDE_IMMEDIATE);
     }
 
+    function requestContinue() as Void { requestStartMenu(); }
+
     function exitApp() as Void { System.exit(); }
 
     function startCalibration(sport, distanceCm) as Void {

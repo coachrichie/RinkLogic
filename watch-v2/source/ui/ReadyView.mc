@@ -13,7 +13,7 @@ class ReadyView extends WatchUi.View {
     private var mTimer = null;
     private var mBackground = null;
     private var mLogo = null;
-    private var mCalibrationProfile = null;
+    private var mCalibrationStatuses = {:ice=>false, :inline=>false};
 
     function initialize(target, statusSource, heartRateSource, clock) {
         View.initialize();
@@ -23,17 +23,25 @@ class ReadyView extends WatchUi.View {
         mClock = clock;
     }
 
-    function requestStart() as Void {
+    function requestContinue() as Void {
         onHide();
-        mTarget.requestStart();
+        mTarget.requestContinue();
     }
 
-    function requestStartMenu() as Void {
-        onHide();
-        mTarget.requestStartMenu();
+    function setCalibrationStatuses(statuses) as Void {
+        try {
+            mCalibrationStatuses = {:ice=>statuses[:ice] == true,
+                :inline=>statuses[:inline] == true};
+        } catch (ex) {
+            mCalibrationStatuses = {:ice=>false, :inline=>false};
+        }
     }
 
-    function setCalibrationProfile(profile) as Void { mCalibrationProfile = profile; }
+    // Transitional adapter used until the application routing is switched to both slots.
+    function setCalibrationProfile(profile) as Void {
+        mCalibrationStatuses = {:ice=>profile != null && profile[:sport] == :ice,
+            :inline=>profile != null && profile[:sport] == :inline};
+    }
 
     function onShow() as Void {
         mHeartRateAt = null;
@@ -122,21 +130,16 @@ class ReadyView extends WatchUi.View {
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(0xB6C6D8, Graphics.COLOR_TRANSPARENT);
         dc.drawText(centerX, height * 79 / 100, Graphics.FONT_XTINY,
-            mCalibrationProfile == null ? WatchUi.loadResource(Rez.Strings.CalibrationBaseline) :
-                ((mCalibrationProfile[:sport] == :ice ? "ICE " : "INLINE ") +
-                    mCalibrationProfile[:factor].format("%.4f") + " · LOCAL"),
-            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.setColor(0x394B61, Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle(centerX - 156, height * 85 / 100, 72, 40);
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX - 120, height * 85 / 100 + 20, Graphics.FONT_XTINY,
-            WatchUi.loadResource(Rez.Strings.ReadyMenu),
+            WatchUi.loadResource(Rez.Strings.SportIce) + " " +
+                (mCalibrationStatuses[:ice] ? "✓" : "—") + " · " +
+                WatchUi.loadResource(Rez.Strings.SportInline) + " " +
+                (mCalibrationStatuses[:inline] ? "✓" : "—"),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(0x0D6CC1, Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle(centerX - 76, height * 85 / 100, 152, 40);
+        dc.fillRectangle(centerX - 100, height * 85 / 100, 200, 40);
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.drawText(centerX, height * 85 / 100 + 20, Graphics.FONT_SMALL,
-            WatchUi.loadResource(Rez.Strings.ReadyStart),
+            WatchUi.loadResource(Rez.Strings.ReadyContinue),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 }
@@ -150,8 +153,7 @@ class ReadyInputDelegate extends WatchUi.InputDelegate {
     }
 
     function onKey(event as WatchUi.KeyEvent) as Lang.Boolean {
-        if (event.getKey() == WatchUi.KEY_ESC) { mView.requestStart(); return true; }
-        if (event.getKey() == WatchUi.KEY_ENTER) { mView.requestStartMenu(); return true; }
+        if (event.getKey() == WatchUi.KEY_ENTER) { mView.requestContinue(); return true; }
         return false;
     }
 
@@ -161,12 +163,8 @@ class ReadyInputDelegate extends WatchUi.InputDelegate {
         var centerX = settings.screenWidth / 2;
         var startY = settings.screenHeight * 85 / 100;
         if (coordinates[1] < startY || coordinates[1] > startY + 40) { return false; }
-        if (coordinates[0] >= centerX - 156 && coordinates[0] <= centerX - 84) {
-            mView.requestStartMenu();
-            return true;
-        }
-        if (coordinates[0] >= centerX - 76 && coordinates[0] <= centerX + 76) {
-            mView.requestStart();
+        if (coordinates[0] >= centerX - 100 && coordinates[0] <= centerX + 100) {
+            mView.requestContinue();
             return true;
         }
         return false;
