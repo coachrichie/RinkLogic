@@ -13,13 +13,17 @@ class CalibrationTargetFake {
     var menuRequests = 0;
     var trainingRequests = 0;
     var sportConfirms = 0;
+    var cancelConfirmations = 0;
+    var discardConfirmations = 0;
     var confirmedPurpose = null;
     var confirmedSport = null;
     var last = null;
-    function startCalibration(sport, distanceCm) as Void {
+    function startCalibration(sport) as Void {
         starts += 1;
-        last = {:sport=>sport, :distanceCm=>distanceCm};
+        last = {:sport=>sport, :distanceCm=>2000};
     }
+    function confirmCancelCalibration() as Void { cancelConfirmations += 1; }
+    function confirmDiscardCalibration() as Void { discardConfirmations += 1; }
     function cancelCalibration() as Void { cancels += 1; }
     function saveCalibration() as Void { saves += 1; }
     function reviewCalibration(candidate) as Void { reviews += 1; last = candidate; }
@@ -59,25 +63,25 @@ class CalibrationSummaryTapEventFake extends WatchUi.ClickEvent {
 }
 
 (:test)
-function setupDefaultsUseInlineTwentyFiveMetres(logger as Test.Logger) as Lang.Boolean {
-    var view = new CalibrationSetupView(new CalibrationTargetFake());
-    var config = view.configuration();
-    return config[:sport] == :inline && config[:referenceDistanceCm] == 2500 &&
-        !config.hasKey(:condition) && !config.hasKey(:targetRepetitions);
+function calibrationIntroShowsFixedProtocolAndSelectedSport(logger as Test.Logger) as Lang.Boolean {
+    var target = new CalibrationTargetFake();
+    var view = new CalibrationIntroView(target, :inline);
+    var dc = new ReadyDcFake();
+    view.onUpdate(dc);
+    var text = dc.texts.toString();
+    return view.sport() == :inline && text.find("20.00 M") != null &&
+        text.find("INLINE") != null && text.find("5 WITHOUT STICK") != null;
 }
 
 (:test)
-function setupCyclesAllSurfacesAndKnownDistances(logger as Test.Logger) as Lang.Boolean {
+function calibrationIntroLowerStartsAndUpperGuardsCancellation(logger as Test.Logger) as Lang.Boolean {
     var target = new CalibrationTargetFake();
-    var view = new CalibrationSetupView(target);
-    var seen = {};
-    for (var i = 0; i < 8; i += 1) {
-        var config = view.configuration();
-        seen[config[:sport].toString() + config[:referenceDistanceCm].toString()] = true;
-        view.cycleSelection(1);
-    }
-    view.requestStart();
-    return seen.size() == 8 && target.starts == 1;
+    var view = new CalibrationIntroView(target, :ice);
+    var delegate = new CalibrationIntroInputDelegate(view);
+    return delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) &&
+        target.starts == 1 && target.last[:distanceCm] == 2000 &&
+        delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ENTER)) &&
+        target.cancelConfirmations == 1;
 }
 
 (:test)
@@ -138,20 +142,20 @@ function sportSelectorTouchSelectsAndInvalidInputsDoNothing(logger as Test.Logge
 function runViewUsesLowerMarkerForStartAndEndStates(logger as Test.Logger) as Lang.Boolean {
     var target = new CalibrationTargetFake();
     var controller = new CalibrationController();
-    controller.configureLegacy(:inline, :skate_only, 2500, 5);
+    controller.configureLegacy(:inline, :skate_only, 2000, 5);
     var view = new CalibrationRunView(target, controller);
     if (view.getState() != :ready) { return false; }
-    if (!view.toggleMarker(1000) || view.getState() != :run) { return false; }
-    if (!view.toggleMarker(4000) || view.getState() != :end) { return false; }
+    if (!view.toggleMarker(1000) || view.getState() != :running) { return false; }
+    if (!view.toggleMarker(4000) || view.getState() != :retry) { return false; }
     view.requestCancel();
-    return target.cancels == 1;
+    return target.cancelConfirmations == 1;
 }
 
 (:test)
 function runViewForwardsMarkersToLiveCoordinator(logger as Test.Logger) as Lang.Boolean {
     var target = new CalibrationTargetFake();
     var controller = new CalibrationController();
-    controller.configureLegacy(:inline, :skate_only, 2500, 5);
+    controller.configureLegacy(:inline, :skate_only, 2000, 5);
     var coordinator = new CalibrationCoordinatorFake();
     var view = new CalibrationRunView(target, controller);
     view.setCoordinator(coordinator);
@@ -163,26 +167,26 @@ function runViewForwardsMarkersToLiveCoordinator(logger as Test.Logger) as Lang.
 function runViewUpperActionCancelsCalibration(logger as Test.Logger) as Lang.Boolean {
     var target = new CalibrationTargetFake();
     var controller = new CalibrationController();
-    controller.configureLegacy(:inline, :skate_only, 2500, 5);
+    controller.configureLegacy(:inline, :skate_only, 2000, 5);
     var view = new CalibrationRunView(target, controller);
     view.requestCancel();
-    return target.cancels == 1;
+    return target.cancelConfirmations == 1;
 }
 
 (:test)
 function runViewRendersConditionPaceDurationAndHonestUpperAction(logger as Test.Logger) as Lang.Boolean {
     var controller = new CalibrationController();
-    controller.configure(:ice, 2500);
+    controller.configure(:ice);
     var view = new CalibrationRunView(new CalibrationTargetFake(), controller);
     view.setCoordinator(new CalibrationCoordinatorFake());
     if (!view.toggleMarker(1000) || !view.toggleMarker(11000)) { return false; }
     var dc = new ReadyDcFake();
     view.onUpdate(dc);
     var joined = dc.texts.toString();
-    if (joined.find("SKATE ONLY") == null || joined.find("SLOW") == null ||
+    if (joined.find("WITHOUT STICK") == null || joined.find("SLOW") == null ||
         joined.find("0.17 MIN") == null || joined.find("UPPER: CANCEL") == null ||
         joined.find("UPPER: SAVE") != null) { return false; }
-    view.nextRepetition();
+    if (!view.nextRepetition()) { return false; }
     return view.prompt()[:pace] == :fast;
 }
 
@@ -192,13 +196,10 @@ function calibrationReviewOffersExplicitActivateAndDiscard(logger as Test.Logger
     var candidate = calibrationProfileCandidate(:ice, 1.0);
     var view = new CalibrationSummaryView(target, candidate);
     var delegate = new CalibrationSummaryInputDelegate(view);
-    if (view.selection() != :activate ||
-        !delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) ||
+    if (!delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ENTER)) ||
         target.activations != 1) { return false; }
-    view.cycleSelection();
-    return view.selection() == :discard &&
-        delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) &&
-        target.discards == 1;
+    return delegate.onKey(new PhysicalKeyEventFake(WatchUi.KEY_ESC)) &&
+        target.discardConfirmations == 1;
 }
 
 (:test)
@@ -208,13 +209,13 @@ function calibrationReviewTouchExecutesTouchedOption(logger as Test.Logger) as L
     var view = new CalibrationSummaryView(target, candidate);
     var delegate = new CalibrationSummaryInputDelegate(view);
     if (!delegate.onTap(new CalibrationSummaryTapEventFake(265)) ||
-        target.discards != 1 || target.activations != 0) { return false; }
+        target.discardConfirmations != 1 || target.activations != 0) { return false; }
 
     target = new CalibrationTargetFake();
     view = new CalibrationSummaryView(target, candidate);
     delegate = new CalibrationSummaryInputDelegate(view);
     return delegate.onTap(new CalibrationSummaryTapEventFake(220)) &&
-        target.activations == 1 && target.discards == 0;
+        target.activations == 1 && target.discardConfirmations == 0;
 }
 
 (:test)
@@ -229,7 +230,7 @@ function calibrationReviewTouchOutsideOptionsDoesNothing(logger as Test.Logger) 
 (:test)
 function calibrationRunExposesConditionPaceAndMinuteDuration(logger as Test.Logger) as Lang.Boolean {
     var controller = new CalibrationController();
-    controller.configure(:ice, 2500);
+    controller.configure(:ice);
     var view = new CalibrationRunView(new CalibrationTargetFake(), controller);
     if (view.prompt()[:condition] != :skate_only || view.prompt()[:pace] != :slow ||
         !view.toggleMarker(1000) || !view.toggleMarker(11000)) { return false; }
@@ -248,10 +249,29 @@ function missingMotionStillCompletesMarkerPairAndAdvances(logger as Test.Logger)
     var view = new CalibrationRunView(new CalibrationTargetFake(), controller);
     view.setCoordinator(coordinator);
     if (!view.toggleMarker(1000) || !view.toggleMarker(11000)) { return false; }
-    if (view.getState() != :end || controller.invalidCount() != 1 ||
+    if (view.getState() != :retry || controller.invalidCount() != 1 ||
         controller.validCount() != 0) { return false; }
     if (!view.toggleMarker(12000)) { return false; }
     if (view.getState() != :ready || coordinator.toggles != 2) { return false; }
-    return view.toggleMarker(13000) && view.getState() == :run &&
+    return view.toggleMarker(13000) && view.getState() == :running &&
         coordinator.toggles == 3;
+}
+
+(:test)
+function calibrationRunOnlyOffersReviewAfterTenAcceptedRuns(logger as Test.Logger) as Lang.Boolean {
+    var target = new CalibrationTargetFake();
+    var controller = new CalibrationController();
+    if (!controller.configure(:ice)) { return false; }
+    var coordinator = new CalibrationCoordinatorFake();
+    coordinator.lastShiftDistanceCm = 2000;
+    var view = new CalibrationRunView(target, controller);
+    view.setCoordinator(coordinator);
+    for (var i = 0; i < 10; i += 1) {
+        var start = 1000 + i * 40000;
+        if (!view.toggleMarker(start) || !view.toggleMarker(start + 10000)) { return false; }
+        if (i < 9 && !view.toggleMarker(start + 11000)) { return false; }
+    }
+    if (view.getState() != :complete || target.reviews != 0) { return false; }
+    view.requestUpperAction();
+    return target.reviews == 1 && target.cancelConfirmations == 0;
 }

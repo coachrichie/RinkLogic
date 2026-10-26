@@ -6,9 +6,7 @@ class CalibrationRunView extends WatchUi.View {
     private var mTarget;
     private var mController;
     private var mCoordinator = null;
-    private var mStarted = false;
-    private var mEnded = false;
-    private var mRepetition = 1;
+    private var mState = :ready;
     private var mLastDurationMinutes = null;
     private var mRunStartedAt = null;
     private var mPromptCondition;
@@ -18,33 +16,32 @@ class CalibrationRunView extends WatchUi.View {
         View.initialize();
         mTarget = target;
         mController = controller;
-        mPromptCondition = mController.currentCondition();
-        mPromptPace = mController.currentPace();
+        refreshPrompt();
     }
 
-    function getState() as Lang.Symbol {
-        if (mEnded) { return :end; }
-        return mStarted ? :run : :ready;
-    }
-
+    function getState() as Lang.Symbol { return mState; }
     function setCoordinator(coordinator) as Void { mCoordinator = coordinator; }
 
     function prompt() as Lang.Dictionary {
-        return {:condition=>mPromptCondition,
-            :pace=>mPromptPace, :repetition=>mController.validCount() + 1,
-            :durationMinutes=>mLastDurationMinutes};
+        var progress = mController.progress();
+        return {:condition=>mPromptCondition, :pace=>mPromptPace,
+            :withinConditionIndex=>progress[:withinConditionIndex],
+            :repetition=>progress[:acceptedCount] + 1,
+            :acceptedCount=>progress[:acceptedCount],
+            :durationMinutes=>mLastDurationMinutes,
+            :reason=>progress[:lastRejectionReason]};
     }
 
     function toggleMarker(atMs) as Lang.Boolean {
-        if (mEnded) {
-            nextRepetition();
-            return true;
-        }
-        if (!mStarted) {
+        if (mState == :accepted || mState == :retry) { return nextRepetition(); }
+        if (mState == :complete) { return false; }
+        if (mState == :ready) {
             if (mCoordinator != null && !mCoordinator.toggleShift()) { return false; }
-            mStarted = mController.startRepetition(atMs);
-            if (mStarted) { mRunStartedAt = atMs; }
-            return mStarted;
+            if (!mController.startRepetition(atMs)) { return false; }
+            mRunStartedAt = atMs;
+            mState = :running;
+            WatchUi.requestUpdate();
+            return true;
         }
         var metrics = {:distanceCm=>null, :pushes=>null,
             :coveragePercent=>null, :timebase=>null};
@@ -56,35 +53,44 @@ class CalibrationRunView extends WatchUi.View {
                 :coveragePercent=>dashboard[:coveragePercent],
                 :timebase=>dashboard[:timebase]};
         }
-        mController.endRepetition(atMs, metrics);
+        var accepted = mController.endRepetition(atMs, metrics);
         mLastDurationMinutes = mRunStartedAt == null ? null :
             (atMs - mRunStartedAt).toFloat() / 60000.0;
-        mEnded = true;
-        if (mController.isEligible()) { mTarget.reviewCalibration(mController.candidateProfile()); }
+        if (mController.progress()[:status] == :complete) { mState = :complete; }
+        else { mState = accepted ? :accepted : :retry; }
+        WatchUi.requestUpdate();
         return true;
     }
 
-    function nextRepetition() as Void {
-        mStarted = false;
-        mEnded = false;
-        mRepetition += 1;
+    function nextRepetition() as Lang.Boolean {
+        if (!mController.acknowledgeResult()) { return false; }
+        mState = :ready;
         mLastDurationMinutes = null;
         mRunStartedAt = null;
-        mPromptCondition = mController.currentCondition();
-        mPromptPace = mController.currentPace();
+        refreshPrompt();
         WatchUi.requestUpdate();
+        return true;
     }
 
-    function requestCancel() as Void { mController.abort(); mTarget.cancelCalibration(); }
+    function requestUpperAction() as Void {
+        if (mState == :complete && mController.isEligible()) {
+            mTarget.reviewCalibration(mController.candidateProfile());
+            return;
+        }
+        mTarget.confirmCancelCalibration();
+    }
+
+    function requestCancel() as Void { requestUpperAction(); }
 
     function conditionLabel(condition) as Lang.String {
-        return condition == :puck_stickhandling ? "PUCK + STICK" : "SKATE ONLY";
+        return WatchUi.loadResource(condition == :puck_stickhandling ?
+            Rez.Strings.CalibrationWithStick : Rez.Strings.CalibrationWithoutStick);
     }
 
     function paceLabel(pace) as Lang.String {
-        if (pace == :fast) { return "FAST"; }
-        if (pace == :normal) { return "NORMAL"; }
-        return "SLOW";
+        if (pace == :fast) { return WatchUi.loadResource(Rez.Strings.CalibrationPaceFast); }
+        if (pace == :normal) { return WatchUi.loadResource(Rez.Strings.CalibrationPaceNormal); }
+        return WatchUi.loadResource(Rez.Strings.CalibrationPaceSlow);
     }
 
     function durationLabel() as Lang.String {
@@ -92,34 +98,62 @@ class CalibrationRunView extends WatchUi.View {
             mLastDurationMinutes.format("%.2f") + " MIN";
     }
 
+    function stateLabel() as Lang.String {
+        if (mState == :running) { return WatchUi.loadResource(Rez.Strings.CalibrationRunning); }
+        if (mState == :accepted) { return WatchUi.loadResource(Rez.Strings.CalibrationAccepted); }
+        if (mState == :retry) { return rejectionLabel(prompt()[:reason]); }
+        if (mState == :complete) { return WatchUi.loadResource(Rez.Strings.CalibrationComplete); }
+        return WatchUi.loadResource(Rez.Strings.CalibrationReady);
+    }
+
+    function rejectionLabel(reason) as Lang.String {
+        if (reason == :too_short) { return WatchUi.loadResource(Rez.Strings.CalibrationTooShort); }
+        if (reason == :too_long) { return WatchUi.loadResource(Rez.Strings.CalibrationTooLong); }
+        if (reason == :missing_motion) { return WatchUi.loadResource(Rez.Strings.CalibrationMissingMotion); }
+        if (reason == :low_coverage) { return WatchUi.loadResource(Rez.Strings.CalibrationLowCoverage); }
+        if (reason == :invalid_distance || reason == :invalid_ratio) {
+            return WatchUi.loadResource(Rez.Strings.CalibrationDeviation);
+        }
+        return WatchUi.loadResource(Rez.Strings.CalibrationInvalidMarker);
+    }
+
     function onUpdate(dc as Graphics.Dc) as Void {
         var centerX = dc.getWidth() / 2;
+        var height = dc.getHeight();
+        var progress = mController.progress();
         dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_BLACK);
         dc.clear();
         dc.setColor(0xC8E5F4, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, 60, Graphics.FONT_LARGE,
-            WatchUi.loadResource(Rez.Strings.CalibrationTitle),
+        dc.drawText(centerX, height * 12 / 100, Graphics.FONT_MEDIUM,
+            conditionLabel(mPromptCondition),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, 112, Graphics.FONT_XTINY,
-            conditionLabel(mPromptCondition) + " · " + paceLabel(mPromptPace),
+        dc.drawText(centerX, height * 27 / 100, Graphics.FONT_LARGE,
+            progress[:withinConditionIndex].toString() + " / 5",
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.drawText(centerX, 137, Graphics.FONT_XTINY, durationLabel(),
+        dc.drawText(centerX, height * 39 / 100, Graphics.FONT_XTINY,
+            WatchUi.loadResource(Rez.Strings.CalibrationRun) + " " +
+                progress[:acceptedCount].toString() + " / 10",
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.setColor(mEnded ? 0xF6C246 : (mStarted ? 0x20D49A : 0x8FA6C1),
+        dc.drawText(centerX, height * 49 / 100, Graphics.FONT_SMALL,
+            paceLabel(mPromptPace),
+            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.setColor(mState == :retry ? 0xF6C246 : 0x20D49A,
             Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, 170, Graphics.FONT_MEDIUM,
-            mEnded ? WatchUi.loadResource(Rez.Strings.CalibrationEnd) :
-                (mStarted ? "RUN · LOWER: END" :
-                    WatchUi.loadResource(Rez.Strings.CalibrationReady)),
+        dc.drawText(centerX, height * 64 / 100, Graphics.FONT_SMALL, stateLabel(),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(0x8FA6C1, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, 230, Graphics.FONT_SMALL,
-            "REPETITION " + mRepetition.toString(),
+        dc.drawText(centerX, height * 76 / 100, Graphics.FONT_XTINY, durationLabel(),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.drawText(centerX, 310, Graphics.FONT_XTINY,
-            "LOWER: MARK · UPPER: CANCEL",
+        dc.drawText(centerX, height * 88 / 100, Graphics.FONT_XTINY,
+            mState == :complete ? WatchUi.loadResource(Rez.Strings.CalibrationUpperSave) :
+                WatchUi.loadResource(Rez.Strings.CalibrationRunHint),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+    }
+
+    private function refreshPrompt() as Void {
+        mPromptCondition = mController.currentCondition();
+        mPromptPace = mController.currentPace();
     }
 }
 
@@ -128,10 +162,21 @@ class CalibrationRunInputDelegate extends WatchUi.InputDelegate {
     private var mClock;
     function initialize(view, clock) { InputDelegate.initialize(); mView = view; mClock = clock; }
     function onKey(event as WatchUi.KeyEvent) as Lang.Boolean {
-        var key = event.getKey();
-        if (key == WatchUi.KEY_ESC) { return mView.toggleMarker(mClock.nowMs()); }
-        if (key == WatchUi.KEY_ENTER) { mView.requestCancel(); return true; }
+        if (event.getKey() == WatchUi.KEY_ESC) { return mView.toggleMarker(mClock.nowMs()); }
+        if (event.getKey() == WatchUi.KEY_ENTER) { mView.requestUpperAction(); return true; }
         return false;
     }
-    function onTap(event) as Lang.Boolean { return mView.toggleMarker(mClock.nowMs()); }
+    function onTap(event) as Lang.Boolean {
+        var coordinates = event.getCoordinates();
+        if (coordinates == null || coordinates.size() < 2) { return false; }
+        var height = Toybox.System.getDeviceSettings().screenHeight;
+        if (coordinates[1] >= height * 80 / 100) {
+            mView.requestUpperAction();
+            return true;
+        }
+        if (coordinates[1] >= height * 55 / 100) {
+            return mView.toggleMarker(mClock.nowMs());
+        }
+        return false;
+    }
 }

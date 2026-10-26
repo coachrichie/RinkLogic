@@ -9,22 +9,21 @@ class CalibrationController {
     private var mInvalid = 0;
     private var mLastMarkerMs = null;
     private var mStatus = :unconfigured;
+    private var mLastRejectionReason = null;
     private var mCandidate = null;
 
     function initialize() { }
 
-    function configure(sport, referenceDistanceCm) as Lang.Boolean {
-        if (!CalibrationTypes.validSport(sport) ||
-            !CalibrationTypes.validReferenceDistance(referenceDistanceCm)) {
-            return false;
-        }
+    function configure(sport) as Lang.Boolean {
+        if (!CalibrationTypes.validSport(sport)) { return false; }
         mSport = sport;
-        mReferenceDistanceCm = referenceDistanceCm;
+        mReferenceDistanceCm = 2000;
         mCurrent = null;
         mAccepted = [];
         mInvalid = 0;
         mLastMarkerMs = null;
-        mStatus = :setup;
+        mStatus = :ready;
+        mLastRejectionReason = null;
         mCandidate = null;
         return true;
     }
@@ -35,29 +34,32 @@ class CalibrationController {
         if (!CalibrationTypes.validCondition(condition) || targetRepetitions != 5) {
             return false;
         }
-        return configure(sport, referenceDistanceCm);
+        if (referenceDistanceCm != 2000) { return false; }
+        return configure(sport);
     }
 
     function currentCondition() { return CalibrationTypes.conditionForIndex(mAccepted.size()); }
     function currentPace() { return CalibrationTypes.paceForIndex(mAccepted.size()); }
 
     function startRepetition(atMs) as Lang.Boolean {
-        if (mSport == null || mStatus == :incomplete || mStatus == :eligible ||
-            mStatus == :inconsistent || mAccepted.size() >= 10) { return false; }
-        if (!validMarker(atMs)) {
+        if (mStatus == :running) {
             mInvalid += 1;
+            mLastRejectionReason = :invalid_marker;
             return false;
         }
-        if (mCurrent != null) {
-            mCurrent = null;
+        if (mSport == null || mStatus != :ready || mAccepted.size() >= 10) {
+            return false;
+        }
+        if (!validMarker(atMs)) {
             mInvalid += 1;
-            mLastMarkerMs = atMs;
-            mStatus = :running;
+            mLastRejectionReason = :invalid_marker;
+            mStatus = :retry;
             return false;
         }
         mCurrent = {:startMs=>atMs, :condition=>currentCondition(),
             :pace=>currentPace()};
         mLastMarkerMs = atMs;
+        mLastRejectionReason = null;
         mStatus = :running;
         return true;
     }
@@ -65,12 +67,18 @@ class CalibrationController {
     function endRepetition(atMs, metrics) as Lang.Boolean {
         if (mCurrent == null) {
             mInvalid += 1;
+            mLastRejectionReason = :invalid_marker;
+            if (mSport != null && mStatus != :complete && mStatus != :incomplete) {
+                mStatus = :retry;
+            }
             return false;
         }
         var started = mCurrent;
         mCurrent = null;
         if (!validMarker(atMs)) {
             mInvalid += 1;
+            mLastRejectionReason = :invalid_marker;
+            mStatus = :retry;
             return false;
         }
         mLastMarkerMs = atMs;
@@ -80,16 +88,22 @@ class CalibrationController {
             var pushes = dictionaryValue(metrics, :pushes);
             var coverage = dictionaryValue(metrics, :coveragePercent);
             var timebase = dictionaryValue(metrics, :timebase);
-            if (durationMs < 2000 || durationMs > 30000 ||
-                distance == null || distance != distance || distance <= 0 ||
-                pushes == null || pushes != pushes || pushes <= 0 ||
-                coverage == null || coverage != coverage || coverage < 80 || coverage > 100 ||
+            if (durationMs < 2000) { return rejectRun(:too_short); }
+            if (durationMs > 30000) { return rejectRun(:too_long); }
+            if (distance == null || pushes == null || coverage == null ||
+                timebase == null || pushes != pushes || pushes <= 0 ||
                 !CalibrationTypes.validTimebase(timebase)) {
-                return rejectRun();
+                return rejectRun(:missing_motion);
+            }
+            if (coverage != coverage || coverage < 80 || coverage > 100) {
+                return rejectRun(:low_coverage);
+            }
+            if (distance != distance || distance <= 0) {
+                return rejectRun(:invalid_distance);
             }
             var ratio = mReferenceDistanceCm.toFloat() / distance.toFloat();
             if (ratio != ratio || ratio < 0.50 || ratio > 1.50) {
-                return rejectRun();
+                return rejectRun(:invalid_ratio);
             }
             var durationMinutes = durationMs.toFloat() / 60000.0;
             mAccepted.add({
@@ -100,11 +114,22 @@ class CalibrationController {
                 :baselineDistanceCm=>distance.toFloat(), :baselineRatio=>ratio,
                 :pushes=>pushes, :coveragePercent=>coverage, :timebase=>timebase
             });
-            if (mAccepted.size() == 10) { evaluateCandidate(); }
+            mStatus = :accepted;
+            mLastRejectionReason = null;
+            if (mAccepted.size() == 10) {
+                evaluateCandidate();
+                mStatus = :complete;
+            }
             return true;
         } catch (ex) {
-            return rejectRun();
+            return rejectRun(:missing_motion);
         }
+    }
+
+    function acknowledgeResult() as Lang.Boolean {
+        if (mStatus != :accepted && mStatus != :retry) { return false; }
+        mStatus = :ready;
+        return true;
     }
 
     function abort() as Void {
@@ -114,7 +139,7 @@ class CalibrationController {
     }
 
     function isEligible() as Lang.Boolean {
-        return mStatus == :eligible && mCandidate != null && mAccepted.size() == 10;
+        return mStatus == :complete && mCandidate != null && mAccepted.size() == 10;
     }
 
     function validCount() as Lang.Number { return mAccepted.size(); }
@@ -129,8 +154,18 @@ class CalibrationController {
         return {:sport=>mSport, :condition=>currentCondition(),
             :pace=>currentPace(), :referenceDistanceCm=>mReferenceDistanceCm,
             :targetRepetitions=>10, :validRepetitions=>mAccepted.size(),
-            :invalidRepetitions=>mInvalid, :status=>mStatus,
+            :invalidRepetitions=>mInvalid,
+            :status=>(mStatus == :complete && !isEligible()) ? :inconsistent : mStatus,
             :eligible=>isEligible(), :acceptedRuns=>copyRuns()};
+    }
+
+    function progress() as Lang.Dictionary {
+        var acceptedCount = mAccepted.size();
+        var withinIndex = acceptedCount >= 10 ? 5 : (acceptedCount % 5) + 1;
+        return {:sport=>mSport, :referenceDistanceCm=>mReferenceDistanceCm,
+            :condition=>currentCondition(), :pace=>currentPace(),
+            :withinConditionIndex=>withinIndex, :acceptedCount=>acceptedCount,
+            :status=>mStatus, :lastRejectionReason=>mLastRejectionReason};
     }
 
     private function validMarker(atMs) as Lang.Boolean {
@@ -146,9 +181,10 @@ class CalibrationController {
         return dictionary[key];
     }
 
-    private function rejectRun() as Lang.Boolean {
+    private function rejectRun(reason) as Lang.Boolean {
         mInvalid += 1;
-        mStatus = :running;
+        mLastRejectionReason = reason;
+        mStatus = :retry;
         return false;
     }
 
@@ -171,7 +207,6 @@ class CalibrationController {
         if (relativeMad(skate) > 0.15 || relativeMad(puck) > 0.15 ||
             disagreement > 0.15 || factor < 0.50 || factor > 1.50) {
             mCandidate = null;
-            mStatus = :inconsistent;
             return;
         }
         mCandidate = {:schemaVersion=>1, :sport=>mSport, :factor=>factor,
@@ -180,7 +215,6 @@ class CalibrationController {
             :conditionMedians=>{:skate_only=>roundFour(skateMedian),
                 :puck_stickhandling=>roundFour(puckMedian)},
             :validRepetitionCount=>10};
-        mStatus = :eligible;
     }
 
     private function median(values) as Lang.Float {

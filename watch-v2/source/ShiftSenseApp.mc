@@ -43,8 +43,8 @@ class ShiftSenseApp extends Application.AppBase {
     }
 
     function requestCalibration() as Void {
-        var setup = new CalibrationSetupView(self);
-        WatchUi.switchToView(setup, new CalibrationSetupInputDelegate(setup),
+        var selector = new SportSelectionView(self, :calibration, :ice);
+        WatchUi.switchToView(selector, new SportSelectionInputDelegate(selector),
             WatchUi.SLIDE_IMMEDIATE);
     }
 
@@ -58,9 +58,9 @@ class ShiftSenseApp extends Application.AppBase {
 
     function exitApp() as Void { System.exit(); }
 
-    function startCalibration(sport, distanceCm) as Void {
+    function startCalibration(sport) as Void {
         mCalibrationController = new CalibrationController();
-        if (!mCalibrationController.configure(sport, distanceCm)) {
+        if (!mCalibrationController.configure(sport)) {
             requestCalibration();
             return;
         }
@@ -70,7 +70,7 @@ class ShiftSenseApp extends Application.AppBase {
         mCoordinator.setDataSources(new GarminProfileService(), new HeartRateService());
         mCoordinator.setMotionSource(new MotionSource(new SystemMotionPort()));
         if (!mCoordinator.startCalibration({:sport=>sport,
-            :referenceDistanceCm=>distanceCm, :targetRepetitions=>10})) {
+            :referenceDistanceCm=>2000, :targetRepetitions=>10})) {
             var errorView = new ErrorView(mCoordinator.getErrorCode(), mCoordinator);
             WatchUi.switchToView(errorView, new ErrorInputDelegate(errorView), WatchUi.SLIDE_IMMEDIATE);
             return;
