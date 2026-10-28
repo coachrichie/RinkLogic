@@ -9,15 +9,17 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class WatchV2BuildConfigurationTests(unittest.TestCase):
-    def describe(self, model, export=False, unit_test=False):
+    def describe(self, model, export=False, unit_test=False, include_device=True):
         shell = shutil.which("pwsh") or shutil.which("powershell")
         self.assertIsNotNone(shell)
         args = [
             shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
             str(ROOT / "scripts" / "watch-v2-build.ps1"),
-            "-Device", "venu2plus", "-DistanceModel", model,
+            "-DistanceModel", model,
             "-DescribeConfiguration",
         ]
+        if include_device:
+            args.extend(["-Device", "venu2plus"])
         if export:
             args.append("-ExportPackage")
         if unit_test:
@@ -63,12 +65,12 @@ class WatchV2BuildConfigurationTests(unittest.TestCase):
         self.assertTrue(config["exportPackage"])
         self.assertEqual(config["artifact"], "RinkLogic-0.2.0-beta.5.iq")
 
-    def test_personal_calibration_export_uses_beta_six_iq_name(self):
+    def test_personal_calibration_export_uses_beta_seven_iq_name(self):
         result = self.describe("PersonalCalibrationBeta", export=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         config = json.loads(result.stdout)
         self.assertTrue(config["exportPackage"])
-        self.assertEqual(config["artifact"], "RinkLogic-0.2.0-beta.6.iq")
+        self.assertEqual(config["artifact"], "RinkLogic-0.2.0-beta.7.iq")
 
     def test_export_rejects_non_calibrated_modes(self):
         for model in ["Fixed", "ProfileHeight"]:
@@ -81,6 +83,16 @@ class WatchV2BuildConfigurationTests(unittest.TestCase):
             with self.subTest(model=model):
                 result = self.describe(model, export=True, unit_test=True)
                 self.assertNotEqual(result.returncode, 0)
+
+    def test_package_export_does_not_require_representative_device(self):
+        result = self.describe(
+            "PersonalCalibrationBeta", export=True, include_device=False
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_single_device_build_requires_device(self):
+        result = self.describe("PersonalCalibrationBeta", include_device=False)
+        self.assertNotEqual(result.returncode, 0)
 
     def test_unsupported_distance_model_is_rejected(self):
         result = self.describe("Unsupported")

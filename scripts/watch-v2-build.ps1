@@ -1,6 +1,5 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
     [string]$Device,
     [switch]$UnitTest,
     [string]$TestName,
@@ -19,7 +18,7 @@ $jungle = switch ($DistanceModel) {
     default { "watch-v2/monkey.jungle" }
 }
 $artifact = if ($ExportPackage -and $DistanceModel -eq "PersonalCalibrationBeta") {
-    "RinkLogic-0.2.0-beta.6.iq"
+    "RinkLogic-0.2.0-beta.7.iq"
 } elseif ($ExportPackage -and $DistanceModel -eq "CalibratedProfile") {
     "RinkLogic-0.2.0-beta.5.iq"
 } elseif ($DistanceModel -eq "PersonalCalibrationBeta") {
@@ -38,6 +37,10 @@ if ($ExportPackage -and $DistanceModel -notin @("CalibratedProfile", "PersonalCa
 
 if ($ExportPackage -and $UnitTest) {
     throw "ExportPackage cannot be combined with UnitTest."
+}
+
+if (-not $ExportPackage -and [string]::IsNullOrWhiteSpace($Device)) {
+    throw "Device is required for PRG and unit-test builds."
 }
 
 if ($DescribeConfiguration) {
@@ -67,7 +70,11 @@ if ([string]::IsNullOrWhiteSpace($env:SHIFTSENSE_DEVELOPER_KEY)) {
 
 Push-Location $repoRoot
 try {
-    $outputDirectory = Join-Path $repoRoot "watch-v2\bin\$Device"
+    $outputDirectory = if ($ExportPackage) {
+        Join-Path $repoRoot "watch-v2\bin\package"
+    } else {
+        Join-Path $repoRoot "watch-v2\bin\$Device"
+    }
     New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
     $outputPath = Join-Path $outputDirectory $artifact
     $unitArgs = @()
@@ -75,7 +82,9 @@ try {
     $exportArgs = @()
     if ($ExportPackage) { $exportArgs += "-e" }
 
-    & "$sdkRoot\bin\monkeyc.bat" -f $jungle -d $Device -o $outputPath -y $env:SHIFTSENSE_DEVELOPER_KEY @unitArgs @exportArgs
+    $deviceArgs = @()
+    if (-not $ExportPackage) { $deviceArgs += @("-d", $Device) }
+    & "$sdkRoot\bin\monkeyc.bat" -f $jungle @deviceArgs -o $outputPath -y $env:SHIFTSENSE_DEVELOPER_KEY @unitArgs @exportArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     if ($UnitTest) {
