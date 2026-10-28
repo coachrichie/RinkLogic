@@ -10,15 +10,30 @@ class ShiftSenseApp extends Application.AppBase {
     private var mReadyView = null;
     private var mCalibrationController = null;
     private var mCalibrationStore = null;
+    private var mSportPreferenceStore = null;
+    private var mPendingTrainingSport = null;
     private var mPendingCalibrationCandidate = null;
+    private var mCalibrationActivationWorkflow = null;
 
     function initialize() {
         AppBase.initialize();
         mCalibrationStore = createCalibrationProfileStore();
+        mSportPreferenceStore = createSportPreferenceStore();
     }
 
     function createCalibrationProfileStore() {
         return new CalibrationProfileStore(new ApplicationCalibrationStoragePort());
+    }
+
+    function createSportPreferenceStore() {
+        return new SportPreferenceStore(new ApplicationCalibrationStoragePort());
+    }
+
+    function sportPreferenceStore() {
+        if (mSportPreferenceStore == null) {
+            mSportPreferenceStore = createSportPreferenceStore();
+        }
+        return mSportPreferenceStore;
     }
 
     function getInitialView() as [WatchUi.Views] or [WatchUi.Views, WatchUi.InputDelegates] {
@@ -30,8 +45,8 @@ class ShiftSenseApp extends Application.AppBase {
     function createReadyView() {
         var ready = new ReadyView(self, new GarminReadyStatusService(),
             new HeartRateService(), new AppClock());
-        try { ready.setCalibrationProfile(mCalibrationStore.loadActive()); }
-        catch (ex) { ready.setCalibrationProfile(null); }
+        try { ready.setCalibrationStatuses(mCalibrationStore.statuses()); }
+        catch (ex) { ready.setCalibrationStatuses({:ice=>false, :inline=>false}); }
         return ready;
     }
 
@@ -43,10 +58,38 @@ class ShiftSenseApp extends Application.AppBase {
     }
 
     function requestCalibration() as Void {
-        var selector = new SportSelectionView(self, :calibration, :ice);
+        var selected = sportPreferenceStore().load();
+        var selector = new SportSelectionView(self, :calibration, selected);
         WatchUi.switchToView(selector, new SportSelectionInputDelegate(selector),
             WatchUi.SLIDE_IMMEDIATE);
     }
+
+    function requestTraining() as Void {
+        var selected = sportPreferenceStore().load();
+        var selector = new SportSelectionView(self, :training, selected);
+        WatchUi.switchToView(selector, new SportSelectionInputDelegate(selector),
+            WatchUi.SLIDE_IMMEDIATE);
+    }
+
+    function confirmSport(purpose, sport) as Void {
+        if ((purpose != :training && purpose != :calibration) ||
+            !CalibrationTypes.validSport(sport)) { return; }
+        sportPreferenceStore().save(sport);
+        if (purpose == :training) {
+            mPendingTrainingSport = sport;
+            requestStart();
+            return;
+        }
+        showCalibrationIntro(sport);
+    }
+
+    function showCalibrationIntro(sport) as Void {
+        var intro = new CalibrationIntroView(self, sport);
+        WatchUi.switchToView(intro, new CalibrationIntroInputDelegate(intro),
+            WatchUi.SLIDE_IMMEDIATE);
+    }
+
+    function pendingTrainingSport() { return mPendingTrainingSport; }
 
     function requestStartMenu() as Void {
         var menu = new StartMenuView(self);
@@ -75,6 +118,8 @@ class ShiftSenseApp extends Application.AppBase {
             WatchUi.switchToView(errorView, new ErrorInputDelegate(errorView), WatchUi.SLIDE_IMMEDIATE);
             return;
         }
+        mCalibrationActivationWorkflow = new CalibrationActivationWorkflow(
+            mCoordinator, mCalibrationStore);
         var run = new CalibrationRunView(self, mCalibrationController);
         run.setCoordinator(mCoordinator);
         WatchUi.switchToView(run, new CalibrationRunInputDelegate(run, new AppClock()),
@@ -87,9 +132,22 @@ class ShiftSenseApp extends Application.AppBase {
         }
         mCalibrationController = null;
         mPendingCalibrationCandidate = null;
-        var ready = createReadyView();
-        mReadyView = ready;
-        WatchUi.switchToView(ready, new ReadyInputDelegate(ready), WatchUi.SLIDE_IMMEDIATE);
+        mCalibrationActivationWorkflow = null;
+        requestStartMenu();
+    }
+
+    function confirmCancelCalibration() as Void {
+        var dialog = new WatchUi.Confirmation(
+            WatchUi.loadResource(Rez.Strings.ConfirmCalibrationCancel));
+        WatchUi.pushView(dialog, new CalibrationCancelConfirmationDelegate(self),
+            WatchUi.SLIDE_IMMEDIATE);
+    }
+
+    function confirmDiscardCalibration() as Void {
+        var dialog = new WatchUi.Confirmation(
+            WatchUi.loadResource(Rez.Strings.ConfirmCalibrationDiscard));
+        WatchUi.pushView(dialog, new CalibrationDiscardConfirmationDelegate(self),
+            WatchUi.SLIDE_IMMEDIATE);
     }
 
     function reviewCalibration(candidate) as Void {
@@ -101,9 +159,11 @@ class ShiftSenseApp extends Application.AppBase {
     }
 
     function activateAndSaveCalibration() as Void {
-        var result = new CalibrationActivationWorkflow(mCoordinator,
-            mCalibrationStore).activate(mPendingCalibrationCandidate);
-        if (result == :save_error || result == :candidate_error) {
+        if (mCalibrationActivationWorkflow == null) { return; }
+        var result = mCalibrationActivationWorkflow.activate(
+            mPendingCalibrationCandidate);
+        if (result == :save_error || result == :storage_error ||
+            result == :candidate_error) {
             var errorView = new ErrorView(mCoordinator == null ? "CALIBRATION" :
                 mCoordinator.getErrorCode(), mCoordinator);
             WatchUi.switchToView(errorView, new ErrorInputDelegate(errorView),
@@ -118,8 +178,9 @@ class ShiftSenseApp extends Application.AppBase {
 
     function discardCalibration() as Void {
         if (mCoordinator != null) {
-            new CalibrationActivationWorkflow(mCoordinator,
-                mCalibrationStore).discard();
+            if (mCalibrationActivationWorkflow != null) {
+                mCalibrationActivationWorkflow.discard();
+            }
         }
         finishCalibration();
     }
@@ -128,9 +189,8 @@ class ShiftSenseApp extends Application.AppBase {
         mCalibrationController = null;
         mCoordinator = null;
         mPendingCalibrationCandidate = null;
-        var ready = createReadyView();
-        mReadyView = ready;
-        WatchUi.switchToView(ready, new ReadyInputDelegate(ready), WatchUi.SLIDE_IMMEDIATE);
+        mCalibrationActivationWorkflow = null;
+        requestStartMenu();
     }
 
     function scheduleConfirmedStart() as Void {
@@ -146,12 +206,21 @@ class ShiftSenseApp extends Application.AppBase {
     }
 
     function confirmedStart() as Void {
+        var sport = mPendingTrainingSport;
+        mPendingTrainingSport = null;
+        if (!CalibrationTypes.validSport(sport)) {
+            requestStartMenu();
+            return;
+        }
         var recorder = new SessionRecorder(new SystemSessionFactory());
         recorder.setShadowWriterFactory(new SystemShadowWriterFactory());
         mCoordinator = new RecordingCoordinator(recorder, new AppClock());
         mCoordinator.setDataSources(new GarminProfileService(), new HeartRateService());
         mCoordinator.setMotionSource(new MotionSource(new SystemMotionPort()));
-        if (mCoordinator.start(:ice)) {
+        var distanceConfig = new DistanceModelConfig();
+        distanceConfig.selectSport(sport);
+        mCoordinator.setDistanceModelConfig(distanceConfig);
+        if (mCoordinator.start(sport)) {
             var live = new LiveView(mCoordinator);
             WatchUi.switchToView(live, new LiveInputDelegate(live), WatchUi.SLIDE_IMMEDIATE);
         } else {

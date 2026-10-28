@@ -41,6 +41,8 @@
     <string id="CalibrationUpperSave">UPPER: REVIEW + SAVE</string>
     <string id="CalibrationSaveHint">UPPER: SAVE</string>
     <string id="CalibrationDiscardHint">LOWER: DISCARD</string>
+    <string id="ConfirmCalibrationCancel">Cancel calibration?</string>
+    <string id="ConfirmCalibrationDiscard">Discard calibration?</string>
     <string id="CalibrationReady">READY · LOWER: START</string>
     <string id="CalibrationEnd">END MARK · LOWER: NEXT</string>
     <string id="CalibrationSaved">CALIBRATION SAVED</string>

@@ -92,3 +92,33 @@ class CalibrationSummaryOutcomeDelegate extends WatchUi.BehaviorDelegate {
     function onBack() as Lang.Boolean { mTarget.finishCalibration(); return true; }
     function onSelect() as Lang.Boolean { mTarget.finishCalibration(); return true; }
 }
+
+class CalibrationCancelConfirmationDelegate extends WatchUi.ConfirmationDelegate {
+    private var mTarget;
+    private var mHandled = false;
+    function initialize(target) {
+        ConfirmationDelegate.initialize();
+        mTarget = target;
+    }
+    function onResponse(response) as Lang.Boolean {
+        if (mHandled) { return true; }
+        mHandled = true;
+        if (response == WatchUi.CONFIRM_YES) { mTarget.cancelCalibration(); }
+        return true;
+    }
+}
+
+class CalibrationDiscardConfirmationDelegate extends WatchUi.ConfirmationDelegate {
+    private var mTarget;
+    private var mHandled = false;
+    function initialize(target) {
+        ConfirmationDelegate.initialize();
+        mTarget = target;
+    }
+    function onResponse(response) as Lang.Boolean {
+        if (mHandled) { return true; }
+        mHandled = true;
+        if (response == WatchUi.CONFIRM_YES) { mTarget.discardCalibration(); }
+        return true;
+    }
+}

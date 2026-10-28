@@ -41,6 +41,8 @@
     <string id="CalibrationUpperSave">OBEN: PRÜFEN + SPEICHERN</string>
     <string id="CalibrationSaveHint">OBEN: SPEICHERN</string>
     <string id="CalibrationDiscardHint">UNTEN: VERWERFEN</string>
+    <string id="ConfirmCalibrationCancel">Kalibrierung abbrechen?</string>
+    <string id="ConfirmCalibrationDiscard">Kalibrierung verwerfen?</string>
     <string id="CalibrationReady">BEREIT · UNTEN: START</string>
     <string id="CalibrationEnd">ENDE · UNTEN: WEITER</string>
     <string id="CalibrationSaved">KALIBRIERUNG GESPEICHERT</string>

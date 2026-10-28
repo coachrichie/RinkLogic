@@ -25,6 +25,29 @@ class StartSequenceAppFake extends ShiftSenseApp {
     }
 }
 
+class AppRoutingFake extends ShiftSenseApp {
+    var startRequests = 0;
+    var introRequests = 0;
+    var introSport = null;
+    function requestStart() as Void { startRequests += 1; }
+    function showCalibrationIntro(sport) as Void {
+        introRequests += 1;
+        introSport = sport;
+    }
+}
+
+(:test)
+function appRoutesOnlyExplicitValidSportConfirmations(logger as Test.Logger) as Lang.Boolean {
+    var app = new AppRoutingFake();
+    app.confirmSport(:training, :inline);
+    if (app.startRequests != 1 || app.pendingTrainingSport() != :inline) { return false; }
+    app.confirmSport(:calibration, :ice);
+    if (app.introRequests != 1 || app.introSport != :ice) { return false; }
+    app.confirmSport(:training, :run);
+    app.confirmSport(:unknown, :ice);
+    return app.startRequests == 1 && app.introRequests == 1;
+}
+
 class ReadyStartTargetFake {
     var requests = 0;
     var calibrationRequests = 0;
