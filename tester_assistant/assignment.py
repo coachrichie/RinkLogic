@@ -99,7 +99,12 @@ def load_release_device_ids() -> frozenset[str]:
 
         ring = entry["ring"]
         status = entry["status"]
-        if ring not in _RING1 | {"Ring2"} or status not in {"release-enabled", "deferred"}:
+        if (
+            not isinstance(ring, str)
+            or not isinstance(status, str)
+            or ring not in _RING1 | {"Ring2"}
+            or status not in {"release-enabled", "deferred"}
+        ):
             raise AssignmentError("Watch device matrix contains an invalid ring or status")
         if (ring in _RING1) != (status == "release-enabled"):
             raise AssignmentError("Watch device matrix ring and release status disagree")
@@ -110,7 +115,8 @@ def load_release_device_ids() -> frozenset[str]:
                 raise AssignmentError("Watch device matrix contains invalid display metadata")
         if type(entry["representative"]) is not bool:
             raise AssignmentError("Watch device matrix representative flag is invalid")
-        if entry["displayType"] not in {"amoled", "mip"}:
+        display_type = entry["displayType"]
+        if not isinstance(display_type, str) or display_type not in {"amoled", "mip"}:
             raise AssignmentError("Watch device matrix display type is invalid")
         for name in ("width", "height"):
             if type(entry[name]) is not int or entry[name] <= 0:

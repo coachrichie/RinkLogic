@@ -139,6 +139,33 @@ class AssignmentTests(unittest.TestCase):
         self.assertIn("packagedvenu2", product_ids)
         self.assertNotIn("venu2", product_ids)
 
+    def test_unhashable_enum_values_fail_closed_with_assignment_error(self):
+        source = Path(__file__).parents[1] / "watch-v2" / "device-matrix.json"
+        base = json.loads(source.read_text(encoding="utf-8"))
+
+        with tempfile.TemporaryDirectory() as directory:
+            matrix_path = Path(directory) / "device-matrix.json"
+            for field, value in (("ring", []), ("status", {}), ("displayType", [])):
+                with self.subTest(field=field):
+                    matrix = json.loads(json.dumps(base))
+                    matrix["devices"][0][field] = value
+                    matrix_path.write_text(json.dumps(matrix), encoding="utf-8")
+                    with patch.object(
+                        assignment_module,
+                        "_device_matrix_path",
+                        return_value=matrix_path,
+                    ):
+                        try:
+                            self._release_ids()
+                        except AssignmentError:
+                            pass
+                        except Exception as exc:
+                            self.fail(
+                                f"Malformed {field} escaped as {type(exc).__name__} instead of AssignmentError"
+                            )
+                        else:
+                            self.fail(f"Malformed {field} was accepted")
+
     def test_loads_json_from_a_path(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "assignment.json"
