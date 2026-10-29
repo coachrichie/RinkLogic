@@ -1,6 +1,7 @@
 """Return-bundle behavior with synthetic, private-free fixtures."""
 
 from dataclasses import replace
+import csv
 import hashlib
 import io
 import json
@@ -161,6 +162,17 @@ class BundleTests(unittest.TestCase):
             "invalid_calibration_reference",
             diagnostics=replace(self.diagnostics, personal_calibration_factor=None),
         )
+
+    def test_bundle_preserves_high_precision_factor_in_generated_reference(self):
+        factor = 1.499999999999999
+        result = self._build(
+            diagnostics=replace(
+                self.diagnostics, personal_calibration_factor=factor))
+        with zipfile.ZipFile(result.path) as archive:
+            rows = list(csv.DictReader(io.StringIO(archive.read(
+                "reference/TDEMO1-R1-001_calibration_reference.csv"
+            ).decode("utf-8"))))
+        self.assertEqual({float(row["active_factor"]) for row in rows}, {factor})
 
     def test_rejects_destination_equal_to_original_or_nested_beneath_it(self):
         self._assert_clean_failure("unsafe_destination", destination_dir=self.original)

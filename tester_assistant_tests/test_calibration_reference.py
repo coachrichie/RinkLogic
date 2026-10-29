@@ -3,6 +3,7 @@
 from dataclasses import replace
 import csv
 import io
+import math
 from pathlib import Path
 import tempfile
 import unittest
@@ -86,6 +87,21 @@ class CalibrationReferenceTests(unittest.TestCase):
         rows = list(csv.DictReader(io.StringIO(
             build_calibration_reference(assignment, diagnostics).decode("utf-8"))))
         self.assertEqual({row["sport"] for row in rows}, {"ice"})
+
+    def test_preserves_valid_binary64_factors_exactly_through_csv_roundtrip(self):
+        factors = (
+            1.234567890123456,
+            1.000000000000001,
+            math.nextafter(1.5, 0.0),
+        )
+        for factor in factors:
+            with self.subTest(factor=factor):
+                diagnostics = replace(
+                    self.diagnostics, personal_calibration_factor=factor)
+                rows = list(csv.DictReader(io.StringIO(
+                    build_calibration_reference(
+                        self.assignment, diagnostics).decode("utf-8"))))
+                self.assertEqual({float(row["active_factor"]) for row in rows}, {factor})
 
     def test_rejects_noncalibration_nonpassing_or_unbound_diagnostics(self):
         smoke_values = beta7_assignment_dict()

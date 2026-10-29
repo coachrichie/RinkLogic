@@ -90,7 +90,7 @@ def build_calibration_reference(
             "marker_status": "valid",
             "target_pace": pace,
             "activation_status": "",
-            "active_factor": format(factor, ".15g"),
+            "active_factor": repr(factor),
             "hrmax_bpm": "",
         })
     try:
