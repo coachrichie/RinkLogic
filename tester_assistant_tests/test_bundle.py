@@ -14,7 +14,7 @@ from tester_assistant.assignment import Assignment
 from tester_assistant.bundle import BundleError, build_return_bundle
 from tester_assistant.diagnostics import DiagnosticReport
 from tester_assistant.questionnaire import QUESTION_IDS, validate_answers
-from tester_assistant_tests.fixtures import beta6_assignment_dict, beta6_original_name
+from tester_assistant_tests.fixtures import beta7_assignment_dict, beta7_original_name
 
 
 FIT_BYTES = b"synthetic original FIT\x00\x01"
@@ -27,16 +27,14 @@ class BundleTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.destination = self.root / "return"
         self.destination.mkdir()
-        self.assignment = Assignment.from_dict(beta6_assignment_dict())
-        self.original = self.root / beta6_original_name()
+        self.assignment = Assignment.from_dict(beta7_assignment_dict())
+        self.original = self.root / beta7_original_name()
         self.original.write_bytes(FIT_BYTES)
         self.diagnostics = self._report()
         self.answers = validate_answers({
             **{question_id: 4 for question_id in QUESTION_IDS[:9]},
             "priority_improvement": "Bessere Statusanzeige gewünscht.",
         })
-        self.reference = self.root / "TDEMO1-R1-001_calibration_reference.csv"
-        self.reference.write_bytes(b"run,reference_distance_cm\n1,2000\n")
 
     def _report(self, *, original=None, original_bytes=FIT_BYTES):
         original = original or self.original
@@ -46,17 +44,21 @@ class BundleTests(unittest.TestCase):
             fit_sha256=digest, original_name=original.name,
             fit_member_name=None, schema_version=12,
             session_start="2026-10-24 18:00:00+00:00",
-            duration_minutes=3.0, manual_shift_count=1,
+            duration_minutes=3.0, manual_shift_count=10,
             estimated_distance_m=345.5, personal_calibration_factor=1.12,
             heart_rate_available=True,
             expected_prg_sha256=self.assignment.expected_prg_sha256,
+            surface=self.assignment.surface, protocol=self.assignment.protocol,
+            product_id=self.assignment.product_id,
+            calibration_reference_distance_cm=2000,
+            calibration_skate_only_runs=5,
+            calibration_stickhandling_runs=5,
         )
 
     def _build(self, **overrides):
         args = dict(original_path=self.original, assignment=self.assignment,
                     diagnostics=self.diagnostics, answers=self.answers,
-                    destination_dir=self.destination,
-                    calibration_reference=self.reference)
+                    destination_dir=self.destination)
         args.update(overrides)
         return build_return_bundle(**args)
 
@@ -82,8 +84,7 @@ class BundleTests(unittest.TestCase):
         with zipfile.ZipFile(result.path) as archive:
             self.assertEqual(set(archive.namelist()), expected)
             self.assertEqual(archive.read(f"original/{self.original.name}"), FIT_BYTES)
-            self.assertEqual(archive.read("reference/TDEMO1-R1-001_calibration_reference.csv"),
-                             self.reference.read_bytes())
+            reference = archive.read("reference/TDEMO1-R1-001_calibration_reference.csv")
             manifest = json.loads(archive.read("manifest.json"))
             diagnostic = json.loads(archive.read("diagnostics.json"))
             feedback = json.loads(archive.read("feedback.json"))
@@ -91,6 +92,9 @@ class BundleTests(unittest.TestCase):
         self.assertEqual(manifest["assignment_id"], self.assignment.assignment_id)
         self.assertEqual(manifest["tester_id"], self.assignment.tester_id)
         self.assertEqual(manifest["original_sha256"], hashlib.sha256(FIT_BYTES).hexdigest())
+        self.assertEqual(manifest["calibration_reference_source"],
+                         "generated_from_validated_assignment_and_diagnostics")
+        self.assertEqual(len(reference.decode("utf-8").splitlines()), 11)
         self.assertEqual(diagnostic["status"], "pass")
         self.assertEqual(feedback["priority_improvement"],
                          "Bessere Statusanzeige gewünscht.")
@@ -100,13 +104,20 @@ class BundleTests(unittest.TestCase):
         self.assertNotIn(str(self.root), all_text)
         self.assertNotIn(self.assignment.upload_url, all_text)
 
-    def test_noncalibration_bundle_omits_reference_even_if_supplied(self):
-        values = beta6_assignment_dict()
+    def test_noncalibration_bundle_omits_reference(self):
+        values = beta7_assignment_dict()
         values["protocol"] = "smoke"
         assignment = Assignment.from_dict(values)
         original = self.root / self.original.name.replace("calibration", "smoke")
         original.write_bytes(FIT_BYTES)
-        report = replace(self._report(original=original), personal_calibration_factor=None)
+        report = replace(
+            self._report(original=original),
+            personal_calibration_factor=None,
+            protocol="smoke",
+            calibration_reference_distance_cm=None,
+            calibration_skate_only_runs=None,
+            calibration_stickhandling_runs=None,
+        )
         result = self._build(original_path=original, assignment=assignment,
                              diagnostics=report)
         self.assertEqual(result.path.name, "TDEMO1-R1-001_2026-10-24_inline_smoke_return.zip")
@@ -118,7 +129,7 @@ class BundleTests(unittest.TestCase):
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w") as archive:
             archive.writestr("activity.fit", FIT_BYTES)
-        original = self.root / beta6_original_name("zip")
+        original = self.root / beta7_original_name("zip")
         original.write_bytes(buffer.getvalue())
         report = replace(self._report(original=original, original_bytes=buffer.getvalue()),
                          fit_sha256=hashlib.sha256(FIT_BYTES).hexdigest(),
@@ -133,6 +144,9 @@ class BundleTests(unittest.TestCase):
             (replace(self.diagnostics, original_name="other.fit"), "identity_mismatch"),
             (replace(self.diagnostics, expected_prg_sha256="a" * 64), "identity_mismatch"),
             (replace(self.diagnostics, schema_version=11), "identity_mismatch"),
+            (replace(self.diagnostics, surface="ice"), "identity_mismatch"),
+            (replace(self.diagnostics, protocol="smoke"), "identity_mismatch"),
+            (replace(self.diagnostics, product_id="fenix7"), "identity_mismatch"),
         )
         for report, code in cases:
             with self.subTest(code=code, report=report):
@@ -142,13 +156,11 @@ class BundleTests(unittest.TestCase):
         self.original.write_bytes(b"modified after inspection")
         self._assert_clean_failure("original_changed")
 
-    def test_requires_exact_bounded_calibration_reference(self):
-        self._assert_clean_failure("reference_missing", calibration_reference=None)
-        wrong = self.root / "other.csv"
-        wrong.write_bytes(b"ok")
-        self._assert_clean_failure("reference_name_mismatch", calibration_reference=wrong)
-        self.reference.write_bytes(b"x" * (1024 * 1024 + 1))
-        self._assert_clean_failure("reference_too_large")
+    def test_generated_reference_failure_is_atomic(self):
+        self._assert_clean_failure(
+            "invalid_calibration_reference",
+            diagnostics=replace(self.diagnostics, personal_calibration_factor=None),
+        )
 
     def test_rejects_destination_equal_to_original_or_nested_beneath_it(self):
         self._assert_clean_failure("unsafe_destination", destination_dir=self.original)
@@ -181,18 +193,6 @@ class BundleTests(unittest.TestCase):
                 raw = self.answers.to_safe_dict()
                 raw["priority_improvement"] = text
                 self._assert_clean_failure("unsafe_feedback", answers=validate_answers(raw))
-
-    def test_rejects_local_path_in_calibration_reference(self):
-        for index, data in enumerate((b"run,note\n1,C:\\Users\\Tester\\run.fit\n",
-                                      b"run,note\n1,/home/tester/run.fit\n",
-                                      b"run,note\n1,path=/home/tester/run.fit\n",
-                                      b"run,note\n1,AWS_SECRET_ACCESS_KEY=abc123\n")):
-            with self.subTest(data=data):
-                self.destination = self.root / f"reference-{index}"
-                self.destination.mkdir()
-                self.reference.write_bytes(data)
-                self._assert_clean_failure("unsafe_reference")
-
 
 if __name__ == "__main__":
     unittest.main()

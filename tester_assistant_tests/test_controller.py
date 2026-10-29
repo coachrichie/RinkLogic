@@ -24,8 +24,6 @@ class ControllerTests(unittest.TestCase):
         self.assignment_path.write_text(json.dumps(beta6_assignment_dict()), encoding="utf-8")
         self.original = self.root / beta6_original_name()
         self.original.write_bytes(b"synthetic FIT bytes")
-        self.reference = self.root / "TDEMO1-R1-001_calibration_reference.csv"
-        self.reference.write_text("run,reference_distance_cm\n1,2000\n", encoding="utf-8")
         self.destination = self.root / "return"
         self.destination.mkdir()
         self.parser = patch("tester_assistant.diagnostics.load_pilot_fit", return_value=pilot_result())
@@ -56,7 +54,6 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(self.controller.load_assignment(self.assignment_path).step, WizardStep.EXPORT)
         self.assertEqual(self.controller.select_original(self.original).step, WizardStep.DIAGNOSTICS)
         self.assertEqual(self.controller.continue_to_questionnaire().step, WizardStep.QUESTIONNAIRE)
-        self.controller.select_calibration_reference(self.reference)
         self.controller.submit_answers(self._answers())
         state = self.controller.create_bundle(self.destination)
         self.assertEqual(state.step, WizardStep.RETURN)
@@ -87,14 +84,11 @@ class ControllerTests(unittest.TestCase):
         self.assertNotIn("secret", repr(state))
         self.assertNotIn("C:/private/activity.fit", repr(state))
 
-    def test_calibration_reference_is_required_only_for_calibration(self):
+    def test_calibration_reference_is_generated_only_for_calibration(self):
         self._reach_questionnaire()
         self.controller.submit_answers(self._answers())
         state = self.controller.create_bundle(self.destination)
-        self.assertEqual(state.step, WizardStep.QUESTIONNAIRE)
-        self.assertEqual(state.status_key, "reference_required")
-        self.controller.select_calibration_reference(self.reference)
-        self.assertEqual(self.controller.create_bundle(self.destination).step, WizardStep.RETURN)
+        self.assertEqual(state.step, WizardStep.RETURN)
 
         smoke = beta6_assignment_dict()
         smoke["protocol"] = "smoke"
@@ -109,17 +103,15 @@ class ControllerTests(unittest.TestCase):
 
     def test_none_cancellations_are_exact_no_ops(self):
         self._reach_questionnaire()
-        self.controller.select_calibration_reference(self.reference)
         self.controller.submit_answers(self._answers())
         before = self.controller.state_snapshot()
         for action in (self.controller.load_assignment, self.controller.select_original,
-                       self.controller.select_calibration_reference, self.controller.create_bundle):
+                       self.controller.create_bundle):
             self.assertEqual(action(None), before)
             self.assertEqual(self.controller.state_snapshot(), before)
 
     def test_replacing_assignment_clears_every_downstream_value(self):
         self._reach_questionnaire()
-        self.controller.select_calibration_reference(self.reference)
         self.controller.submit_answers(self._answers())
         self.controller.create_bundle(self.destination)
         second = self.root / "second.json"
@@ -128,7 +120,6 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(state.step, WizardStep.EXPORT)
         self.assertEqual(state.assignment_path, second)
         self.assertIsNone(state.original_path)
-        self.assertIsNone(state.calibration_reference)
         self.assertIsNone(state.diagnostics)
         self.assertIsNone(state.answers)
         self.assertIsNone(state.bundle)
@@ -136,7 +127,6 @@ class ControllerTests(unittest.TestCase):
 
     def test_replacing_original_invalidates_diagnostics_answers_and_bundle(self):
         self._reach_questionnaire()
-        self.controller.select_calibration_reference(self.reference)
         self.controller.submit_answers(self._answers())
         self.controller.create_bundle(self.destination)
         other = self.root / beta6_original_name("zip")
@@ -151,7 +141,6 @@ class ControllerTests(unittest.TestCase):
 
     def test_invalid_replacement_path_clears_earlier_bundle_state(self):
         self._reach_questionnaire()
-        self.controller.select_calibration_reference(self.reference)
         self.controller.submit_answers(self._answers())
         self.controller.create_bundle(self.destination)
         state = self.controller.select_original(object())
@@ -183,7 +172,6 @@ class ControllerTests(unittest.TestCase):
 
     def test_reset_and_restart_leave_existing_files_untouched(self):
         self._reach_questionnaire()
-        self.controller.select_calibration_reference(self.reference)
         self.controller.submit_answers(self._answers())
         bundle = self.controller.create_bundle(self.destination).bundle.path
         before = bundle.read_bytes()
@@ -192,7 +180,6 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(state.step, WizardStep.ASSIGNMENT)
         self.assertIsNone(state.assignment_path)
         self.assertIsNone(state.original_path)
-        self.assertIsNone(state.calibration_reference)
         self.assertIsNone(state.diagnostics)
         self.assertIsNone(state.answers)
         self.assertIsNone(state.bundle)

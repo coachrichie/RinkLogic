@@ -1,4 +1,4 @@
-"""Display-independent, local workflow for a Beta-6 tester return bundle."""
+"""Display-independent, local workflow for a Beta-7 tester return bundle."""
 
 from __future__ import annotations
 
@@ -41,10 +41,6 @@ _SUMMARIES = {
     "questionnaire_ready": "Bitte beantworte die Fragen zum Test.",
     "answers_invalid": "Bitte prüfe deine Antworten.",
     "answers_valid": "Antworten geprüft. Das Rückgabepaket kann erstellt werden.",
-    "reference_required": "Bitte wähle die Kalibrierungsreferenz aus.",
-    "reference_invalid": "Die Kalibrierungsreferenz ist nicht gültig.",
-    "reference_selected": "Kalibrierungsreferenz ausgewählt.",
-    "reference_not_needed": "Für diesen Testauftrag ist keine Kalibrierungsreferenz nötig.",
     "bundle_failed": "Das Rückgabepaket konnte nicht erstellt werden.",
     "bundle_created": "Rückgabepaket erstellt. Bitte sende es bewusst über den privaten Kanal.",
 }
@@ -58,7 +54,6 @@ class WizardState:
     assignment_path: Path | None = None
     assignment: Assignment | None = None
     original_path: Path | None = None
-    calibration_reference: Path | None = None
     diagnostics: DiagnosticReport | None = None
     diagnostic_code: str | None = None
     answers: FeedbackAnswers | None = None
@@ -99,7 +94,7 @@ class BetaTestController:
         if self._state.assignment is None:
             return self._status("step_blocked")
         self._state = replace(self._state, step=WizardStep.EXPORT,
-                              original_path=None, calibration_reference=None,
+                              original_path=None,
                               diagnostics=None, diagnostic_code=None, answers=None,
                               bundle=None)
         try:
@@ -131,24 +126,6 @@ class BetaTestController:
         self._state = replace(self._state, step=WizardStep.QUESTIONNAIRE)
         return self._status("questionnaire_ready")
 
-    def select_calibration_reference(self, path: str | Path | None) -> WizardState:
-        if path is None:
-            return self._state
-        if self._state.step != WizardStep.QUESTIONNAIRE or self._state.assignment is None:
-            return self._status("step_blocked")
-        if self._state.assignment.protocol != "calibration":
-            return self._status("reference_not_needed")
-        try:
-            selected = Path(path)
-            expected = f"{self._state.assignment.assignment_id}_calibration_reference.csv"
-            if selected.name != expected or not selected.is_file():
-                raise ValueError("invalid reference")
-        except Exception:
-            self._state = replace(self._state, calibration_reference=None, bundle=None)
-            return self._status("reference_invalid")
-        self._state = replace(self._state, calibration_reference=selected, bundle=None)
-        return self._status("reference_selected")
-
     def submit_answers(self, raw: Mapping[str, object]) -> WizardState:
         if self._state.step != WizardStep.QUESTIONNAIRE:
             return self._status("step_blocked")
@@ -168,8 +145,6 @@ class BetaTestController:
                 or state.original_path is None or state.diagnostics is None
                 or state.answers is None):
             return self._status("step_blocked")
-        if state.assignment.protocol == "calibration" and state.calibration_reference is None:
-            return self._status("reference_required")
         try:
             result = build_return_bundle(
                 original_path=state.original_path,
@@ -177,8 +152,6 @@ class BetaTestController:
                 diagnostics=state.diagnostics,
                 answers=state.answers,
                 destination_dir=Path(destination),
-                calibration_reference=(state.calibration_reference
-                                       if state.assignment.protocol == "calibration" else None),
             )
         except Exception:
             return self._status("bundle_failed")

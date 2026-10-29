@@ -67,7 +67,6 @@ class AppContractTests(unittest.TestCase):
         reset = selection_texts(WizardState())
         self.assertEqual(reset["assignment"], "Kein Testauftrag ausgewählt.")
         self.assertEqual(reset["original"], "Kein Originalexport ausgewählt.")
-        self.assertEqual(reset["reference"], "Keine Referenz ausgewählt.")
 
     def test_diagnostics_uses_unavailable_for_absent_measurements(self):
         report = DiagnosticReport("pass", (), "a" * 64, "b" * 64, "original.fit", None,

@@ -13,11 +13,11 @@ import tempfile
 import zipfile
 
 from .assignment import Assignment, AssignmentError
+from .calibration_reference import CalibrationReferenceError, build_calibration_reference
 from .diagnostics import DiagnosticReport
 from .questionnaire import FeedbackAnswers, QuestionnaireError, validate_answers
 
 
-_MAX_REFERENCE_BYTES = 1024 * 1024
 _UNSAFE_TEXT = re.compile(
     r"(?:[A-Za-z]:[\\/]|\\\\[^\\\s]+\\|"
     r"(?:^|[\s,;\"'=])/(?:[^\s/]+/)*[^\s/]+|"
@@ -84,28 +84,6 @@ def _read_original(path: Path, expected_sha256: str) -> bytes:
     return data
 
 
-def _read_reference(path: Path | None, assignment_id: str) -> bytes:
-    if path is None:
-        raise BundleError("reference_missing")
-    path = Path(path)
-    if path.name != f"{assignment_id}_calibration_reference.csv":
-        raise BundleError("reference_name_mismatch")
-    try:
-        with path.open("rb") as source:
-            data = source.read(_MAX_REFERENCE_BYTES + 1)
-    except OSError:
-        raise BundleError("reference_missing") from None
-    if len(data) > _MAX_REFERENCE_BYTES:
-        raise BundleError("reference_too_large")
-    try:
-        text = data.decode("utf-8-sig")
-    except UnicodeError:
-        raise BundleError("unsafe_reference") from None
-    if "\x00" in text or _UNSAFE_TEXT.search(text):
-        raise BundleError("unsafe_reference")
-    return data
-
-
 def _archive_info(name: str) -> zipfile.ZipInfo:
     info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
     info.compress_type = zipfile.ZIP_DEFLATED
@@ -119,7 +97,6 @@ def build_return_bundle(
     diagnostics: DiagnosticReport,
     answers: FeedbackAnswers,
     destination_dir: Path,
-    calibration_reference: Path | None = None,
 ) -> BundleResult:
     """Build and exclusively publish one assignment-bound local return ZIP."""
     original_path = Path(original_path)
@@ -140,7 +117,10 @@ def build_return_bundle(
         raise BundleError("diagnostics_not_pass")
     if (diagnostics.original_name != original_path.name
             or diagnostics.expected_prg_sha256 != assignment.expected_prg_sha256
-            or diagnostics.schema_version != assignment.fit_schema):
+            or diagnostics.schema_version != assignment.fit_schema
+            or diagnostics.surface != assignment.surface
+            or diagnostics.protocol != assignment.protocol
+            or diagnostics.product_id != assignment.product_id):
         raise BundleError("identity_mismatch")
 
     day = _session_day(diagnostics.session_start)
@@ -152,8 +132,11 @@ def build_return_bundle(
 
     feedback = _validate_feedback(answers)
     original_data = _read_original(original_path, diagnostics.original_sha256)
-    reference_data = (_read_reference(calibration_reference, assignment.assignment_id)
-                      if assignment.protocol == "calibration" else None)
+    try:
+        reference_data = (build_calibration_reference(assignment, diagnostics)
+                          if assignment.protocol == "calibration" else None)
+    except CalibrationReferenceError:
+        raise BundleError("invalid_calibration_reference") from None
 
     manifest = {
         "contract_version": assignment.contract_version,
@@ -175,6 +158,13 @@ def build_return_bundle(
         "fit_sha256": diagnostics.fit_sha256,
         "expected_prg_sha256": assignment.expected_prg_sha256,
     }
+    if reference_data is not None:
+        manifest.update({
+            "calibration_reference_source":
+                "generated_from_validated_assignment_and_diagnostics",
+            "calibration_reference_limitation":
+                "assignment_protocol_metadata_not_independent_measurement",
+        })
     diagnostic_data = {"session_start": diagnostics.session_start,
                        **diagnostics.safe_summary()}
     members: list[tuple[str, bytes]] = [

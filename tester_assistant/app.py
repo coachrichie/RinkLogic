@@ -91,7 +91,6 @@ def selection_texts(state: WizardState) -> dict[str, str]:
     return {
         "assignment": str(state.assignment_path) if state.assignment_path else "Kein Testauftrag ausgewählt.",
         "original": str(state.original_path) if state.original_path else "Kein Originalexport ausgewählt.",
-        "reference": str(state.calibration_reference) if state.calibration_reference else "Keine Referenz ausgewählt.",
     }
 
 
@@ -170,7 +169,6 @@ class BetaTestApp:
         self.status = tk.StringVar(value=controller.state_snapshot().status_summary)
         self.assignment_text = tk.StringVar(value="Kein Testauftrag ausgewählt.")
         self.original_text = tk.StringVar(value="Kein Originalexport ausgewählt.")
-        self.reference_text = tk.StringVar(value="Keine Referenz ausgewählt.")
         self.bundle_text = tk.StringVar(value="Noch kein Rückgabepaket erstellt.")
         self.rating_vars: dict[str, tk.StringVar] = {}
         self._first_focus: dict[WizardStep, tk.Widget] = {}
@@ -285,12 +283,9 @@ class BetaTestApp:
         self.problem_details.grid(row=23, column=0, sticky="ew")
         self.problem_details.bind("<FocusIn>", lambda _event: canvas.yview_moveto(1.0))
         bind_questionnaire_wheel(canvas, content)
-        self.reference_button = ttk.Button(page, text="Kalibrierungsreferenz auswählen …",
-                                           command=self._choose_reference)
-        self.reference_button.grid(row=3, column=0, sticky="w", pady=(12, 0))
-        ttk.Label(page, textvariable=self.reference_text, wraplength=780).grid(row=4, column=0, sticky="w")
-        ttk.Button(page, text="Antworten prüfen", command=self._check_answers).grid(row=5, column=0, sticky="w", pady=(8, 0))
-        self._footer(WizardStep.QUESTIONNAIRE, 6, next_text="Rückgabepaket erstellen …")
+        ttk.Button(page, text="Antworten prüfen", command=self._check_answers).grid(
+            row=3, column=0, sticky="w", pady=(8, 0))
+        self._footer(WizardStep.QUESTIONNAIRE, 4, next_text="Rückgabepaket erstellen …")
 
         page = self._page(WizardStep.RETURN)
         self._label(page, "Das Rückgabepaket wurde lokal erstellt. Bitte über den privaten Kanal selbst hochladen. Der Assistent sendet keine Datei und bestätigt keinen Eingang.", 1)
@@ -314,10 +309,8 @@ class BetaTestApp:
         selections = selection_texts(state)
         self.assignment_text.set(selections["assignment"])
         self.original_text.set(selections["original"])
-        self.reference_text.set(selections["reference"])
         for label, value in diagnostic_rows(state.diagnostics):
             self.diagnostic_values[label].set(value)
-        self.reference_button.grid() if state.assignment and state.assignment.protocol == "calibration" else self.reference_button.grid_remove()
         if state.bundle is not None:
             bundle = state.bundle
             self.bundle_text.set(
@@ -353,13 +346,6 @@ class BetaTestApp:
                                           filetypes=[("FIT oder ZIP", "*.fit *.zip"), ("Alle Dateien", "*.*")])
         if path:
             self.controller.select_original(path)
-            self._refresh()
-
-    def _choose_reference(self) -> None:
-        path = filedialog.askopenfilename(parent=self.root, title="Kalibrierungsreferenz auswählen",
-                                          filetypes=[("CSV", "*.csv"), ("Alle Dateien", "*.*")])
-        if path:
-            self.controller.select_calibration_reference(path)
             self._refresh()
 
     def _raw_answers(self) -> dict[str, object]:
