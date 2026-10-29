@@ -12,8 +12,8 @@ from unittest.mock import patch
 from tester_assistant.assignment import Assignment
 from tester_assistant.diagnostics import DiagnosticError, inspect_original
 from tester_assistant_tests.fixtures import (
-    beta6_assignment_dict,
-    beta6_original_name,
+    beta7_assignment_dict,
+    beta7_original_name,
     pilot_result,
 )
 
@@ -31,13 +31,18 @@ def zip_bytes(members: list[tuple[str | zipfile.ZipInfo, bytes]]) -> bytes:
 
 class DiagnosticsTests(unittest.TestCase):
     def setUp(self):
-        self.assignment = Assignment.from_dict(beta6_assignment_dict())
+        assignment = beta7_assignment_dict()
+        assignment.update({"surface": "ice", "product_id": "venu3"})
+        self.assignment = Assignment.from_dict(assignment)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.folder = Path(self.temp.name)
 
     def original(self, data: bytes, suffix: str = "fit") -> Path:
-        path = self.folder / beta6_original_name(suffix)
+        path = self.folder / beta7_original_name(
+            suffix, surface=self.assignment.surface,
+            protocol=self.assignment.protocol,
+        )
         path.write_bytes(data)
         return path
 
@@ -60,14 +65,26 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertEqual(report.schema_version, 12)
         self.assertEqual(report.session_start, "2026-10-24 18:00:00+00:00")
         self.assertEqual(report.duration_minutes, 3)
-        self.assertEqual(report.manual_shift_count, 1)
+        self.assertEqual(report.manual_shift_count, 10)
         self.assertEqual(report.estimated_distance_m, 345.5)
         self.assertEqual(report.personal_calibration_factor, 1.12)
         self.assertTrue(report.heart_rate_available)
+        self.assertEqual(report.surface, "ice")
+        self.assertEqual(report.protocol, "calibration")
+        self.assertEqual(report.product_id, "venu3")
+        self.assertEqual(report.calibration_reference_distance_cm, 2000)
+        self.assertEqual(report.calibration_skate_only_runs, 5)
+        self.assertEqual(report.calibration_stickhandling_runs, 5)
         summary = report.safe_summary()
         self.assertEqual(report.expected_prg_sha256, "0" * 64)
         self.assertNotIn("expected_prg_sha256", summary)
-        self.assertEqual(summary["manual_shift_count"], 1)
+        self.assertEqual(summary["manual_shift_count"], 10)
+        self.assertEqual(summary["surface"], "ice")
+        self.assertEqual(summary["protocol"], "calibration")
+        self.assertEqual(summary["product_id"], "venu3")
+        self.assertEqual(summary["calibration_reference_distance_cm"], 2000)
+        self.assertEqual(summary["calibration_skate_only_runs"], 5)
+        self.assertEqual(summary["calibration_stickhandling_runs"], 5)
         self.assertNotIn("original_name", summary)
         self.assertNotIn("fit_member_name", summary)
         self.assertNotIn("original_sha256", summary)
@@ -106,7 +123,10 @@ class DiagnosticsTests(unittest.TestCase):
 
     def test_empty_and_unsupported_input_are_rejected(self):
         self.assert_code(self.original(b""), "empty_input")
-        path = self.folder / beta6_original_name("exe")
+        path = self.folder / beta7_original_name(
+            "exe", surface=self.assignment.surface,
+            protocol=self.assignment.protocol,
+        )
         path.write_bytes(FIT_BYTES)
         self.assert_code(path, "unsupported_extension")
 
@@ -191,8 +211,6 @@ class DiagnosticsTests(unittest.TestCase):
             ({"duration_ms": -1}, "invalid_duration"),
             ({"duration_ms": float("nan")}, "invalid_duration"),
             ({"duration_ms": 10 ** 1000}, "invalid_duration"),
-            ({"personal_calibration_factor": float("inf")}, "invalid_metric"),
-            ({"personal_calibration_factor": 10 ** 1000}, "invalid_metric"),
             ({"push_metrics": {"estimated_distance_m": float("nan"), "manual_shifts": []}}, "invalid_metric"),
         )
         path = self.original(FIT_BYTES)
@@ -202,6 +220,53 @@ class DiagnosticsTests(unittest.TestCase):
                 result.update(overrides)
                 with patch("tester_assistant.diagnostics.load_pilot_fit", return_value=result):
                     self.assert_code(path, code)
+
+    def test_calibration_requires_exactly_ten_manual_lap_aggregates(self):
+        path = self.original(FIT_BYTES)
+        for count in (9, 11):
+            with self.subTest(count=count), \
+                 patch("tester_assistant.diagnostics.load_pilot_fit",
+                       return_value=pilot_result(manual_shift_count=count)):
+                self.assert_code(path, "calibration_lap_count")
+
+    def test_calibration_requires_finite_factor_in_supported_range(self):
+        path = self.original(FIT_BYTES)
+        cases = (
+            (None, "calibration_factor_missing"),
+            (True, "calibration_factor_invalid"),
+            ("1.0", "calibration_factor_invalid"),
+            (float("nan"), "calibration_factor_invalid"),
+            (float("inf"), "calibration_factor_invalid"),
+            (10 ** 1000, "calibration_factor_invalid"),
+            (0.49, "calibration_factor_out_of_range"),
+            (1.51, "calibration_factor_out_of_range"),
+        )
+        for factor, code in cases:
+            with self.subTest(factor=factor), \
+                 patch("tester_assistant.diagnostics.load_pilot_fit",
+                       return_value=pilot_result(
+                           personal_calibration_factor=factor)):
+                self.assert_code(path, code)
+
+    def test_non_calibration_protocols_do_not_require_factor_or_ten_laps(self):
+        for protocol in ("smoke", "controlled-shifts", "normal-training"):
+            with self.subTest(protocol=protocol):
+                raw = beta7_assignment_dict()
+                raw["protocol"] = protocol
+                assignment = Assignment.from_dict(raw)
+                path = self.folder / beta7_original_name(protocol=protocol)
+                path.write_bytes(FIT_BYTES)
+                parsed = pilot_result(
+                    manual_shift_count=1, personal_calibration_factor=None)
+                with patch("tester_assistant.diagnostics.load_pilot_fit",
+                           return_value=parsed):
+                    report = inspect_original(path, assignment)
+                self.assertEqual(report.manual_shift_count, 1)
+                self.assertIsNone(report.personal_calibration_factor)
+                self.assertEqual(report.protocol, protocol)
+                self.assertIsNone(report.calibration_reference_distance_cm)
+                self.assertIsNone(report.calibration_skate_only_runs)
+                self.assertIsNone(report.calibration_stickhandling_runs)
 
 
 if __name__ == "__main__":

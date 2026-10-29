@@ -1,7 +1,9 @@
 """Synthetic assignment data shared by tester-assistant tests."""
 
-def beta7_original_name(suffix: str = "fit") -> str:
-    return f"TDEMO1-R1-001_2026-10-24_inline_calibration_original.{suffix}"
+def beta7_original_name(
+    suffix: str = "fit", *, surface: str = "inline", protocol: str = "calibration",
+) -> str:
+    return f"TDEMO1-R1-001_2026-10-24_{surface}_{protocol}_original.{suffix}"
 
 
 def beta6_original_name(suffix: str = "fit") -> str:
@@ -9,14 +11,27 @@ def beta6_original_name(suffix: str = "fit") -> str:
     return beta7_original_name(suffix)
 
 
-def pilot_result() -> dict[str, object]:
+def pilot_result(
+    *, manual_shift_count: int = 10, personal_calibration_factor: object = 1.12,
+) -> dict[str, object]:
     """A complete parser-shaped, synthetic schema-12 session."""
+    manual_shifts = [
+        {"at_ms": (index + 1) * 10000, "duration_seconds": 10,
+         "duration_minutes": 1 / 6, "pushes": 3,
+         "estimated_distance_cm": None, "estimated_distance_m": 20,
+         "short_pushes": 0, "coverage_percent": 100}
+        for index in range(manual_shift_count)
+    ]
     return {
         "schema_version": 12,
         "session_start": "2026-10-24 18:00:00+00:00",
         "duration_ms": 180000,
         "records": [{"type": "record", "heart_rate": 142}],
-        "manual_boundaries": [{"at_ms": 0, "state": "ice"}],
+        "manual_boundaries": [
+            {"at_ms": (index + 1) * 10000,
+             "state": "ice" if index % 2 == 0 else "bench"}
+            for index in range(manual_shift_count)
+        ],
         "proposals": [],
         "valid_motion_seconds": 0,
         "missing_sensor_seconds": 0,
@@ -27,13 +42,9 @@ def pilot_result() -> dict[str, object]:
         "time_metrics_minutes": {},
         "raw_time_fields": {},
         "raw_session": {"type": "session"},
-        "personal_calibration_factor": 1.12,
-        "push_metrics": {"estimated_distance_m": 345.5, "manual_shifts": [
-            {"at_ms": 60000, "duration_seconds": 60, "duration_minutes": 1,
-             "pushes": 3, "estimated_distance_cm": None,
-             "estimated_distance_m": 100, "short_pushes": 0,
-             "coverage_percent": 100},
-        ]},
+        "personal_calibration_factor": personal_calibration_factor,
+        "push_metrics": {"estimated_distance_m": 345.5,
+                         "manual_shifts": manual_shifts},
         "phase_intervals": [],
     }
 

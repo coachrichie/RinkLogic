@@ -46,6 +46,12 @@ class DiagnosticReport:
     personal_calibration_factor: float | None
     heart_rate_available: bool
     expected_prg_sha256: str
+    surface: str = ""
+    protocol: str = ""
+    product_id: str = ""
+    calibration_reference_distance_cm: int | None = None
+    calibration_skate_only_runs: int | None = None
+    calibration_stickhandling_runs: int | None = None
 
     def safe_summary(self) -> dict[str, object]:
         """Return only fields safe for local confirmation and later opt-in sharing."""
@@ -58,6 +64,12 @@ class DiagnosticReport:
             "estimated_distance_m": self.estimated_distance_m,
             "personal_calibration_factor": self.personal_calibration_factor,
             "heart_rate_available": self.heart_rate_available,
+            "surface": self.surface,
+            "protocol": self.protocol,
+            "product_id": self.product_id,
+            "calibration_reference_distance_cm": self.calibration_reference_distance_cm,
+            "calibration_skate_only_runs": self.calibration_skate_only_runs,
+            "calibration_stickhandling_runs": self.calibration_stickhandling_runs,
         }
 
 
@@ -149,6 +161,22 @@ def _finite_nonnegative(value: object) -> float | None:
     return number
 
 
+def _calibration_factor(value: object) -> float:
+    if value is None:
+        raise DiagnosticError("calibration_factor_missing")
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise DiagnosticError("calibration_factor_invalid")
+    try:
+        factor = float(value)
+    except OverflowError:
+        raise DiagnosticError("calibration_factor_invalid") from None
+    if not math.isfinite(factor) or factor < 0:
+        raise DiagnosticError("calibration_factor_invalid")
+    if not 0.50 <= factor <= 1.50:
+        raise DiagnosticError("calibration_factor_out_of_range")
+    return factor
+
+
 def _report_from_pilot(
     pilot: object, original_name: str, original_sha256: str,
     fit_sha256: str, fit_member_name: str | None, assignment: Assignment,
@@ -176,7 +204,18 @@ def _report_from_pilot(
     if not isinstance(manual_shifts, list):
         raise DiagnosticError("parser_error")
     distance = _finite_nonnegative(push_metrics.get("estimated_distance_m"))
-    factor = _finite_nonnegative(pilot.get("personal_calibration_factor"))
+    if assignment.protocol == "calibration":
+        if len(manual_shifts) != 10:
+            raise DiagnosticError("calibration_lap_count")
+        factor = _calibration_factor(pilot.get("personal_calibration_factor"))
+        reference_distance_cm = 2000
+        skate_only_runs = 5
+        stickhandling_runs = 5
+    else:
+        factor = _finite_nonnegative(pilot.get("personal_calibration_factor"))
+        reference_distance_cm = None
+        skate_only_runs = None
+        stickhandling_runs = None
     records = pilot.get("records")
     if not isinstance(records, list):
         raise DiagnosticError("parser_error")
@@ -196,6 +235,11 @@ def _report_from_pilot(
         personal_calibration_factor=factor,
         heart_rate_available=heart_rate_available,
         expected_prg_sha256=assignment.expected_prg_sha256,
+        surface=assignment.surface, protocol=assignment.protocol,
+        product_id=assignment.product_id,
+        calibration_reference_distance_cm=reference_distance_cm,
+        calibration_skate_only_runs=skate_only_runs,
+        calibration_stickhandling_runs=stickhandling_runs,
     )
 
 
