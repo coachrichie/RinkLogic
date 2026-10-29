@@ -135,10 +135,14 @@ class ReadyView extends WatchUi.View {
                 WatchUi.loadResource(Rez.Strings.SportInline) + " " +
                 (mCalibrationStatuses[:inline] ? "✓" : "—"),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        var buttonWidth = width - 18 < 200 ? width - 18 : 200;
+        var buttonHeight = height * 10 / 100 < 40 ? height * 10 / 100 : 40;
+        var buttonY = height * 85 / 100;
         dc.setColor(0x0D6CC1, Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle(centerX - 100, height * 85 / 100, 200, 40);
+        dc.fillRectangle(centerX - buttonWidth / 2, buttonY,
+            buttonWidth, buttonHeight);
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 85 / 100 + 20, Graphics.FONT_SMALL,
+        dc.drawText(centerX, buttonY + buttonHeight / 2, Graphics.FONT_SMALL,
             WatchUi.loadResource(Rez.Strings.ReadyContinue),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
@@ -162,8 +166,15 @@ class ReadyInputDelegate extends WatchUi.InputDelegate {
         var settings = Toybox.System.getDeviceSettings();
         var centerX = settings.screenWidth / 2;
         var startY = settings.screenHeight * 85 / 100;
-        if (coordinates[1] < startY || coordinates[1] > startY + 40) { return false; }
-        if (coordinates[0] >= centerX - 100 && coordinates[0] <= centerX + 100) {
+        var buttonHeight = settings.screenHeight * 10 / 100 < 40 ?
+            settings.screenHeight * 10 / 100 : 40;
+        var buttonWidth = settings.screenWidth - 18 < 200 ?
+            settings.screenWidth - 18 : 200;
+        if (coordinates[1] < startY || coordinates[1] > startY + buttonHeight) {
+            return false;
+        }
+        if (coordinates[0] >= centerX - buttonWidth / 2 &&
+            coordinates[0] <= centerX + buttonWidth / 2) {
             mView.requestContinue();
             return true;
         }

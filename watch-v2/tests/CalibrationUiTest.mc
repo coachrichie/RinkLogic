@@ -204,17 +204,18 @@ function calibrationReviewOffersExplicitActivateAndDiscard(logger as Test.Logger
 
 (:test)
 function calibrationReviewTouchExecutesTouchedOption(logger as Test.Logger) as Lang.Boolean {
+    var screenHeight = Toybox.System.getDeviceSettings().screenHeight;
     var target = new CalibrationTargetFake();
     var candidate = calibrationProfileCandidate(:ice, 1.0);
     var view = new CalibrationSummaryView(target, candidate);
     var delegate = new CalibrationSummaryInputDelegate(view);
-    if (!delegate.onTap(new CalibrationSummaryTapEventFake(265)) ||
+    if (!delegate.onTap(new CalibrationSummaryTapEventFake(screenHeight * 64 / 100)) ||
         target.discardConfirmations != 1 || target.activations != 0) { return false; }
 
     target = new CalibrationTargetFake();
     view = new CalibrationSummaryView(target, candidate);
     delegate = new CalibrationSummaryInputDelegate(view);
-    return delegate.onTap(new CalibrationSummaryTapEventFake(220)) &&
+    return delegate.onTap(new CalibrationSummaryTapEventFake(screenHeight * 52 / 100)) &&
         target.activations == 1 && target.discardConfirmations == 0;
 }
 
@@ -223,7 +224,8 @@ function calibrationReviewTouchOutsideOptionsDoesNothing(logger as Test.Logger) 
     var target = new CalibrationTargetFake();
     var view = new CalibrationSummaryView(target, calibrationProfileCandidate(:ice, 1.0));
     var delegate = new CalibrationSummaryInputDelegate(view);
-    return !delegate.onTap(new CalibrationSummaryTapEventFake(120)) &&
+    return !delegate.onTap(new CalibrationSummaryTapEventFake(
+        Toybox.System.getDeviceSettings().screenHeight * 28 / 100)) &&
         target.activations == 0 && target.discards == 0;
 }
 
