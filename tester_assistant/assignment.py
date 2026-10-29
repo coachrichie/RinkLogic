@@ -1,4 +1,4 @@
-"""Strict immutable contract for a local Beta-6 tester assignment."""
+"""Strict immutable contract for a local Beta-7 tester assignment."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import ipaddress
 import json
 from pathlib import Path
 import re
+import sys
 from typing import Mapping
 from urllib.parse import urlsplit
 
@@ -38,9 +39,89 @@ _SURFACES = frozenset({"ice", "inline"})
 _PROTOCOLS = frozenset({"smoke", "calibration", "controlled-shifts", "normal-training"})
 _TESTER_ID = re.compile(r"T[A-Z0-9]{5}\Z")
 _ASSIGNMENT_ID = re.compile(r"(?P<tester>T[A-Z0-9]{5})-R[0-4]-[0-9]{3}\Z")
-_RELEASE_ID = re.compile(r"RL-B6-[0-9]{8}-[A-F0-9]{7}\Z")
+_RELEASE_ID = re.compile(r"RL-B7-[0-9]{8}-[A-F0-9]{7}\Z")
 _SHA256 = re.compile(r"[0-9a-fA-F]{64}\Z")
 _DNS_LABEL = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\Z")
+_PRODUCT_ID = re.compile(r"[a-z0-9]+\Z")
+_DEVICE_FIELD_NAMES = frozenset(
+    {
+        "id",
+        "ring",
+        "displayClass",
+        "inputClass",
+        "representative",
+        "status",
+        "displayType",
+        "width",
+        "height",
+    }
+)
+_RING1 = frozenset({"Ring1A", "Ring1B", "Ring1C"})
+
+
+def _device_matrix_path() -> Path:
+    """Resolve only the authoritative source or bundled Watch device matrix."""
+    bundled_root = getattr(sys, "_MEIPASS", None)
+    if bundled_root is not None:
+        return Path(bundled_root) / "watch-v2" / "device-matrix.json"
+    return Path(__file__).resolve().parents[1] / "watch-v2" / "device-matrix.json"
+
+
+def load_release_device_ids() -> frozenset[str]:
+    """Return the validated Beta-7 release-enabled Ring-1 product IDs."""
+    try:
+        with _device_matrix_path().open("r", encoding="utf-8") as source:
+            raw = json.load(source)
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise AssignmentError("Watch device matrix is not readable valid JSON") from exc
+
+    if not isinstance(raw, Mapping) or set(raw) != {"schemaVersion", "devices"}:
+        raise AssignmentError("Watch device matrix has an invalid structure")
+    if type(raw["schemaVersion"]) is not int or raw["schemaVersion"] != 1:
+        raise AssignmentError("Watch device matrix schema is unsupported")
+
+    devices = raw["devices"]
+    if not isinstance(devices, list):
+        raise AssignmentError("Watch device matrix devices must be a list")
+
+    all_ids: set[str] = set()
+    release_ids: set[str] = set()
+    for entry in devices:
+        if not isinstance(entry, Mapping) or set(entry) != _DEVICE_FIELD_NAMES:
+            raise AssignmentError("Watch device matrix contains a malformed entry")
+
+        product_id = entry["id"]
+        if not isinstance(product_id, str) or _PRODUCT_ID.fullmatch(product_id) is None:
+            raise AssignmentError("Watch device matrix contains an invalid product ID")
+        if product_id in all_ids:
+            raise AssignmentError("Watch device matrix contains duplicate product IDs")
+        all_ids.add(product_id)
+
+        ring = entry["ring"]
+        status = entry["status"]
+        if ring not in _RING1 | {"Ring2"} or status not in {"release-enabled", "deferred"}:
+            raise AssignmentError("Watch device matrix contains an invalid ring or status")
+        if (ring in _RING1) != (status == "release-enabled"):
+            raise AssignmentError("Watch device matrix ring and release status disagree")
+
+        for name in ("displayClass", "inputClass"):
+            value = entry[name]
+            if not isinstance(value, str) or not value or value != value.strip():
+                raise AssignmentError("Watch device matrix contains invalid display metadata")
+        if type(entry["representative"]) is not bool:
+            raise AssignmentError("Watch device matrix representative flag is invalid")
+        if entry["displayType"] not in {"amoled", "mip"}:
+            raise AssignmentError("Watch device matrix display type is invalid")
+        for name in ("width", "height"):
+            if type(entry[name]) is not int or entry[name] <= 0:
+                raise AssignmentError("Watch device matrix dimensions are invalid")
+
+        if status == "release-enabled":
+            release_ids.add(product_id)
+
+    if len(release_ids) != 50:
+        raise AssignmentError("Watch device matrix must contain exactly 50 Ring-1 devices")
+    return frozenset(release_ids)
 
 
 def _is_valid_upload_host(host: str) -> bool:
@@ -69,7 +150,7 @@ def _is_valid_upload_host(host: str) -> bool:
 
 @dataclass(frozen=True, slots=True)
 class Assignment:
-    """Validated Beta-6 assignment metadata; never contains tester contact data."""
+    """Validated Beta-7 assignment metadata; never contains tester contact data."""
 
     contract_version: int
     tester_id: str
@@ -150,10 +231,10 @@ class Assignment:
             if any(ord(char) < 32 or ord(char) == 127 for char in value):
                 raise AssignmentError(f"Assignment field {name} contains control characters")
 
-        if type(values["contract_version"]) is not int or values["contract_version"] != 1:
+        if type(values["contract_version"]) is not int or values["contract_version"] != 2:
             raise AssignmentError("Unsupported assignment contract version")
-        if type(values["internal_version"]) is not int or values["internal_version"] != 6:
-            raise AssignmentError("Assignment is not for Beta-6 internal version 6")
+        if type(values["internal_version"]) is not int or values["internal_version"] != 7:
+            raise AssignmentError("Assignment is not for Beta-7 internal version 7")
         if type(values["fit_schema"]) is not int or values["fit_schema"] != 12:
             raise AssignmentError("Assignment is not for FIT schema 12")
 
@@ -166,16 +247,17 @@ class Assignment:
             raise AssignmentError("Assignment ID is malformed or belongs to another tester")
 
         expected_identity = {
-            "app_version": "0.2.0-beta.6",
+            "app_version": "0.2.0-beta.7",
             "model_id": "profile_height_v1+local_known_distance_v1",
-            "product_id": "venu2plus",
             "consent_version": "beta6-consent-2026-10-23",
         }
         for name, expected in expected_identity.items():
             if values[name] != expected:
-                raise AssignmentError(f"Assignment {name} is not the supported Beta-6 value")
+                raise AssignmentError(f"Assignment {name} is not the supported Beta-7 value")
         if not _RELEASE_ID.fullmatch(values["release_id"]):  # type: ignore[arg-type]
-            raise AssignmentError("Assignment release ID is malformed or not Beta-6")
+            raise AssignmentError("Assignment release ID is malformed or not Beta-7")
+        if values["product_id"] not in load_release_device_ids():
+            raise AssignmentError("Assignment product_id is not a release-enabled Ring-1 device")
 
         if values["surface"] not in _SURFACES:
             raise AssignmentError("Assignment surface is unsupported")
