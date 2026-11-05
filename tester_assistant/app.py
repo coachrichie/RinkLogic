@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 import webbrowser
 
 from .bundle import BundleResult
+from .assignment import Assignment
 from .controller import BetaTestController, WizardState, WizardStep
 from .diagnostics import DiagnosticReport
 from .questionnaire import QuestionDefinition, load_questions
@@ -26,6 +27,22 @@ _STEP_TITLES = {
     WizardStep.DIAGNOSTICS: "3. Diagnose",
     WizardStep.QUESTIONNAIRE: "4. Fragebogen",
     WizardStep.RETURN: "5. Rückgabe",
+}
+WINDOW_TITLE = "RinkLogic Beta 7 – Testassistent"
+ASSIGNMENT_INTRO = (
+    "Wähle den erhaltenen Beta-7-Testauftrag (JSON). Der Assistent arbeitet lokal "
+    "und fragt keine Garmin-Zugangsdaten ab."
+)
+_BASE_EXPORT_GUIDANCE = (
+    "Garmin Connect Web öffnen → Aktivität wählen → „Export Original“ herunterladen. "
+    "Die unveränderte FIT- oder ZIP-Datei hier auswählen. Keine Zugangsdaten eingeben."
+)
+_SURFACE_LABELS = {"ice": "Eis", "inline": "Inline"}
+_PROTOCOL_LABELS = {
+    "smoke": "Kurztest",
+    "calibration": "Kalibrierung",
+    "controlled-shifts": "Kontrollierte Wechsel",
+    "normal-training": "Normales Training",
 }
 _DIAGNOSTIC_MESSAGES = {
     "unreadable_input": "Die Datei konnte nicht gelesen werden.",
@@ -43,7 +60,11 @@ _DIAGNOSTIC_MESSAGES = {
     "corrupt_zip": "Das ZIP ist beschädigt oder nicht lesbar.",
     "invalid_metric": "Die Messwerte konnten nicht geprüft werden.",
     "parser_error": "Die FIT-Datei konnte nicht ausgewertet werden.",
-    "schema_mismatch": "Das FIT-Schema passt nicht zu Beta 6.",
+    "schema_mismatch": "Das FIT-Schema passt nicht zu Beta 7.",
+    "calibration_lap_count": "Die Kalibrierung benötigt genau zehn gültige Läufe.",
+    "calibration_factor_missing": "Der persönliche Kalibrierungsfaktor fehlt.",
+    "calibration_factor_invalid": "Der persönliche Kalibrierungsfaktor ist ungültig.",
+    "calibration_factor_out_of_range": "Der persönliche Kalibrierungsfaktor liegt außerhalb des unterstützten Bereichs.",
     "missing_session_start": "Der Beginn der Einheit fehlt.",
     "invalid_duration": "Die Dauer der Einheit ist ungültig.",
     "unsupported_extension": "Bitte eine Originaldatei als FIT oder ZIP wählen.",
@@ -69,6 +90,32 @@ def privacy_text() -> str:
 
 def questionnaire_items() -> tuple[tuple[int, QuestionDefinition], ...]:
     return tuple(enumerate(load_questions(), start=1))
+
+
+def assignment_summary(assignment: Assignment | None) -> str:
+    """Return validated assignment context for both assignment and export pages."""
+    if assignment is None:
+        return "Noch kein gültiger Beta-7-Testauftrag geladen."
+    surface = _SURFACE_LABELS[assignment.surface]
+    protocol = _PROTOCOL_LABELS[assignment.protocol]
+    return (
+        f"Beta 7 · Version: {assignment.app_version} · Gerät: {assignment.product_id} · "
+        f"Sportprofil: {surface} ({assignment.surface}) · "
+        f"Protokoll: {protocol} ({assignment.protocol})"
+    )
+
+
+def export_guidance(assignment: Assignment | None) -> str:
+    """Describe manual Original export and, when assigned, the fixed calibration."""
+    if assignment is None or assignment.protocol != "calibration":
+        return _BASE_EXPORT_GUIDANCE
+    surface = _SURFACE_LABELS[assignment.surface]
+    return (
+        f"{_BASE_EXPORT_GUIDANCE}\n\n"
+        f"Kalibrierung für {surface} ({assignment.surface}): Gerade Strecke exakt auf "
+        "20,00 m (2000 cm) messen. Läufe 1–5 ohne Stickhandling, danach Läufe 6–10 "
+        "mit Stickhandling. Tempo je Block: langsam, schnell, normal, langsam, schnell."
+    )
 
 
 def button_state(state: WizardState) -> dict[str, bool]:
@@ -161,13 +208,15 @@ class BetaTestApp:
         self.controller = controller
         self.view_step = WizardStep.ASSIGNMENT
         self.pages: dict[WizardStep, ttk.Frame] = {}
-        self.root.title("RinkLogic Beta 6 – Testassistent")
+        self.root.title(WINDOW_TITLE)
         self.root.geometry("900x740")
         self.root.minsize(620, 500)
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         self.status = tk.StringVar(value=controller.state_snapshot().status_summary)
         self.assignment_text = tk.StringVar(value="Kein Testauftrag ausgewählt.")
+        self.assignment_details = tk.StringVar(value=assignment_summary(None))
+        self.export_guidance_text = tk.StringVar(value=export_guidance(None))
         self.original_text = tk.StringVar(value="Kein Originalexport ausgewählt.")
         self.bundle_text = tk.StringVar(value="Noch kein Rückgabepaket erstellt.")
         self.rating_vars: dict[str, tk.StringVar] = {}
@@ -208,20 +257,25 @@ class BetaTestApp:
 
     def _build_pages(self) -> None:
         page = self._page(WizardStep.ASSIGNMENT)
-        self._label(page, "Wähle den erhaltenen Beta-6-Testauftrag (JSON). Der Assistent arbeitet lokal und fragt keine Garmin-Zugangsdaten ab.", 1)
+        self._label(page, ASSIGNMENT_INTRO, 1)
         select = ttk.Button(page, text="Testauftrag auswählen …", command=self._choose_assignment)
         select.grid(row=2, column=0, sticky="w")
         self._first_focus[WizardStep.ASSIGNMENT] = select
         ttk.Label(page, textvariable=self.assignment_text, wraplength=780).grid(row=3, column=0, sticky="w", pady=10)
-        self._footer(WizardStep.ASSIGNMENT, 4)
+        ttk.Label(page, textvariable=self.assignment_details, wraplength=780, justify="left").grid(
+            row=4, column=0, sticky="ew", pady=(0, 10))
+        self._footer(WizardStep.ASSIGNMENT, 5)
 
         page = self._page(WizardStep.EXPORT)
-        self._label(page, "Garmin Connect Web öffnen → Aktivität wählen → „Export Original“ herunterladen. Die unveränderte FIT- oder ZIP-Datei hier auswählen. Keine Zugangsdaten eingeben.", 1)
+        ttk.Label(page, textvariable=self.assignment_details, wraplength=780, justify="left").grid(
+            row=1, column=0, sticky="ew", pady=(0, 10))
+        ttk.Label(page, textvariable=self.export_guidance_text, wraplength=780, justify="left").grid(
+            row=2, column=0, sticky="ew", pady=(0, 10))
         select = ttk.Button(page, text="Originalexport auswählen …", command=self._choose_original)
-        select.grid(row=2, column=0, sticky="w")
+        select.grid(row=3, column=0, sticky="w")
         self._first_focus[WizardStep.EXPORT] = select
-        ttk.Label(page, textvariable=self.original_text, wraplength=780).grid(row=3, column=0, sticky="w", pady=10)
-        self._footer(WizardStep.EXPORT, 4)
+        ttk.Label(page, textvariable=self.original_text, wraplength=780).grid(row=4, column=0, sticky="w", pady=10)
+        self._footer(WizardStep.EXPORT, 5)
 
         page = self._page(WizardStep.DIAGNOSTICS)
         self._label(page, "Lokale Prüfung des Originalexports. Die Distanz ist eine experimentelle Schätzung; diese Anzeige bewertet weder Genauigkeit noch Gesundheit oder Freigabe.", 1)
@@ -308,6 +362,8 @@ class BetaTestApp:
             f" {diagnostic_message(state.diagnostic_code)}" if state.diagnostic_code else ""))
         selections = selection_texts(state)
         self.assignment_text.set(selections["assignment"])
+        self.assignment_details.set(assignment_summary(state.assignment))
+        self.export_guidance_text.set(export_guidance(state.assignment))
         self.original_text.set(selections["original"])
         for label, value in diagnostic_rows(state.diagnostics):
             self.diagnostic_values[label].set(value)
@@ -454,7 +510,7 @@ def self_check() -> dict[str, object]:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Lokaler RinkLogic Beta-6-Testassistent")
+    parser = argparse.ArgumentParser(description="Lokaler RinkLogic Beta-7-Testassistent")
     parser.add_argument("--self-check", action="store_true", help="Offline-Paketprüfung ohne Fenster")
     args = parser.parse_args(argv)
     if args.self_check:

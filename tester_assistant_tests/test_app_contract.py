@@ -8,22 +8,70 @@ import json
 import unittest
 from unittest.mock import patch
 
+import tester_assistant.app as app_module
 from tester_assistant.app import (
     button_state, diagnostic_message, diagnostic_rows, main, privacy_text,
     questionnaire_items, rating_label, step_title, validated_upload_url,
     selection_texts,
     bind_questionnaire_wheel,
 )
+from tester_assistant.assignment import Assignment, AssignmentError, load_release_device_ids
 from tester_assistant.bundle import BundleResult
 from tester_assistant.controller import BetaTestController, WizardState, WizardStep
 from tester_assistant.diagnostics import DiagnosticReport
 from tester_assistant.questionnaire import QUESTION_IDS, validate_answers
-from tester_assistant_tests.fixtures import beta6_assignment_dict, beta6_original_name, pilot_result
+from tester_assistant_tests.fixtures import (
+    beta6_assignment_dict, beta6_original_name, beta7_assignment_dict, pilot_result,
+)
 from pathlib import Path
 import tempfile
 
 
 class AppContractTests(unittest.TestCase):
+    def test_assignment_and_export_copy_exposes_beta7_context_and_fixed_calibration(self):
+        assignment = Assignment.from_dict(beta7_assignment_dict())
+
+        self.assertTrue(hasattr(app_module, "assignment_summary"))
+        self.assertTrue(hasattr(app_module, "export_guidance"))
+        self.assertEqual(getattr(app_module, "WINDOW_TITLE", None), "RinkLogic Beta 7 – Testassistent")
+        self.assertIn("Beta-7-Testauftrag", getattr(app_module, "ASSIGNMENT_INTRO", ""))
+        self.assertEqual(
+            app_module.assignment_summary(assignment),
+            "Beta 7 · Version: 0.2.0-beta.7 · Gerät: venu2plus · "
+            "Sportprofil: Inline (inline) · Protokoll: Kalibrierung (calibration)",
+        )
+        guidance = app_module.export_guidance(assignment)
+        for text in (
+            "20,00 m (2000 cm)", "Läufe 1–5 ohne Stickhandling",
+            "Läufe 6–10 mit Stickhandling", "langsam, schnell, normal, langsam, schnell",
+        ):
+            self.assertIn(text, guidance)
+        self.assertNotIn("Referenzdatei", guidance)
+        self.assertNotIn("CSV", guidance)
+
+    def test_every_ring1_product_renders_as_validated_plain_text_and_ring2_is_rejected(self):
+        self.assertTrue(hasattr(app_module, "assignment_summary"))
+        release_ids = load_release_device_ids()
+        self.assertEqual(len(release_ids), 50)
+        for product_id in release_ids:
+            raw = beta7_assignment_dict()
+            raw["product_id"] = product_id
+            rendered = app_module.assignment_summary(Assignment.from_dict(raw))
+            with self.subTest(product_id=product_id):
+                self.assertIn(f"Gerät: {product_id}", rendered)
+                self.assertFalse(any(ord(char) < 32 or ord(char) == 127 for char in rendered))
+
+        ring2 = beta7_assignment_dict()
+        ring2["product_id"] = "venux1"
+        with self.assertRaises(AssignmentError):
+            Assignment.from_dict(ring2)
+
+    def test_gui_contract_has_no_manual_calibration_reference_control(self):
+        from tester_assistant.app import BetaTestApp
+
+        self.assertFalse(hasattr(BetaTestApp, "_choose_calibration_reference"))
+        self.assertEqual(set(selection_texts(WizardState())), {"assignment", "original"})
+
     def test_five_german_step_titles_follow_workflow(self):
         self.assertEqual([step_title(step) for step in WizardStep], [
             "1. Testauftrag", "2. Originalexport", "3. Diagnose",

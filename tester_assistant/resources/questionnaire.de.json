@@ -7,7 +7,7 @@
     {"id": "status_readability", "prompt": "Wie gut waren Status, Version und Hinweise auf der Uhr lesbar?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
     {"id": "controls_reliability", "prompt": "Wie zuverlässig funktionierten Tasten und Touch während des Tests?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
     {"id": "manual_shift_flow", "prompt": "Wie verständlich und zuverlässig war das manuelle Markieren von Eis- und Bankphasen?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
-    {"id": "calibration_flow", "prompt": "Wie verständlich war der Kalibrierungsablauf?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
+    {"id": "calibration_flow", "prompt": "Wie verständlich waren die Auswahl des Sportprofils, der Aufbau der gemessenen 20-m-Strecke sowie fünf Läufe ohne und fünf mit Stickhandling?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
     {"id": "distance_explanation", "prompt": "Wie verständlich war die Kennzeichnung der Distanz als experimentelle Schätzung?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
     {"id": "stability", "prompt": "Wie stabil lief die App ohne Absturz, IQ!-Fehler oder Datenverlust?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
     {"id": "export_ease", "prompt": "Wie einfach war der Export der Originaldatei aus Garmin Connect?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},

@@ -48,7 +48,7 @@ _EXPECTED_QUESTIONS = (
     ("status_readability", "Wie gut waren Status, Version und Hinweise auf der Uhr lesbar?"),
     ("controls_reliability", "Wie zuverlässig funktionierten Tasten und Touch während des Tests?"),
     ("manual_shift_flow", "Wie verständlich und zuverlässig war das manuelle Markieren von Eis- und Bankphasen?"),
-    ("calibration_flow", "Wie verständlich war der Kalibrierungsablauf?"),
+    ("calibration_flow", "Wie verständlich waren die Auswahl des Sportprofils, der Aufbau der gemessenen 20-m-Strecke sowie fünf Läufe ohne und fünf mit Stickhandling?"),
     ("distance_explanation", "Wie verständlich war die Kennzeichnung der Distanz als experimentelle Schätzung?"),
     ("stability", "Wie stabil lief die App ohne Absturz, IQ!-Fehler oder Datenverlust?"),
     ("export_ease", "Wie einfach war der Export der Originaldatei aus Garmin Connect?"),
