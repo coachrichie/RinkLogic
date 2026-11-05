@@ -1,4 +1,32 @@
-# ShiftSense Hockey – kurzer Gerätetest
+# RinkLogic – Geräteinstallation und Beta-7-Test
+
+## Beta 7 – geführter Ring-1-Test
+
+1. Nur die signierte Datei `RinkLogic-0.2.0-beta.7.iq` beziehungsweise den für
+   das konkrete Modell erzeugten PRG-Testbuild verwenden; App-ID, SHA-256 und
+   Zielgerät gegen die Release-Notiz prüfen.
+2. App öffnen und `WEITER` wählen. Das Menü muss `TRAINING`, `KALIBRIERUNG` und
+   `EXIT` klar lesbar zeigen. Touch-Modelle und reine Tastenmodelle müssen ohne
+   versteckte Geste bedienbar sein.
+3. Für `KALIBRIERUNG` den Sport `EIS` oder `INLINE` wählen. Eine exakt 20 m
+   lange Strecke verwenden und den Anweisungen für fünf gültige Läufe ohne und
+   fünf mit Stickhandling folgen. Abgelehnte Läufe dürfen den Zähler nicht
+   erhöhen.
+4. Erst nach 10/10 gültigen Läufen aktivieren. Speichern muss nur das gewählte
+   Sportprofil ersetzen; Abbrechen oder ein Speicherfehler darf das bisherige
+   Profil nicht beschädigen.
+5. Anschließend `TRAINING` mit demselben Sport starten, mehrere manuelle Shifts
+   markieren und speichern. Alle Zeitwerte auf Uhr und in benutzerdefinierten
+   Garmin-Connect-Feldern müssen in Minuten erscheinen. Die Aktivität muss als
+   Hockey gespeichert werden, damit Garmin die sportartspezifische
+   Kalorienberechnung verwenden kann. Die native Distanzanzeige ist kein
+   Beta-7-Abnahmekriterium und darf weiterhin `0,00 km` zeigen.
+6. Original-FIT und ausgefülltes Testformular ausschließlich über den privaten
+   vereinbarten Kanal zurückgeben. Keine FIT-Datei, Uhr-Logs oder Kontodaten in
+   GitHub-Issues hochladen. Beta 7 besitzt keinen automatischen Cloud-Upload.
+
+Compile- und Simulatortests ersetzen diese Hardwareabnahme nicht. Der genaue
+Nachweisstatus steht in `docs/testing/BETA7-DEVICE-MATRIX.md`.
 
 ## RinkLogic 0.2.0-beta.4 – morgiger Smoke-Test
 

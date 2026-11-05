@@ -2,6 +2,30 @@
 
 Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entscheidungen, Implementierungsstände, Tests, Messergebnisse, Abweichungen und bekannte Risiken nachvollziehbar fest.
 
+## 2026-10-29 – Beta 7: geführte Multisport-Kalibrierung und Ring 1
+
+- Zielversion `0.2.0-beta.7`; App-ID und langfristiges Garmin-Schlüsselpaar
+  bleiben unverändert. FIT-Schema 12 und die bisherigen Garmin-Connect-Felder
+  werden nicht umgedeutet.
+- Der Startablauf lautet `WEITER` und danach `TRAINING`, `KALIBRIERUNG` oder
+  `EXIT`. Training und Kalibrierung verlangen eine ausdrückliche Auswahl von
+  Eis- oder Inlinehockey.
+- Die Kalibrierung verwendet fest 20 m, fünf gültige Läufe ohne und fünf mit
+  Stickhandling. Eis und Inline besitzen getrennte, transaktional aktivierte
+  Profile; bei fehlendem oder ungültigem Profil greift das Basismodell.
+- Die Ring-1-Matrix enthält 50 releasefähige Geräteprofile. Compile-,
+  Simulator- und Hardwarestatus werden getrennt dokumentiert; eine erfolgreiche
+  Kompilierung ist keine Hardwarefreigabe.
+- Remote-Tester senden Original-FIT und Testformular weiterhin manuell über
+  einen privaten Kanal. Es gibt in Beta 7 keine Cloudarchitektur, kein globales
+  Modell und keinen GPS-Zwang.
+- Am 5. November lagen 50/50 Ring-1-Einzelbuilds sowie 266/266 bestandene
+  Venu-2-Plus-Tests vor. Acht weitere Repräsentanten bestanden ebenfalls die
+  Vollsuite; auf der Forerunner 255S bestand der gezielte Responsive-Test,
+  während ein wiederholter Komplettlauf am Simulatorprozess endete.
+- Paket-Hash und Hardware-/Garmin-Connect-Abnahme werden erst nach Abschluss
+  der verbleibenden Release-Gates ergänzt.
+
 ## 2026-10-23 – Beta 6: persönliche Kalibrierung und Remote-Testvorbereitung
 
 - Zielversion `0.2.0-beta.6`, interne Portalversion `6`, FIT-Schema 12 und
