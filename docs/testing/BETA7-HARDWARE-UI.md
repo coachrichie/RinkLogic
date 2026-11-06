@@ -1,6 +1,6 @@
 # Beta 7 – UI- und Responsive-Abnahme für Ring 1
 
-Stand: 5. November 2026
+Stand: 6. November 2026
 
 Geprüfter Quellstand: Commit `18355e9` auf dem lokalen Beta-7-Strang
 
@@ -10,10 +10,12 @@ Diese Prüfung autorisiert weder Merge noch Upload, Portal-Aktion, Verteilung od
 
 ## Kurzurteil
 
-Die Zustands- und Tastenlogik des geführten Ablaufs ist automatisiert gut abgedeckt. Der aktuelle Stand ist trotzdem **nicht UI-freigabefähig**, weil zwei konkrete P0-Interaktionsfehler und mehrere noch offene Responsive-Nachweise bestehen:
+Die Zustands- und Tastenlogik des geführten Ablaufs ist automatisiert gut abgedeckt. Der aktuelle Stand ist trotzdem **nicht UI-freigabefähig**, weil vier konkrete P0-Interaktionsfehler und mehrere noch offene Responsive-Nachweise bestehen:
 
-1. Die sichtbaren Touch-Aktionshinweise der Review-Seite liegen außerhalb ihrer aktiven Touchzonen.
-2. Nach einem gültigen Kalibrierlauf zeigt die Ergebnisansicht bereits die nächste Laufnummer, aber noch Bedingung und Tempo des soeben beendeten Laufs.
+1. Der Bedienhinweis des Startmenüs liegt in der aktiven Exit-Touchzone.
+2. Titel, Leerraum und Bedienhinweis der Sportauswahl bestätigen ungewollt eine Sportart.
+3. Die sichtbaren Touch-Aktionshinweise der Review-Seite liegen außerhalb ihrer aktiven Touchzonen.
+4. Nach einem gültigen Kalibrierlauf zeigt die Ergebnisansicht bereits die nächste Laufnummer, aber noch Bedingung und Tempo des soeben beendeten Laufs.
 
 Zusätzlich beweist der vorhandene Responsive-Test nur, dass Textanker und Rechtecke innerhalb eines quadratischen Koordinatenraums liegen. Er prüft keine Textbreiten, Font-Höhen, Runddisplay-Sicherheitszonen, deutsche Langtexte oder das 466-px-Ring-1-Ziel.
 
@@ -33,6 +35,17 @@ Verteilung der Ring-1-Ziele:
 - 41 Geräte mit `button-five`, 9 Geräte mit `touch-two-button`
 - 32 AMOLED-, 18 MIP-Geräte
 - quadratische Displaygrößen: 218, 240, 260, 280, 360, 390, 416, 454 und 466 px
+
+## Gesperrter Vorgängerkandidat
+
+Der signierte Export vom 5. November 2026 ist aufgrund der vier P0-Befunde **nicht zu installieren, zu verteilen oder für ein Go/No-Go zu verwenden**:
+
+- Datei: `RinkLogic-0.2.0-beta.7.iq`
+- Größe: 8.579.883 Byte
+- SHA-256: `918F13E499F338B3F3D81EE1D564C445697F39EE99E290BD305E0195F48D6CB8`
+- Exportnachweis: 69/69 Garmin-Paketbinärdateien
+
+Der Hash dient nur als Sperrkennung. Nach jeder Watch-Codeänderung sind Commit, Größe und SHA-256 eines neu signierten Pakets frisch zu ermitteln. Ein Prüfer muss beim alten Hash den Test vor der Installation abbrechen.
 
 ## Ablaufbewertung
 
@@ -135,6 +148,153 @@ Nicht nachgewiesen:
 
 Die grüne Responsive-Prüfung darf daher nicht als visuelle Freigabe der 50 Geräte bezeichnet werden.
 
+## Prüffähige Akzeptanzkriterien für die vier P0-Fixes
+
+Die Kriterien gelten zuerst automatisiert und anschließend auf den unten zugeordneten realen Touch- beziehungsweise Tastenmodellen. Ein einzelner Eingabeimpuls darf höchstens eine Navigation oder Datenaktion auslösen.
+
+### P0-A – Neutralzonen im Startmenü
+
+Bestanden nur wenn:
+
+- ein Touch direkt auf **TRAINING**, **KALIBRIERUNG** oder **EXIT** genau den berührten Eintrag ausführt;
+- Touches oberhalb des ersten Eintrags, zwischen den drei sichtbaren Einträgen, auf dem Bedienhinweis und unterhalb des Hinweises keine Aktion ausführen;
+- die Touchzonen einander nicht überlappen und an jeder Grenze je ein Testpunkt knapp innerhalb und knapp außerhalb existiert;
+- die gleichen Grenztests für 360, 390, 416 und 454 px bestehen;
+- Standardauswahl, unteres Weiterschalten und obere Bestätigung auf Tastenmodellen unverändert funktionieren;
+- Touch oder Tastendruck weder zwei Seitenwechsel noch einen unbeabsichtigten Exit erzeugen.
+
+Erforderliche Regressionstests: alle drei sichtbaren Einträge, jede Neutralzone, jede Zonengrenze sowie fehlende beziehungsweise zu kurze Touchkoordinaten.
+
+### P0-B – Neutralzonen in der Sportauswahl
+
+Bestanden nur wenn:
+
+- ein Touch direkt auf **EIS** genau Eis und direkt auf **INLINE** genau Inline bestätigt;
+- Titel, Fläche oberhalb/unterhalb der Einträge, Abstand zwischen den Einträgen und Bedienhinweis neutral bleiben;
+- die letzte Sportart nur sichtbar vorgewählt wird und nie durch Öffnen der Seite automatisch bestätigt wird;
+- die Touchgrenzen für 360, 390, 416 und 454 px geprüft sind;
+- untere Taste weiterhin zwischen Eis/Inline wechselt und obere Taste ausschließlich die sichtbare Auswahl bestätigt;
+- ungültiger Zweck, ungültige Sportart und ungültige Touchkoordinaten weiterhin keine Aktion auslösen.
+
+### P0-C – Review-Touchflächen auf sichtbaren Aktionen
+
+Bestanden nur wenn:
+
+- ein Touch auf den sichtbaren Hinweis **OBEN: SPEICHERN** beziehungsweise dessen gezeichnete Aktionsfläche ausschließlich Speichern/Aktivieren ausführt;
+- ein Touch auf **UNTEN: VERWERFEN** unmittelbar und ausschließlich verwirft;
+- Faktor, Medianzeilen, Titel, Leerraum und Flächen außerhalb der beiden Aktionen neutral bleiben;
+- beide Aktionszonen vollständig innerhalb des runden sicheren Bereichs liegen, sich nicht überlappen und eine neutrale Trennung besitzen;
+- die Tests die tatsächlich gezeichneten Y-Positionen auf 360, 390, 416 und 454 px antippen, nicht frühere unsichtbare Prozentbereiche;
+- obere Taste weiterhin unmittelbar speichert und untere Taste unmittelbar verwirft;
+- nach Touch oder Tastendruck weder ein zusätzlicher Bestätigungsdialog noch eine zweite Aktion ausgelöst wird.
+
+### P0-D – Konsistente Accepted-Seite
+
+Die Accepted-Seite beschreibt immer den gerade abgeschlossenen gültigen Lauf. Bestanden nur wenn:
+
+- nach Lauf 1 **OHNE STICK · 1/5 · LOCKER · LAUF 1/10** zusammen mit **GÜLTIG · UNTEN: WEITER** erscheint;
+- erst nach der unteren Weiter-Aktion die nächste Vorgabe **OHNE STICK · 2/5 · SCHNELL** erscheint;
+- nach Lauf 5 **OHNE STICK · 5/5 · SCHNELL · LAUF 5/10** angezeigt wird;
+- nach Weiter der Block eindeutig zu **MIT STICK · 1/5 · LOCKER** wechselt;
+- nach Lauf 6 **MIT STICK · 1/5 · LOCKER · LAUF 6/10** angezeigt wird;
+- nach Lauf 10 **MIT STICK · 5/5 · SCHNELL · LAUF 10/10** und die vollständige Abschlussaktion erscheint;
+- ein ungültiger Lauf Laufnummer, Bedingung und Tempo nicht weiterstellt und dieselbe Vorgabe als Wiederholung zeigt;
+- die untere Taste pro Zustand genau eine Start-, Ende-, Weiter- oder Wiederholen-Aktion ausführt;
+- die obere Taste vor Abschluss nur den Abbruchdialog und nach 10/10 nur Review/Speichern öffnet.
+
+## Priorisierte reale Testmodelle
+
+Jeder Tester verwendet genau den für sein Modell erzeugten PRG aus dem **neu signierten Fix-Paket**. Das alte Paket mit Hash `918F…6CB8` ist gesperrt. Die Sportzuordnung stellt sicher, dass Eis und Inline in jeder wesentlichen Gerätegruppe vorkommen.
+
+| Tester | Reales Modell | Eingabe / Display | Sport | Review-Ausgang | Priorität und besonderer Fokus |
+| --- | --- | --- | --- | --- | --- |
+| T01 | `venu2plus` | Touch + 2 Tasten / AMOLED 416 px | Inline | Speichern | Hardware-Baseline; alle vier P0-Fixes und vollständiger End-to-End-Ablauf |
+| T02 | `venu2s` | Touch + 2 Tasten / AMOLED 360 px | Eis | Verwerfen | kleinster Touch-Repräsentant; Touchgrenzen und deutsche Textbreite |
+| T03 | `venu3` | Touch + 2 Tasten / AMOLED 454 px | Inline | Speichern | großes Touchdisplay; Skalierung, Neutralzonen und Randabstände |
+| T04 | `fr255s` | 5 Tasten / MIP 218 px | Eis | Speichern | kleinstes Ring-1-Display; Clipping, obere/untere Taste, lange Fehlertexte |
+| T05 | `fr955` | 5 Tasten / MIP 260 px | Inline | Verwerfen | mittleres MIP; Tastenfluss und Abschlussdialoge |
+| T06 | `fenix7x` | 5 Tasten / MIP 280 px | Eis | Speichern | großes MIP; Lesbarkeit und Tastenentprellung |
+| T07 | `instinct3amoled45mm` | 5 Tasten / AMOLED 390 px | Inline | Speichern | kleines AMOLED mit fünf Tasten; Ready-Auffindbarkeit und Langtexte |
+| T08 | `epix2` | 5 Tasten / AMOLED 416 px | Eis | Verwerfen | mittleres AMOLED mit fünf Tasten; bislang fehlende Klassenabdeckung in der Kurzliste |
+| T09 | `epix2pro51mm` | 5 Tasten / AMOLED 454 px | Inline | Speichern | großes AMOLED mit fünf Tasten; Abschluss- und Review-Seiten |
+| T10 | `fenix9pro51mm` | 5 Tasten / AMOLED 466 px | Eis | Speichern | 466-px-Extremwert; im bisherigen Fake-Responsive-Test nicht enthalten |
+
+T01 bis T04 sind das Mindestgate nach dem Fix. T05 bis T09 schließen die neun tatsächlich vorkommenden Kombinationen aus Display- und Eingabeklasse. T10 ist der verpflichtende 466-px-Randfall, sobald dieses reale Modell verfügbar ist. Ein Simulatorlauf darf einen realen Modelltest nicht als `hardware-verified` ersetzen.
+
+## Eindeutiger Ablauf pro Tester
+
+Jeder Tester protokolliert Modell-ID, Firmware, Sprache, Fix-Commit, PRG-Dateiname, PRG-SHA-256, Datum sowie Ergebnis jedes Schritts. Bei `IQ!`, falschem Hash, abgeschnittenem Pflichttext, falscher Aktion oder Doppelaktion wird sofort gestoppt.
+
+### F00 – Kandidatenidentität
+
+1. Prüfen, dass Commit und SHA-256 dem nach dem P0-Fix neu dokumentierten Kandidaten entsprechen.
+2. Bei SHA-256 `918F13E499F338B3F3D81EE1D564C445697F39EE99E290BD305E0195F48D6CB8` nicht installieren und als **gesperrter Vorgängerkandidat** melden.
+3. Prüfen, dass der PRG ausdrücklich für die eigene Produkt-ID erzeugt wurde.
+
+### F01 – Ready-Seite
+
+1. App auf Deutsch öffnen und READY/BEREIT, HR-Quellenstatus, Eis-/Inline-Status und Weiter-Aktion auf Clipping prüfen.
+2. Tastenmodell: untere Taste darf nichts starten; obere Taste öffnet genau einmal das Startmenü.
+3. Touchmodell: außerhalb der Continue-Fläche tippen – keine Aktion; innerhalb tippen – genau ein Wechsel zum Startmenü.
+
+### F02 – Startmenü und P0-A
+
+1. Tastenmodell: Ausgang **TRAINING**; untere Taste nacheinander Kalibrierung, Exit und Training; obere Taste bestätigt nur die sichtbare Auswahl.
+2. Touchmodell: Training, Kalibrierung und Exit jeweils mittig antippen und nach jeder Aktion zum Menü zurückkehren.
+3. Touchmodell: oberer Leerraum, alle Zwischenräume, Bedienhinweis und unterer Rand – jeder Touch muss neutral bleiben.
+4. An jeder sichtbaren Touchgrenze einmal knapp innen und knapp außen tippen; keine Nachbar- oder Doppelaktion zulassen.
+
+### F03 – Sportauswahl und P0-B
+
+1. Training öffnen; prüfen, dass die zuletzt gewählte Sportart nur vorgewählt ist.
+2. Tastenmodell: unten wechseln, oben bestätigen. Touchmodell: Eis und Inline jeweils direkt antippen.
+3. Touchmodell: Titel, Zwischenraum, Bedienhinweis und Außenflächen antippen; keine Bestätigung darf erfolgen.
+4. Zurück zum Menü, Kalibrierung öffnen und dieselben Prüfungen wiederholen.
+5. Die laut Testertabelle zugewiesene Sportart für den folgenden Ablauf bestätigen.
+
+### F04 – Training
+
+1. Startbestätigung annehmen und prüfen, dass die Aufzeichnung genau einmal beginnt.
+2. Untere Taste: Shift starten, erneut drücken: Shift beenden; mindestens zwei Shifts erfassen.
+3. Touch/Swipe auf der Live-Seite darf die Aufzeichnung weder speichern noch beenden.
+4. Obere Taste speichert genau einmal.
+5. Abschlussseiten auf Trainingsdauer in Minuten, HR-Werte, Shiftzahl, Eis-/Bankzeit und Clipping prüfen; danach zum Startmenü zurückkehren.
+
+### F05 – Kalibrierungs-Intro
+
+1. Kalibrierung und die zugewiesene Sportart wählen.
+2. Sichtbar bestätigen: **20,00 m**, **5 ohne Stick + 5 mit Stick**, richtige Sportart.
+3. Obere Taste einmal testen und den Abbruchdialog mit **Nein** schließen; Kalibrierung muss erhalten bleiben.
+4. Mit der unteren Taste beginnen.
+
+### F06 – Geführte Läufe und P0-D
+
+1. Einmal absichtlich unter zwei Sekunden markieren; die Seite muss denselben Lauf mit verständlicher Wiederholen-Meldung zeigen und darf keinen gültigen Lauf zählen.
+2. Zehn gültige 20-m-Läufe durchführen: je Block locker, schnell, normal, locker, schnell; zuerst fünf ohne, danach fünf mit Stickhandling.
+3. Jeder Lauf: unten Start, unten Ende, Ergebnis lesen, unten Weiter beziehungsweise Wiederholen.
+4. Accepted-Seiten nach Lauf 1, 5, 6 und 10 wörtlich gegen P0-D prüfen und fotografisch oder schriftlich protokollieren.
+5. Vor 10/10 obere Taste testen und den Abbruchdialog mit **Nein** schließen; sie darf nicht speichern.
+6. Nach 10/10 muss die obere Taste ausschließlich Review/Speichern öffnen.
+
+### F07 – Review und P0-C
+
+1. Sport, 10/10, Gesamtfaktor und beide Bedingungsmediane vollständig lesen können.
+2. Touchmodell: Faktor und beide Medianzeilen antippen – keine Aktion.
+3. Touchmodell: sichtbare Speichern-Aktion antippen – nur Speichern; bei T02 stattdessen sichtbare Verwerfen-Aktion antippen – unmittelbar verwerfen.
+4. Tastenmodell: laut Testertabelle obere Taste für Speichern oder untere Taste für Verwerfen verwenden; genau der gewählte Pfad muss ohne weitere Bestätigung folgen.
+5. Keine Aktion darf einen Bestätigungsdialog oder eine zweite Aktivierung durch denselben Tastendruck/Touch erzeugen.
+
+### F08 – Ergebnis und Rückkehr
+
+1. Speicherpfad: eindeutige Erfolgsmeldung, danach Select/Back zum Startmenü; Ready muss nur für die getestete Sportart einen lokalen Kalibrierstatus zeigen.
+2. Verwerfen-Pfad: Rückkehr ohne neuen Faktor; zuvor vorhandene Profile der anderen Sportart bleiben unverändert.
+3. Fehler- und Ergebnistext auf Abschneiden, Rundrandkontakt und Überlagerung prüfen.
+4. Ein kurzes Training mit der geprüften Sportart starten und speichern; keine `IQ!`-Anzeige und keine falsche Sportzuordnung zulassen.
+
+### F09 – Ergebnisprotokoll
+
+Pro Schritt `PASS`, `FAIL` oder `N/A` mit Begründung erfassen. Ein `FAIL` in F00, F02, F03, F06 oder F07 blockiert das Modell und den gesamten Fix-Kandidaten. Ein bestandener Test gilt nur für das tatsächlich geprüfte Modell, nicht automatisch für seine Klasse oder alle 50 Ring-1-Ziele.
+
 ## Priorisierte Restpunkte
 
 ### P0 – vor Task-7-Abschluss
@@ -169,10 +329,12 @@ Die grüne Responsive-Prüfung darf daher nicht als visuelle Freigabe der 50 Ger
 | 20-m-5+5-Protokoll | **automatisiert bestanden** |
 | Ring-1-Matrixvertrag | **automatisiert bestanden** |
 | 50 Ring-1-Buildziele | **lokale PRGs vorhanden; kein Hardwareclaim** |
+| Signiertes Paket `918F…6CB8` | **gesperrt – enthält die vier P0-Befunde** |
+| Neuer Fix-Kandidat | **ausstehend – Commit, Größe und SHA-256 noch nicht festgelegt** |
 | Responsive Koordinatenprüfung | **bestanden, aber methodisch unvollständig** |
 | Touch-Interaktion | **nicht bestanden – P0-Kollisionen vorhanden** |
 | Semantische Laufsynchronität | **nicht bestanden – P0-Widerspruch vorhanden** |
 | Visuelle Simulatorabnahme | **offen** |
 | Physische Hardwareabnahme | **offen** |
 
-Task 7 bleibt damit **in Arbeit**. Task 8, signierter Kandidat und jede Veröffentlichung bleiben bis zur Behebung und erneuten Prüfung blockiert.
+Task 7 bleibt damit **in Arbeit**. Ein neuer signierter Kandidat und jede Verteilung bleiben blockiert, bis die vier P0-Fixes in einem neuen Commit vorliegen, die automatisierten Abnahmekriterien bestehen und das neue Paket eindeutig über Größe und SHA-256 identifiziert ist.
