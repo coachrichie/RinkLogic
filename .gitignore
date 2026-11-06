@@ -25,3 +25,5 @@ build/
 *.spec
 __pycache__/
 *.pyc
+embedded-assignment.json
+RinkLogic-Beta7-Test-Assistant/

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +19,25 @@ ABSOLUTE_PATH_EXEMPTIONS = {
     "scripts/release_audit.py",
     "scripts/tests/test_release_audit.py",
 }
+SYNTHETIC_ABSOLUTE_PATH_FIXTURES = {
+    "tester_assistant_tests/test_bundle.py": (
+        "/home/tester/run.fit",
+        r"C:\Users\Tester\run.fit",
+        r"C:\\Users\\Tester\\run.fit",
+    ),
+    "tester_assistant_tests/test_questionnaire.py": (
+        r"C:\Users\Tester\Documents\original.fit",
+        r"C:\\Users\\Tester\\Documents\\original.fit",
+    ),
+}
+
+
+def _contains_unapproved_absolute_path(line: str, allowed: tuple[str, ...]) -> bool:
+    """Return whether a line contains an absolute path beyond exact fixtures."""
+    remainder = line
+    for token in allowed:
+        remainder = remainder.replace(token, "")
+    return re.search(ABSOLUTE_PATH_PATTERN, remainder) is not None
 
 
 def _run_git(repo_root: Path, *args: str, text: bool = False) -> subprocess.CompletedProcess:
@@ -93,7 +113,17 @@ def _absolute_path_findings(repo_root: Path) -> list[str]:
             raise RuntimeError(f"unable to scan commit {commit}")
         for match in grep_result.stdout.splitlines():
             _, separator, path = match.partition(":")
-            if separator and path and path not in ABSOLUTE_PATH_EXEMPTIONS:
+            if not separator or not path or path in ABSOLUTE_PATH_EXEMPTIONS:
+                continue
+            show_result = _run_git(repo_root, "show", f"{commit}:{path}", text=True)
+            if show_result.returncode != 0:
+                raise RuntimeError(f"unable to inspect {commit}:{path}")
+            allowed = SYNTHETIC_ABSOLUTE_PATH_FIXTURES.get(path, ())
+            has_unapproved_match = any(
+                _contains_unapproved_absolute_path(line, allowed)
+                for line in show_result.stdout.splitlines()
+            )
+            if has_unapproved_match:
                 findings.add(f"absolute-path: {commit}:{path}")
     return sorted(findings)
 

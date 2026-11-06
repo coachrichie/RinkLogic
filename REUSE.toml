@@ -23,6 +23,8 @@ path = [
   "LICENSE",
   "NOTICE",
   "requirements-dev.txt",
+  "requirements-tester-app.txt",
+  "requirements-packaging.txt",
   "REUSE.toml",
 ]
 precedence = "closest"
