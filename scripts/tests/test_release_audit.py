@@ -131,7 +131,9 @@ class ReleaseAuditTests(unittest.TestCase):
             questionnaire = root / "tester_assistant_tests" / "test_questionnaire.py"
             bundle.parent.mkdir(parents=True)
             bundle.write_text(
-                'fixture = "path=/home/tester/run.fit"\n', encoding="utf-8"
+                'fixture = "path=/home/tester/run.fit"\n'
+                'byte_fixture = b"run,note\\n1,/home/tester/run.fit\\n"\n',
+                encoding="utf-8",
             )
             questionnaire.write_text(
                 'fixture = r"C:\\Users\\Tester\\Documents\\original.fit"\n',
@@ -173,6 +175,46 @@ class ReleaseAuditTests(unittest.TestCase):
             )
             run_git(root, "add", "tester_assistant_tests/test_bundle.py")
             run_git(root, "commit", "-m", "mix fixture and leaked path")
+            commit = run_git(root, "rev-parse", "HEAD")
+
+            self.assertIn(
+                f"absolute-path: {commit}:tester_assistant_tests/test_bundle.py",
+                audit_repository(root),
+            )
+
+    def test_allowed_fixture_path_with_suffix_extension_is_reported(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            initialize_repository(root)
+            fixture = root / "tester_assistant_tests" / "test_bundle.py"
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                'posix = "/home/tester/run.fit/private.fit"\n'
+                'windows = r"C:\\Users\\Tester\\run.fit\\private.fit"\n',
+                encoding="utf-8",
+            )
+            run_git(root, "add", "tester_assistant_tests/test_bundle.py")
+            run_git(root, "commit", "-m", "extend synthetic fixture paths")
+            commit = run_git(root, "rev-parse", "HEAD")
+
+            self.assertIn(
+                f"absolute-path: {commit}:tester_assistant_tests/test_bundle.py",
+                audit_repository(root),
+            )
+
+    def test_allowed_fixture_path_with_prefix_extension_is_reported(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            initialize_repository(root)
+            fixture = root / "tester_assistant_tests" / "test_bundle.py"
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                'posix = "/private/home/tester/run.fit"\n'
+                'windows = r"private-C:\\Users\\Tester\\run.fit"\n',
+                encoding="utf-8",
+            )
+            run_git(root, "add", "tester_assistant_tests/test_bundle.py")
+            run_git(root, "commit", "-m", "prefix synthetic fixture paths")
             commit = run_git(root, "rev-parse", "HEAD")
 
             self.assertIn(

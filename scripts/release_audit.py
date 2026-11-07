@@ -30,13 +30,19 @@ SYNTHETIC_ABSOLUTE_PATH_FIXTURES = {
         r"C:\\Users\\Tester\\Documents\\original.fit",
     ),
 }
+PATH_TOKEN_CHARACTER_PATTERN = r"[\w./\\:-]"
 
 
 def _contains_unapproved_absolute_path(line: str, allowed: tuple[str, ...]) -> bool:
     """Return whether a line contains an absolute path beyond exact fixtures."""
     remainder = line
     for token in allowed:
-        remainder = remainder.replace(token, "")
+        exact_fixture = re.compile(
+            rf"(?<!{PATH_TOKEN_CHARACTER_PATTERN})"
+            rf"{re.escape(token)}"
+            rf"(?:(?=\\[nrt][\"'])|(?!{PATH_TOKEN_CHARACTER_PATTERN}))"
+        )
+        remainder = exact_fixture.sub("", remainder)
     return re.search(ABSOLUTE_PATH_PATTERN, remainder) is not None
 
 
