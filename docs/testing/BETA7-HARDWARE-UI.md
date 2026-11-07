@@ -23,11 +23,11 @@ Diese Freigabe ist kein Hardwareclaim und kein Portal-Upload. Die nachfolgenden
 Befundabschnitte beschreiben zur Nachvollziehbarkeit den inzwischen gesperrten
 Vorgängerstand.
 
-Offen bleibt eine Abweichung von der Bedienvorgabe **keine zusätzliche
-Bestätigung nach Tastendruck**: Die Review-Seite ruft beim Verwerfen weiterhin
-`confirmDiscardCalibration()` auf. Der Kandidat darf deshalb zwar für die
-kontrollierte Hardwareprüfung verwendet werden, ist aber noch nicht für die
-abschließende UI-Freigabe oder Portalveröffentlichung freigegeben.
+Der Verwerfen-Pfad öffnet absichtlich genau einen Bestätigungsdialog. Dieser
+Schutz verhindert den versehentlichen Verlust einer vollständigen
+Zehn-Lauf-Kalibrierung; erst **Ja** verwirft den Kandidaten. Speichern bleibt
+eine direkte Aktion. Dieses Verhalten ist automatisiert abgedeckt und kein
+zusätzlicher Build-Blocker.
 
 Der Responsive-Test prüft Textanker und Rechtecke einschließlich des
 466-px-Randfalls. Er ersetzt keine echte Prüfung von Textbreite, Font-Höhe,
@@ -70,8 +70,7 @@ Der Hash dient nur als Sperrkennung. Nach jeder Watch-Codeänderung sind Commit,
 - Exportnachweis: 69/69 Garmin-Paketvarianten
 
 Dieser Kandidat ist ausschließlich für die kontrollierte Remote-Hardwareabnahme
-bestimmt. Reale Geräteergebnisse und die direkte Verwerfen-Aktion ohne zweiten
-Dialog bleiben offen.
+bestimmt. Reale Geräteergebnisse bleiben offen.
 
 ## Ablaufbewertung
 
@@ -209,12 +208,14 @@ Bestanden nur wenn:
 Bestanden nur wenn:
 
 - ein Touch auf den sichtbaren Hinweis **OBEN: SPEICHERN** beziehungsweise dessen gezeichnete Aktionsfläche ausschließlich Speichern/Aktivieren ausführt;
-- ein Touch auf **UNTEN: VERWERFEN** unmittelbar und ausschließlich verwirft;
+- ein Touch auf **UNTEN: VERWERFEN** genau einen Bestätigungsdialog öffnet und
+  erst dessen **Ja** den Kandidaten verwirft;
 - Faktor, Medianzeilen, Titel, Leerraum und Flächen außerhalb der beiden Aktionen neutral bleiben;
 - beide Aktionszonen vollständig innerhalb des runden sicheren Bereichs liegen, sich nicht überlappen und eine neutrale Trennung besitzen;
 - die Tests die tatsächlich gezeichneten Y-Positionen auf 360, 390, 416 und 454 px antippen, nicht frühere unsichtbare Prozentbereiche;
-- obere Taste weiterhin unmittelbar speichert und untere Taste unmittelbar verwirft;
-- nach Touch oder Tastendruck weder ein zusätzlicher Bestätigungsdialog noch eine zweite Aktion ausgelöst wird.
+- obere Taste weiterhin unmittelbar speichert und die untere Taste
+  ausschließlich den einen Verwerfen-Dialog öffnet;
+- ein Eingabeimpuls weder zwei Dialoge noch eine zweite Aktion auslöst.
 
 ### P0-D – Konsistente Accepted-Seite
 
@@ -308,9 +309,13 @@ Jeder Tester protokolliert Modell-ID, Firmware, Sprache, Fix-Commit, PRG-Dateina
 
 1. Sport, 10/10, Gesamtfaktor und beide Bedingungsmediane vollständig lesen können.
 2. Touchmodell: Faktor und beide Medianzeilen antippen – keine Aktion.
-3. Touchmodell: sichtbare Speichern-Aktion antippen – nur Speichern; bei T02 stattdessen sichtbare Verwerfen-Aktion antippen – unmittelbar verwerfen.
-4. Tastenmodell: laut Testertabelle obere Taste für Speichern oder untere Taste für Verwerfen verwenden; genau der gewählte Pfad muss ohne weitere Bestätigung folgen.
-5. Keine Aktion darf einen Bestätigungsdialog oder eine zweite Aktivierung durch denselben Tastendruck/Touch erzeugen.
+3. Touchmodell: sichtbare Speichern-Aktion antippen – nur Speichern; bei T02
+   stattdessen sichtbare Verwerfen-Aktion antippen, den einzelnen Dialog prüfen
+   und mit **Ja** bestätigen.
+4. Tastenmodell: laut Testertabelle obere Taste für Speichern oder untere Taste
+   für den Verwerfen-Dialog verwenden; beim Verwerfen erst **Ja** ausführen.
+5. Keine Aktion darf zwei Dialoge oder eine zweite Aktivierung durch denselben
+   Tastendruck/Touch erzeugen.
 
 ### F08 – Ergebnis und Rückkehr
 
@@ -336,7 +341,8 @@ Pro Schritt `PASS`, `FAIL` oder `N/A` mit Begründung erfassen. Ein `FAIL` in F0
 
 ### P1 – vor Ring-1-Go/No-Go
 
-- [ ] Verwerfen auf Review per Touch und unterer Taste unmittelbar ausführen; keinen zusätzlichen Bestätigungsdialog öffnen.
+- [x] Verwerfen auf Review per Touch und unterer Taste öffnet genau einen
+  Schutzdialog und verwirft erst nach **Ja**.
 - [ ] Auf Tastenmodellen einen eindeutigen Hinweis für **obere Taste: Weiter** auf der Ready-Seite prüfen.
 - [ ] Reine Tastenflüsse auf mindestens einem kleinen MIP- und einem großen AMOLED-Fünf-Tasten-Modell vollständig durchspielen.
 - [x] Korrigierte Touchgrenzen für Startmenü, Sportauswahl und Review auf 360/390/416/454 px automatisiert prüfen.
@@ -366,9 +372,8 @@ Pro Schritt `PASS`, `FAIL` oder `N/A` mit Begründung erfassen. Ein `FAIL` in F0
 | Semantische Laufsynchronität | **über alle zehn Läufe bestanden** |
 | Visuelle Simulatorabnahme | **Venu 2S bestanden; weitere Modelle im Remote-Test** |
 | Physische Hardwareabnahme | **offen** |
-| Direkte Verwerfen-Aktion ohne Zusatzdialog | **offen – aktueller Code öffnet Bestätigung** |
+| Verwerfen mit einem Schutzdialog | **automatisiert bestanden** |
 
 Task 7 bleibt bis zu realen Testergebnissen **in Arbeit**. Der eindeutig
 identifizierte Fix-Kandidat ist zur kontrollierten Remote-Abnahme freigegeben;
-die direkte Verwerfen-Aktion, Portalveröffentlichung und pauschale
-Hardwarefreigabe bleiben offen.
+Portalveröffentlichung und pauschale Hardwarefreigabe bleiben offen.
