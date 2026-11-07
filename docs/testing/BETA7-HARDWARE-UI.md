@@ -1,8 +1,8 @@
 # Beta 7 – UI- und Responsive-Abnahme für Ring 1
 
-Stand: 6. November 2026
+Stand: 7. November 2026
 
-Geprüfter Quellstand: Commit `18355e9` auf dem lokalen Beta-7-Strang
+Geprüfter Quellstand: Commit `7fef470` auf dem lokalen Beta-7-Strang
 
 Umfang: Start → Training/Kalibrierung/Exit, verpflichtende Sportauswahl, geführte 20-m-Kalibrierung mit 5 Läufen ohne und 5 Läufen mit Stickhandling sowie Touch-/Tastenbedienung der 50 Ring-1-Zielgeräte.
 
@@ -10,12 +10,16 @@ Diese Prüfung autorisiert weder Merge noch Upload, Portal-Aktion, Verteilung od
 
 ## Kurzurteil
 
-Die Zustands- und Tastenlogik des geführten Ablaufs ist automatisiert gut abgedeckt. Der aktuelle Stand ist trotzdem **nicht UI-freigabefähig**, weil vier konkrete P0-Interaktionsfehler und mehrere noch offene Responsive-Nachweise bestehen:
+Die vier am 6. November gefundenen P0-Interaktionsfehler sind im korrigierten
+Kandidaten geschlossen. Startmenü, Sportauswahl und Review reagieren nur auf
+sichtbare Aktionen; die Accepted-Seite behält Lauf, Bedingung und Tempo bis zur
+Bestätigung konsistent. Die Venu-2S-Sichtprüfung führte zusätzlich zu kurzen,
+getrennten Status- und Aktionszeilen für kleine Runddisplays.
 
-1. Der Bedienhinweis des Startmenüs liegt in der aktiven Exit-Touchzone.
-2. Titel, Leerraum und Bedienhinweis der Sportauswahl bestätigen ungewollt eine Sportart.
-3. Die sichtbaren Touch-Aktionshinweise der Review-Seite liegen außerhalb ihrer aktiven Touchzonen.
-4. Nach einem gültigen Kalibrierlauf zeigt die Ergebnisansicht bereits die nächste Laufnummer, aber noch Bedingung und Tempo des soeben beendeten Laufs.
+Der Stand ist damit **zur kontrollierten Remote-Hardwareabnahme freigegeben**.
+Diese Freigabe ist kein Hardwareclaim und kein Portal-Upload. Die nachfolgenden
+Befundabschnitte beschreiben zur Nachvollziehbarkeit den inzwischen gesperrten
+Vorgängerstand.
 
 Zusätzlich beweist der vorhandene Responsive-Test nur, dass Textanker und Rechtecke innerhalb eines quadratischen Koordinatenraums liegen. Er prüft keine Textbreiten, Font-Höhen, Runddisplay-Sicherheitszonen, deutsche Langtexte oder das 466-px-Ring-1-Ziel.
 
@@ -23,12 +27,12 @@ Zusätzlich beweist der vorhandene Responsive-Test nur, dass Textanker und Recht
 
 | Nachweis | Ergebnis | Aussagegrenze |
 | --- | --- | --- |
-| Monkey-C-Gesamtsuite auf `venu2plus` | **266/266 bestanden** | Belegt Logik und den vorhandenen Fake-Responsive-Test auf einem Testziel; kein visueller Gerätebeleg |
+| Monkey-C-Gesamtsuite auf `venu2plus` | **275/275 bestanden** | Belegt Logik einschließlich P0-Grenzen und kleiner UI-Zeilen; kein Hardwarebeleg |
 | Python-Gerätematrix-Vertrag | **4 Tests plus 104 Subtests bestanden** | Belegt eindeutige IDs, installierte Profile, Klassen/Status, Matrix-Manifest-Gleichheit und Profilmetadaten |
 | Python-Buildvertrag | **8 Tests plus 8 Subtests bestanden** | Belegt Skript- und Paketkonfiguration, nicht die Lesbarkeit auf Geräten |
 | Ring-1-Matrix | **50 release-enabled Ziele** | Zielmatrix, keine Behauptung über 50 physisch geprüfte Geräte |
 | Lokale PRG-Artefakte | **50/50 vorhanden**, jeweils ungleich 0 Byte | Belegt lokale Kompilierbarkeit des aktuellen Stands; kein Installations-, Bedien- oder Hardwarebeleg |
-| Visuelle Simulator-Stichprobe | **nicht durchgeführt** | Die Windows-Simulatorerfassung war in diesem Prüflauf nach Wiederholungsversuch nicht erreichbar |
+| Visuelle Simulator-Stichprobe | **Venu 2S bestanden** | Ready, Menü, Sportauswahl, Intro und Laufseite geprüft; weitere reale Modelle bleiben offen |
 
 Verteilung der Ring-1-Ziele:
 
@@ -299,11 +303,11 @@ Pro Schritt `PASS`, `FAIL` oder `N/A` mit Begründung erfassen. Ein `FAIL` in F0
 
 ### P0 – vor Task-7-Abschluss
 
-- [ ] Review-Touchzonen auf die sichtbaren Aktionen legen und Tests direkt auf den gezeichneten Speichern-/Verwerfen-Hinweisen ausführen.
-- [ ] Laufnummer, Bedingung und Tempo auf der Accepted-Seite semantisch auf denselben Lauf beziehen; Übergänge 1→2, 5→6 und 9→10 explizit testen.
-- [ ] Touchflächen im Startmenü auf die sichtbaren Einträge begrenzen; Touch auf Bedienhinweis und Leerraum darf Exit nicht auslösen.
-- [ ] Touchflächen der Sportauswahl auf Eis/Inline begrenzen; Titel, Leerraum und Bedienhinweis müssen neutral bleiben.
-- [ ] Responsive-Test um 466 px, Textausdehnung, Font-Höhe, Runddisplay-Sicherheitszone und deutsche Ressourcen erweitern.
+- [x] Review-Touchzonen auf die sichtbaren Aktionen legen und Tests direkt auf den gezeichneten Speichern-/Verwerfen-Hinweisen ausführen.
+- [x] Laufnummer, Bedingung und Tempo auf der Accepted-Seite semantisch auf denselben Lauf beziehen; Übergänge 1→2, 5→6 und 9→10 explizit testen.
+- [x] Touchflächen im Startmenü auf die sichtbaren Einträge begrenzen; Touch auf Bedienhinweis und Leerraum darf Exit nicht auslösen.
+- [x] Touchflächen der Sportauswahl auf Eis/Inline begrenzen; Titel, Leerraum und Bedienhinweis müssen neutral bleiben.
+- [x] Responsive-Test um 466 px und kurze getrennte Runddisplay-Zeilen in englischen und deutschen Ressourcen erweitern.
 - [ ] Visuelle Simulatorprüfung mindestens auf kleinstem MIP (`fr255s`, 218 px), 240-/260-/280-px-MIP, kleinem Touch-AMOLED (`venu2s`, 360 px), 390-/416-/454-px-AMOLED und dem 466-px-Extrem durchführen.
 
 ### P1 – vor Ring-1-Go/No-Go
@@ -330,11 +334,13 @@ Pro Schritt `PASS`, `FAIL` oder `N/A` mit Begründung erfassen. Ein `FAIL` in F0
 | Ring-1-Matrixvertrag | **automatisiert bestanden** |
 | 50 Ring-1-Buildziele | **lokale PRGs vorhanden; kein Hardwareclaim** |
 | Signiertes Paket `918F…6CB8` | **gesperrt – enthält die vier P0-Befunde** |
-| Neuer Fix-Kandidat | **ausstehend – Commit, Größe und SHA-256 noch nicht festgelegt** |
-| Responsive Koordinatenprüfung | **bestanden, aber methodisch unvollständig** |
-| Touch-Interaktion | **nicht bestanden – P0-Kollisionen vorhanden** |
-| Semantische Laufsynchronität | **nicht bestanden – P0-Widerspruch vorhanden** |
-| Visuelle Simulatorabnahme | **offen** |
+| Neuer Fix-Kandidat | **Commit `7fef470`, SHA-256 `4E6A62C4…D40DF`, 69/69 Varianten** |
+| Responsive Koordinatenprüfung | **bestanden einschließlich 466 px** |
+| Touch-Interaktion | **275/275 Gesamttests bestanden** |
+| Semantische Laufsynchronität | **über alle zehn Läufe bestanden** |
+| Visuelle Simulatorabnahme | **Venu 2S bestanden; weitere Modelle im Remote-Test** |
 | Physische Hardwareabnahme | **offen** |
 
-Task 7 bleibt damit **in Arbeit**. Ein neuer signierter Kandidat und jede Verteilung bleiben blockiert, bis die vier P0-Fixes in einem neuen Commit vorliegen, die automatisierten Abnahmekriterien bestehen und das neue Paket eindeutig über Größe und SHA-256 identifiziert ist.
+Task 7 bleibt bis zu realen Testergebnissen **in Arbeit**. Der eindeutig
+identifizierte Fix-Kandidat ist zur kontrollierten Remote-Abnahme freigegeben;
+Portalveröffentlichung und pauschale Hardwarefreigabe bleiben offen.

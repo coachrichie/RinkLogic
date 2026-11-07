@@ -2,6 +2,11 @@
 
 ## Beta 7 – geführter Ring-1-Test
 
+**Freigegebener Remote-Testkandidat vom 7. November 2026:** Commit `7fef470`,
+8.624.741 Byte, SHA-256
+`4E6A62C40B0AE9FB978CB702CF82854A784A9E98CD79FFF662C7DCC7A90D40DF`.
+Das ältere Vorabpaket mit SHA-256 `918F13E4…D6CB8` bleibt gesperrt.
+
 1. Nur die signierte Datei `RinkLogic-0.2.0-beta.7.iq` beziehungsweise den für
    das konkrete Modell erzeugten PRG-Testbuild verwenden; App-ID, SHA-256 und
    Zielgerät gegen die Release-Notiz prüfen.

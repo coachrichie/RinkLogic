@@ -23,8 +23,15 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
   Venu-2-Plus-Tests vor. Acht weitere Repräsentanten bestanden ebenfalls die
   Vollsuite; auf der Forerunner 255S bestand der gezielte Responsive-Test,
   während ein wiederholter Komplettlauf am Simulatorprozess endete.
-- Paket-Hash und Hardware-/Garmin-Connect-Abnahme werden erst nach Abschluss
-  der verbleibenden Release-Gates ergänzt.
+- Der Vorabexport vom 5. November 2026 mit SHA-256 `918F13E4…D6CB8` wurde nach
+  dem UI-Review gesperrt. Der korrigierte signierte Remote-Testkandidat vom
+  7. November aus Commit `7fef470` umfasst 69/69 Garmin-Paketvarianten, ist
+  8.624.741 Byte groß und hat SHA-256
+  `4E6A62C40B0AE9FB978CB702CF82854A784A9E98CD79FFF662C7DCC7A90D40DF`.
+  Die App-ID blieb `4c7d5f9e2b484f0da6913b1c8e7f2a64`; `manifest.sig2` und
+  `dev_key.pub` sind enthalten. 275/275 Venu-2-Plus-Tests und die visuelle
+  Venu-2S-Simulatorprüfung bestanden; Hardware- und Connect-Abnahme bleiben
+  offen.
 
 ## 2026-10-23 – Beta 6: persönliche Kalibrierung und Remote-Testvorbereitung
 
