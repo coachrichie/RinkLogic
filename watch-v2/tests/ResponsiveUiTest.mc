@@ -36,7 +36,7 @@ class ResponsiveDcFake extends Graphics.Dc {
 
 (:test)
 function responsiveLaunchAndCalibrationViewsStayInsideRoundDisplays(logger as Test.Logger) as Lang.Boolean {
-    var sizes = [218, 240, 260, 280, 360, 390, 416, 454];
+    var sizes = [218, 240, 260, 280, 360, 390, 416, 454, 466];
     for (var i = 0; i < sizes.size(); i += 1) {
         var size = sizes[i];
         var views = [];

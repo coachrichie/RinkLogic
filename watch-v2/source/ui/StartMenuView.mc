@@ -22,11 +22,19 @@ class StartMenuView extends WatchUi.View {
         else { mTarget.exitApp(); }
     }
 
-    function selectAt(y, height) as Void {
-        if (y < height * 40 / 100) { mSelection = :training; }
-        else if (y < height * 65 / 100) { mSelection = :calibration; }
-        else { mSelection = :exit; }
+    function selectAt(y, height) as Lang.Boolean {
+        if (height <= 0) { return false; }
+        if (y >= height * 26 / 100 && y <= height * 42 / 100) {
+            mSelection = :training;
+        } else if (y >= height * 43 / 100 && y <= height * 59 / 100) {
+            mSelection = :calibration;
+        } else if (y >= height * 60 / 100 && y <= height * 76 / 100) {
+            mSelection = :exit;
+        } else {
+            return false;
+        }
         confirmSelection();
+        return true;
     }
 
     function onUpdate(dc as Graphics.Dc) as Void {
@@ -63,8 +71,9 @@ class StartMenuInputDelegate extends WatchUi.InputDelegate {
         return false;
     }
     function onTap(event as WatchUi.ClickEvent) as Lang.Boolean {
-        mView.selectAt(event.getCoordinates()[1],
+        var coordinates = event.getCoordinates();
+        if (coordinates == null || coordinates.size() < 2) { return false; }
+        return mView.selectAt(coordinates[1],
             System.getDeviceSettings().screenHeight);
-        return true;
     }
 }

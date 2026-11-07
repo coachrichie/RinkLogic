@@ -11,6 +11,7 @@ class CalibrationRunView extends WatchUi.View {
     private var mRunStartedAt = null;
     private var mPromptCondition;
     private var mPromptPace;
+    private var mPromptWithinConditionIndex;
 
     function initialize(target, controller) {
         View.initialize();
@@ -25,7 +26,7 @@ class CalibrationRunView extends WatchUi.View {
     function prompt() as Lang.Dictionary {
         var progress = mController.progress();
         return {:condition=>mPromptCondition, :pace=>mPromptPace,
-            :withinConditionIndex=>progress[:withinConditionIndex],
+            :withinConditionIndex=>mPromptWithinConditionIndex,
             :repetition=>progress[:acceptedCount] + 1,
             :acceptedCount=>progress[:acceptedCount],
             :durationMinutes=>mLastDurationMinutes,
@@ -129,7 +130,7 @@ class CalibrationRunView extends WatchUi.View {
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.drawText(centerX, height * 27 / 100, Graphics.FONT_LARGE,
-            progress[:withinConditionIndex].toString() + " / 5",
+            mPromptWithinConditionIndex.toString() + " / 5",
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.drawText(centerX, height * 39 / 100, Graphics.FONT_XTINY,
             WatchUi.loadResource(Rez.Strings.CalibrationRun) + " " +
@@ -152,8 +153,10 @@ class CalibrationRunView extends WatchUi.View {
     }
 
     private function refreshPrompt() as Void {
-        mPromptCondition = mController.currentCondition();
-        mPromptPace = mController.currentPace();
+        var progress = mController.progress();
+        mPromptCondition = progress[:condition];
+        mPromptPace = progress[:pace];
+        mPromptWithinConditionIndex = progress[:withinConditionIndex];
     }
 }
 

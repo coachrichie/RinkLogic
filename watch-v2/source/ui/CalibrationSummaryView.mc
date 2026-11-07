@@ -12,11 +12,14 @@ class CalibrationSummaryView extends WatchUi.View {
     function requestSave() as Void { mTarget.activateAndSaveCalibration(); }
     function requestDiscard() as Void { mTarget.confirmDiscardCalibration(); }
     function confirmTouch(y, height) as Lang.Boolean {
-        if (height <= 0 || y < height * 45 / 100 || y > height * 72 / 100) {
+        if (height <= 0) { return false; }
+        if (y >= height * 69 / 100 && y <= height * 79 / 100) {
+            requestSave();
+        } else if (y >= height * 80 / 100 && y <= height * 90 / 100) {
+            requestDiscard();
+        } else {
             return false;
         }
-        if (y < height * 58 / 100) { requestSave(); }
-        else { requestDiscard(); }
         return true;
     }
     function onUpdate(dc as Graphics.Dc) as Void {

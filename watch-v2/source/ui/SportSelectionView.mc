@@ -31,10 +31,17 @@ class SportSelectionView extends WatchUi.View {
         mTarget.confirmSport(mPurpose, mSelection);
     }
 
-    function selectAt(y, height) as Void {
-        if (mPurpose == null) { return; }
-        mSelection = y < height / 2 ? :ice : :inline;
+    function selectAt(y, height) as Lang.Boolean {
+        if (mPurpose == null || height <= 0) { return false; }
+        if (y >= height * 35 / 100 && y <= height * 50 / 100) {
+            mSelection = :ice;
+        } else if (y >= height * 53 / 100 && y <= height * 69 / 100) {
+            mSelection = :inline;
+        } else {
+            return false;
+        }
         confirmSelection();
+        return true;
     }
 
     function onUpdate(dc as Graphics.Dc) as Void {
@@ -75,8 +82,9 @@ class SportSelectionInputDelegate extends WatchUi.InputDelegate {
         return false;
     }
     function onTap(event as WatchUi.ClickEvent) as Lang.Boolean {
-        mView.selectAt(event.getCoordinates()[1],
+        var coordinates = event.getCoordinates();
+        if (coordinates == null || coordinates.size() < 2) { return false; }
+        return mView.selectAt(coordinates[1],
             System.getDeviceSettings().screenHeight);
-        return true;
     }
 }
