@@ -2,7 +2,9 @@
 
 Stand: 7. November 2026
 
-Geprüfter Quellstand: Commit `7fef470` auf dem lokalen Beta-7-Strang
+Geprüfter App-Quellstand: Commit `7fef470` auf dem lokalen Beta-7-Strang
+
+Dokumentationsstand: Commit `da3f2d3`
 
 Umfang: Start → Training/Kalibrierung/Exit, verpflichtende Sportauswahl, geführte 20-m-Kalibrierung mit 5 Läufen ohne und 5 Läufen mit Stickhandling sowie Touch-/Tastenbedienung der 50 Ring-1-Zielgeräte.
 
@@ -21,7 +23,15 @@ Diese Freigabe ist kein Hardwareclaim und kein Portal-Upload. Die nachfolgenden
 Befundabschnitte beschreiben zur Nachvollziehbarkeit den inzwischen gesperrten
 Vorgängerstand.
 
-Zusätzlich beweist der vorhandene Responsive-Test nur, dass Textanker und Rechtecke innerhalb eines quadratischen Koordinatenraums liegen. Er prüft keine Textbreiten, Font-Höhen, Runddisplay-Sicherheitszonen, deutsche Langtexte oder das 466-px-Ring-1-Ziel.
+Offen bleibt eine Abweichung von der Bedienvorgabe **keine zusätzliche
+Bestätigung nach Tastendruck**: Die Review-Seite ruft beim Verwerfen weiterhin
+`confirmDiscardCalibration()` auf. Der Kandidat darf deshalb zwar für die
+kontrollierte Hardwareprüfung verwendet werden, ist aber noch nicht für die
+abschließende UI-Freigabe oder Portalveröffentlichung freigegeben.
+
+Der Responsive-Test prüft Textanker und Rechtecke einschließlich des
+466-px-Randfalls. Er ersetzt keine echte Prüfung von Textbreite, Font-Höhe,
+Runddisplay-Sicherheitszone oder Lesbarkeit auf MIP und AMOLED.
 
 ## Reproduzierter automatisierter Stand
 
@@ -51,6 +61,18 @@ Der signierte Export vom 5. November 2026 ist aufgrund der vier P0-Befunde **nic
 
 Der Hash dient nur als Sperrkennung. Nach jeder Watch-Codeänderung sind Commit, Größe und SHA-256 eines neu signierten Pakets frisch zu ermitteln. Ein Prüfer muss beim alten Hash den Test vor der Installation abbrechen.
 
+## Aktueller Fix-Kandidat
+
+- App-Quellstand: `7fef470`
+- Datei: `RinkLogic-0.2.0-beta.7.iq`
+- Größe: 8.624.741 Byte
+- SHA-256: `4E6A62C40B0AE9FB978CB702CF82854A784A9E98CD79FFF662C7DCC7A90D40DF`
+- Exportnachweis: 69/69 Garmin-Paketvarianten
+
+Dieser Kandidat ist ausschließlich für die kontrollierte Remote-Hardwareabnahme
+bestimmt. Reale Geräteergebnisse und die direkte Verwerfen-Aktion ohne zweiten
+Dialog bleiben offen.
+
 ## Ablaufbewertung
 
 ### 1. Ready → Auswahl
@@ -75,7 +97,7 @@ Automatisiert bestätigt:
 - Obere Taste (`KEY_ENTER`) führt die sichtbare Auswahl aus.
 - Touch wählt alle drei Einträge direkt.
 
-Konkreter P0-Befund:
+Historischer P0-Befund des gesperrten Vorgängers:
 
 - Der Touchbereich für **EXIT** umfasst pauschal die unteren 35 Prozent des Displays. Der Bedienhinweis liegt bei 84 Prozent und damit ebenfalls in der Exit-Zone. Ein Touch auf den Hinweis führt unmittelbar **EXIT** aus. Der Test prüft nur je einen Mittelpunkt und erkennt diese Kollision nicht.
 
@@ -88,7 +110,7 @@ Automatisiert bestätigt:
 - Untere Taste wechselt, obere Taste bestätigt.
 - Ungültige Zwecke und Sportwerte führen keine Aktion aus.
 
-Konkreter P0-Befund:
+Historischer P0-Befund des gesperrten Vorgängers:
 
 - Auf Touchgeräten bestätigt jede Berührung in der oberen Bildschirmhälfte sofort **EIS**, jede Berührung in der unteren Hälfte sofort **INLINE**. Damit lösen auch Touches auf Titel, Leerraum oder Bedienhinweis eine Auswahl aus. Es gibt keine auf die sichtbaren Optionen begrenzten Touchzonen und keine neutrale Fläche.
 
@@ -112,9 +134,9 @@ Automatisiert bestätigt:
 - Nach genau zehn gültigen Läufen öffnet die obere Taste Review/Speichern; vorher führt sie in den abgesicherten Abbruch.
 - Touch im Bereich 55–79 Prozent entspricht der unteren Aktion, ab 80 Prozent der oberen Aktion.
 
-Konkreter P0-Befund:
+Historischer P0-Befund des gesperrten Vorgängers:
 
-- Nach einem akzeptierten Lauf ist `acceptedCount` bereits erhöht. Die Anzeige `withinConditionIndex` wird deshalb aus dem nächsten Lauf berechnet, während Bedingung und Tempo bis zur unteren Weiter-Aktion zwischengespeichert beim beendeten Lauf bleiben. Beispiel nach Lauf 1: Anzeige **2 / 5** zusammen mit dem Tempo von Lauf 1. Nach dem fünften Lauf kann **OHNE STICK 1 / 5** erscheinen, obwohl der nächste Block **MIT STICK 1 / 5** ist. Das ist eine semantisch widersprüchliche Führung und wird von den aktuellen Tests nicht geprüft.
+- Nach einem akzeptierten Lauf war `acceptedCount` bereits erhöht. Die Anzeige `withinConditionIndex` wurde deshalb aus dem nächsten Lauf berechnet, während Bedingung und Tempo bis zur unteren Weiter-Aktion zwischengespeichert beim beendeten Lauf blieben. Beispiel nach Lauf 1: Anzeige **2 / 5** zusammen mit dem Tempo von Lauf 1. Nach dem fünften Lauf konnte **OHNE STICK 1 / 5** erscheinen, obwohl der nächste Block **MIT STICK 1 / 5** war. Das war eine semantisch widersprüchliche Führung und wurde von den damaligen Tests nicht geprüft.
 
 ### 6. Review, Speichern und Rückkehr
 
@@ -125,13 +147,17 @@ Automatisiert bestätigt:
 - Untere Taste öffnet die Bestätigung zum Verwerfen.
 - Nach Ergebnis führt Select/Back zum Startmenü zurück.
 
-Konkreter P0-Befund:
+Historischer P0-Befund des gesperrten Vorgängers:
 
-- Sichtbarer Hinweis **OBEN: SPEICHERN** liegt bei 74 Prozent, **UNTEN: VERWERFEN** bei 84 Prozent. Die Touchlogik akzeptiert jedoch nur 45–72 Prozent und teilt bei 58 Prozent. Dadurch sind beide sichtbaren Hinweise nicht antippbar. Stattdessen aktiviert ein Touch auf die Medianzeile bei 51 Prozent das Speichern und ein Touch auf die Medianzeile bei 60 Prozent das Verwerfen. Die bestehenden Touchtests verwenden genau 52 und 64 Prozent und bestätigen damit die unsichtbaren Zonen statt der sichtbaren Aktionen.
+- Der sichtbare Hinweis **OBEN: SPEICHERN** lag bei 74 Prozent, **UNTEN: VERWERFEN** bei 84 Prozent. Die Touchlogik akzeptierte jedoch nur 45–72 Prozent und teilte bei 58 Prozent. Dadurch waren beide sichtbaren Hinweise nicht antippbar. Stattdessen aktivierte ein Touch auf die Medianzeile bei 51 Prozent das Speichern und ein Touch auf die Medianzeile bei 60 Prozent das Verwerfen. Die damaligen Touchtests verwendeten genau 52 und 64 Prozent und bestätigten damit die unsichtbaren Zonen statt der sichtbaren Aktionen.
 
 ## Bewertung des vorhandenen Responsive-Tests
 
-`ResponsiveUiTest.mc` ruft sechs Ansichten mit Fake-Displays der Größen 218, 240, 260, 280, 360, 390, 416 und 454 px auf. Er speichert ausschließlich die Y-Koordinate jedes `drawText`-Aufrufs sowie die Rechtecke und prüft, ob diese Koordinaten innerhalb des quadratischen Displays liegen.
+`ResponsiveUiTest.mc` ruft sechs Ansichten mit Fake-Displays der Größen 218,
+240, 260, 280, 360, 390, 416, 454 und 466 px auf. Er speichert die Y-Koordinate
+jedes `drawText`-Aufrufs sowie die Rechtecke und prüft, ob diese Koordinaten
+innerhalb des quadratischen Displays liegen. Separate UI-Tests prüfen außerdem
+die Touchgrenzen auf 360, 390, 416 und 454 px.
 
 Damit nachgewiesen:
 
@@ -146,8 +172,6 @@ Nicht nachgewiesen:
 - Überlappungen zwischen benachbarten Textzeilen
 - deutsche Langtexte und Fehlermeldungen
 - Bitmap-Skalierung beziehungsweise absichtliches Clipping des 416×416-Ready-Hintergrunds auf 218–390 px
-- Touchgrenzen auf 360, 390 und 454 px
-- 466×466 px des Ring-1-Geräts `fenix9pro51mm`
 - tatsächliche Lesbarkeit auf MIP und AMOLED
 
 Die grüne Responsive-Prüfung darf daher nicht als visuelle Freigabe der 50 Geräte bezeichnet werden.
@@ -312,12 +336,14 @@ Pro Schritt `PASS`, `FAIL` oder `N/A` mit Begründung erfassen. Ein `FAIL` in F0
 
 ### P1 – vor Ring-1-Go/No-Go
 
+- [ ] Verwerfen auf Review per Touch und unterer Taste unmittelbar ausführen; keinen zusätzlichen Bestätigungsdialog öffnen.
 - [ ] Auf Tastenmodellen einen eindeutigen Hinweis für **obere Taste: Weiter** auf der Ready-Seite prüfen.
 - [ ] Reine Tastenflüsse auf mindestens einem kleinen MIP- und einem großen AMOLED-Fünf-Tasten-Modell vollständig durchspielen.
-- [ ] Touchgrenzen knapp beidseits von 40/65 Prozent im Startmenü, 50 Prozent in der Sportauswahl, 60/80 Prozent im Intro, 55/80 Prozent im Lauf und den korrigierten Review-Grenzen testen.
+- [x] Korrigierte Touchgrenzen für Startmenü, Sportauswahl und Review auf 360/390/416/454 px automatisiert prüfen.
+- [ ] Touchgrenzen von Intro und Lauf auf realer Touch-Hardware prüfen.
 - [ ] Lange deutsche Fehlertexte auf 218/240/260 px auf Abschneiden und Überlagerung prüfen.
 - [ ] Die Repräsentantenliste vereinheitlichen: Die Matrix markiert 11 Geräte als `representative`, der bisherige Ausführungsplan nennt neun.
-- [ ] `StartMenuInputDelegate` und `SportSelectionInputDelegate` gegen fehlende oder zu kurze Touchkoordinaten absichern und testen.
+- [x] `StartMenuInputDelegate` und `SportSelectionInputDelegate` gegen fehlende oder zu kurze Touchkoordinaten absichern und testen.
 
 ### P2 – Beobachtung im Hardwaretest
 
@@ -334,13 +360,15 @@ Pro Schritt `PASS`, `FAIL` oder `N/A` mit Begründung erfassen. Ein `FAIL` in F0
 | Ring-1-Matrixvertrag | **automatisiert bestanden** |
 | 50 Ring-1-Buildziele | **lokale PRGs vorhanden; kein Hardwareclaim** |
 | Signiertes Paket `918F…6CB8` | **gesperrt – enthält die vier P0-Befunde** |
-| Neuer Fix-Kandidat | **Commit `7fef470`, SHA-256 `4E6A62C4…D40DF`, 69/69 Varianten** |
+| Neuer Fix-Kandidat | **Commit `7fef470`, 8.624.741 Byte, SHA-256 `4E6A62C4…D40DF`, 69/69 Varianten** |
 | Responsive Koordinatenprüfung | **bestanden einschließlich 466 px** |
 | Touch-Interaktion | **275/275 Gesamttests bestanden** |
 | Semantische Laufsynchronität | **über alle zehn Läufe bestanden** |
 | Visuelle Simulatorabnahme | **Venu 2S bestanden; weitere Modelle im Remote-Test** |
 | Physische Hardwareabnahme | **offen** |
+| Direkte Verwerfen-Aktion ohne Zusatzdialog | **offen – aktueller Code öffnet Bestätigung** |
 
 Task 7 bleibt bis zu realen Testergebnissen **in Arbeit**. Der eindeutig
 identifizierte Fix-Kandidat ist zur kontrollierten Remote-Abnahme freigegeben;
-Portalveröffentlichung und pauschale Hardwarefreigabe bleiben offen.
+die direkte Verwerfen-Aktion, Portalveröffentlichung und pauschale
+Hardwarefreigabe bleiben offen.
