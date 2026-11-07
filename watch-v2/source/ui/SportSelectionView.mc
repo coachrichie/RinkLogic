@@ -50,9 +50,7 @@ class SportSelectionView extends WatchUi.View {
         dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_BLACK);
         dc.clear();
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        var title = mPurpose == :calibration ?
-            WatchUi.loadResource(Rez.Strings.SelectCalibrationSport) :
-            WatchUi.loadResource(Rez.Strings.SelectTrainingSport);
+        var title = WatchUi.loadResource(Rez.Strings.SelectSport);
         dc.drawText(centerX, height * 22 / 100, Graphics.FONT_SMALL, title,
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         drawSport(dc, centerX, height * 43 / 100, :ice,
@@ -60,8 +58,11 @@ class SportSelectionView extends WatchUi.View {
         drawSport(dc, centerX, height * 61 / 100, :inline,
             WatchUi.loadResource(Rez.Strings.SportInline));
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 82 / 100, Graphics.FONT_XTINY,
-            WatchUi.loadResource(Rez.Strings.MenuHint),
+        dc.drawText(centerX, height * 80 / 100, Graphics.FONT_XTINY,
+            WatchUi.loadResource(Rez.Strings.MenuHintLower),
+            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.drawText(centerX, height * 87 / 100, Graphics.FONT_XTINY,
+            WatchUi.loadResource(Rez.Strings.MenuHintUpper),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 

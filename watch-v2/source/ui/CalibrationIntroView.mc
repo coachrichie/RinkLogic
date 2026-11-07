@@ -35,22 +35,28 @@ class CalibrationIntroView extends WatchUi.View {
             WatchUi.loadResource(Rez.Strings.CalibrationTitle),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 30 / 100, Graphics.FONT_SMALL,
-            WatchUi.loadResource(Rez.Strings.CalibrationCourse),
+        dc.drawText(centerX, height * 27 / 100, Graphics.FONT_SMALL,
+            WatchUi.loadResource(Rez.Strings.CalibrationDistance),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.drawText(centerX, height * 42 / 100, Graphics.FONT_SMALL,
+        dc.drawText(centerX, height * 36 / 100, Graphics.FONT_XTINY,
+            WatchUi.loadResource(Rez.Strings.CalibrationDirection),
+            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.drawText(centerX, height * 46 / 100, Graphics.FONT_SMALL,
             mSport == :inline ? WatchUi.loadResource(Rez.Strings.SportInline) :
                 WatchUi.loadResource(Rez.Strings.SportIce),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.drawText(centerX, height * 55 / 100, Graphics.FONT_XTINY,
-            WatchUi.loadResource(Rez.Strings.CalibrationProtocol),
+        dc.drawText(centerX, height * 56 / 100, Graphics.FONT_XTINY,
+            WatchUi.loadResource(Rez.Strings.CalibrationProtocolWithout),
+            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.drawText(centerX, height * 63 / 100, Graphics.FONT_XTINY,
+            WatchUi.loadResource(Rez.Strings.CalibrationProtocolWith),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(0x20D49A, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 72 / 100, Graphics.FONT_XTINY,
+        dc.drawText(centerX, height * 74 / 100, Graphics.FONT_XTINY,
             WatchUi.loadResource(Rez.Strings.CalibrationIntroStart),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(0x8FA6C1, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 84 / 100, Graphics.FONT_XTINY,
+        dc.drawText(centerX, height * 86 / 100, Graphics.FONT_XTINY,
             WatchUi.loadResource(Rez.Strings.CalibrationUpperCancel),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }

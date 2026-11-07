@@ -74,6 +74,24 @@ function calibrationIntroShowsFixedProtocolAndSelectedSport(logger as Test.Logge
 }
 
 (:test)
+function calibrationIntroUsesShortRoundSafeRows(logger as Test.Logger) as Lang.Boolean {
+    var view = new CalibrationIntroView(new CalibrationTargetFake(), :ice);
+    var dc = new ReadyDcFake();
+    view.onUpdate(dc);
+    var distance = false;
+    var course = false;
+    var without = false;
+    var withStick = false;
+    for (var i = 0; i < dc.texts.size(); i += 1) {
+        if (dc.texts[i].equals("20.00 M")) { distance = true; }
+        if (dc.texts[i].equals("STRAIGHT COURSE")) { course = true; }
+        if (dc.texts[i].equals("5 WITHOUT STICK")) { without = true; }
+        if (dc.texts[i].equals("5 WITH STICK")) { withStick = true; }
+    }
+    return distance && course && without && withStick;
+}
+
+(:test)
 function calibrationIntroLowerStartsAndUpperGuardsCancellation(logger as Test.Logger) as Lang.Boolean {
     var target = new CalibrationTargetFake();
     var view = new CalibrationIntroView(target, :ice);
@@ -120,6 +138,27 @@ function startMenuTouchIgnoresHintAndWhitespace(logger as Test.Logger) as Lang.B
         !view.selectAt(416 * 98 / 100, 416) &&
         target.trainingRequests == 0 && target.menuRequests == 0 &&
         target.exits == 0;
+}
+
+(:test)
+function menuHintsUseTwoShortReadableLines(logger as Test.Logger) as Lang.Boolean {
+    var menuDc = new ReadyDcFake();
+    new StartMenuView(new CalibrationTargetFake()).onUpdate(menuDc);
+    var sportDc = new ReadyDcFake();
+    new SportSelectionView(new CalibrationTargetFake(), :training, :ice).onUpdate(sportDc);
+    var menuLower = false;
+    var menuUpper = false;
+    var sportLower = false;
+    var sportUpper = false;
+    for (var i = 0; i < menuDc.texts.size(); i += 1) {
+        if (menuDc.texts[i].equals("LOWER: CYCLE")) { menuLower = true; }
+        if (menuDc.texts[i].equals("UPPER: SELECT")) { menuUpper = true; }
+    }
+    for (var j = 0; j < sportDc.texts.size(); j += 1) {
+        if (sportDc.texts[j].equals("LOWER: CYCLE")) { sportLower = true; }
+        if (sportDc.texts[j].equals("UPPER: SELECT")) { sportUpper = true; }
+    }
+    return menuLower && menuUpper && sportLower && sportUpper;
 }
 
 (:test)
@@ -292,6 +331,36 @@ function calibrationRunExposesConditionPaceAndMinuteDuration(logger as Test.Logg
         !view.toggleMarker(1000) || !view.toggleMarker(11000)) { return false; }
     return view.prompt()[:durationMinutes] > 0.1666 &&
         view.prompt()[:durationMinutes] < 0.1667;
+}
+
+(:test)
+function calibrationRunUsesSeparateStatusAndActionRows(logger as Test.Logger) as Lang.Boolean {
+    var controller = new CalibrationController();
+    if (!controller.configure(:ice)) { return false; }
+    var view = new CalibrationRunView(new CalibrationTargetFake(), controller);
+    var dc = new ReadyDcFake();
+    view.onUpdate(dc);
+    var ready = false;
+    var lower = false;
+    var upper = false;
+    for (var i = 0; i < dc.texts.size(); i += 1) {
+        if (dc.texts[i].equals("READY")) { ready = true; }
+        if (dc.texts[i].equals("LOWER: START")) { lower = true; }
+        if (dc.texts[i].equals("UPPER: CANCEL")) { upper = true; }
+    }
+    return ready && lower && upper;
+}
+
+(:test)
+function calibrationSummaryUsesShortRoundSafeTitle(logger as Test.Logger) as Lang.Boolean {
+    var view = new CalibrationSummaryView(new CalibrationTargetFake(),
+        calibrationProfileCandidate(:ice, 1.0));
+    var dc = new ReadyDcFake();
+    view.onUpdate(dc);
+    for (var i = 0; i < dc.texts.size(); i += 1) {
+        if (dc.texts[i].equals("REVIEW")) { return true; }
+    }
+    return false;
 }
 
 (:test)

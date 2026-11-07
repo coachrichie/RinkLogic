@@ -49,8 +49,11 @@ class StartMenuView extends WatchUi.View {
         drawItem(dc, centerX, height * 68 / 100, :exit,
             WatchUi.loadResource(Rez.Strings.MenuExit));
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 84 / 100, Graphics.FONT_XTINY,
-            WatchUi.loadResource(Rez.Strings.MenuHint),
+        dc.drawText(centerX, height * 80 / 100, Graphics.FONT_XTINY,
+            WatchUi.loadResource(Rez.Strings.MenuHintLower),
+            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.drawText(centerX, height * 87 / 100, Graphics.FONT_XTINY,
+            WatchUi.loadResource(Rez.Strings.MenuHintUpper),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 
