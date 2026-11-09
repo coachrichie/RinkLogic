@@ -81,6 +81,8 @@ class Beta7SyntheticEndToEndTests(unittest.TestCase):
                 as connect,
             patch("urllib.request.urlopen", side_effect=AssertionError("network call"))
                 as urlopen,
+            patch("webbrowser.open", side_effect=AssertionError("browser call"))
+                as browser,
         ):
             self.assertEqual(controller.load_assignment(assignment_path).step,
                              WizardStep.EXPORT)
@@ -96,6 +98,7 @@ class Beta7SyntheticEndToEndTests(unittest.TestCase):
             self.assertEqual(controller.return_email(), values["return_email"])
             connect.assert_not_called()
             urlopen.assert_not_called()
+            browser.assert_not_called()
 
         return state.bundle.path, original_bytes  # type: ignore[union-attr]
 
@@ -129,8 +132,13 @@ class Beta7SyntheticEndToEndTests(unittest.TestCase):
                 }
                 with zipfile.ZipFile(bundle) as archive:
                     self.assertEqual(set(archive.namelist()), expected)
+                    self.assertEqual(bundle.parent,
+                                     self.root / f"{tester_id}-calibration-return")
                     self.assertEqual(archive.read(f"original/{original_name}"),
                                      original_bytes)
+                    feedback = json.loads(archive.read("feedback.json"))
+                    self.assertEqual(feedback["priority_improvement"],
+                                     "Kalibrierungsstatus deutlicher anzeigen.")
                     self._assert_archive_hashes(archive)
                     reference = archive.read(reference_name)
                     manifest = json.loads(archive.read("manifest.json"))

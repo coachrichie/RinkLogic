@@ -11,8 +11,6 @@ import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from typing import Sequence
-from urllib.parse import urlsplit
-import webbrowser
 
 from .bundle import BundleResult
 from .assignment import Assignment
@@ -129,7 +127,7 @@ def button_state(state: WizardState) -> dict[str, bool]:
             WizardStep.QUESTIONNAIRE: state.answers is not None,
             WizardStep.RETURN: False,
         }[state.step],
-        "open_upload": state.step is WizardStep.RETURN and state.bundle is not None,
+        "open_folder": state.step is WizardStep.RETURN and state.bundle is not None,
     }
 
 
@@ -166,20 +164,16 @@ def diagnostic_rows(report: DiagnosticReport | None) -> tuple[tuple[str, str], .
     )
 
 
-def validated_upload_url(bundle: BundleResult | None, url: str | None) -> str | None:
-    """Recheck the controller-provided URL at the browser boundary."""
-    if (bundle is None or not bundle.path.is_file() or not isinstance(url, str)
-            or any(char.isspace() for char in url)):
+def return_reminder_text(bundle: BundleResult | None, email: str | None) -> str | None:
+    """Return the manual-send instruction only for a published local bundle."""
+    if bundle is None or not bundle.path.is_file() or not isinstance(email, str) or not email:
         return None
-    try:
-        parsed = urlsplit(url)
-        parsed.port
-    except ValueError:
-        return None
-    if (parsed.scheme.lower() != "https" or not parsed.hostname or
-            parsed.username is not None or parsed.password is not None or parsed.fragment):
-        return None
-    return url
+    return (
+        f"Rückgabepaket gespeichert:\n{bundle.path}\n\n"
+        f"SHA-256: {bundle.sha256}\n\n"
+        f"Bitte hänge genau diese ZIP-Datei an eine E-Mail an {email} an und sende sie "
+        "manuell. Der Assistent sendet nichts automatisch."
+    )
 
 
 def bind_questionnaire_wheel(canvas: tk.Canvas, content: ttk.Frame) -> None:
@@ -342,17 +336,15 @@ class BetaTestApp:
         self._footer(WizardStep.QUESTIONNAIRE, 4, next_text="Rückgabepaket erstellen …")
 
         page = self._page(WizardStep.RETURN)
-        self._label(page, "Das Rückgabepaket wurde lokal erstellt. Bitte über den privaten Kanal selbst hochladen. Der Assistent sendet keine Datei und bestätigt keinen Eingang.", 1)
+        self._label(page, "Das Rückgabepaket wurde lokal im gewählten Ordner erstellt. Es enthält den unveränderten Originalexport und den ausgefüllten Fragebogen. Bitte sende die angezeigte ZIP-Datei selbst per E-Mail. Der Assistent sendet nichts automatisch und bestätigt keinen Eingang.", 1)
         ttk.Label(page, textvariable=self.bundle_text, wraplength=780, justify="left").grid(
             row=2, column=0, sticky="ew", pady=(0, 20))
         actions = ttk.Frame(page)
         actions.grid(row=3, column=0, sticky="w")
         folder = ttk.Button(actions, text="Ordner öffnen", command=self._open_folder)
         folder.grid(row=0, column=0, padx=(0, 8))
-        upload = ttk.Button(actions, text="Upload-Seite öffnen", command=self._open_upload)
-        upload.grid(row=0, column=1, padx=(0, 8))
-        ttk.Button(actions, text="Fertig", command=self.root.destroy).grid(row=0, column=2)
-        self.upload_button = upload
+        ttk.Button(actions, text="Fertig", command=self.root.destroy).grid(row=0, column=1)
+        self.folder_button = folder
         self._first_focus[WizardStep.RETURN] = folder
         self._footer(WizardStep.RETURN, 4)
 
@@ -367,14 +359,13 @@ class BetaTestApp:
         self.original_text.set(selections["original"])
         for label, value in diagnostic_rows(state.diagnostics):
             self.diagnostic_values[label].set(value)
-        if state.bundle is not None:
-            bundle = state.bundle
-            self.bundle_text.set(
-                f"Datei: {bundle.path}\nSHA-256: {bundle.sha256}\nInhalt: " +
-                ", ".join(bundle.member_names))
-        else:
+        reminder = return_reminder_text(state.bundle, self.controller.return_email())
+        if reminder is None:
             self.bundle_text.set("Noch kein Rückgabepaket erstellt.")
-        self.upload_button.configure(state="normal" if button_state(state)["open_upload"] else "disabled")
+        else:
+            self.bundle_text.set(reminder)
+        self.folder_button.configure(
+            state="normal" if button_state(state)["open_folder"] else "disabled")
         for step, (_back, next_button) in self._navigation.items():
             if next_button is None:
                 continue
@@ -465,6 +456,9 @@ class BetaTestApp:
             state = self.controller.create_bundle(destination)
             if state.step is WizardStep.RETURN:
                 self.view_step = WizardStep.RETURN
+                reminder = return_reminder_text(state.bundle, self.controller.return_email())
+                if reminder is not None:
+                    messagebox.showinfo("Rückgabe bereit", reminder, parent=self.root)
         self._refresh()
 
     def _open_folder(self) -> None:
@@ -481,18 +475,6 @@ class BetaTestApp:
                 subprocess.Popen(["xdg-open", str(folder)])
         except OSError:
             messagebox.showerror("Ordner öffnen", "Der Ordner konnte nicht geöffnet werden.", parent=self.root)
-
-    def _open_upload(self) -> None:
-        state = self.controller.state_snapshot()
-        url = validated_upload_url(state.bundle, self.controller.upload_url())
-        if url is None:
-            messagebox.showerror("Upload-Seite", "Die Upload-Seite ist nicht verfügbar.", parent=self.root)
-            return
-        if messagebox.askyesno("Upload-Seite öffnen",
-                               "Die private Upload-Seite im Browser öffnen? Das Rückgabepaket wird nicht automatisch gesendet.",
-                               parent=self.root):
-            webbrowser.open(url)
-
 
 def build_app(root: tk.Tk | None = None) -> BetaTestApp:
     return BetaTestApp(root if root is not None else tk.Tk(), BetaTestController())

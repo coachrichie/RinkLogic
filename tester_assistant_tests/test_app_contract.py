@@ -11,7 +11,7 @@ from unittest.mock import patch
 import tester_assistant.app as app_module
 from tester_assistant.app import (
     button_state, diagnostic_message, diagnostic_rows, main, privacy_text,
-    questionnaire_items, rating_label, step_title, validated_upload_url,
+    questionnaire_items, rating_label, return_reminder_text, step_title,
     selection_texts,
     bind_questionnaire_wheel,
 )
@@ -96,16 +96,16 @@ class AppContractTests(unittest.TestCase):
         for word in ("Namen", "E-Mail-Adressen", "Gesundheitsangaben", "Dritte"):
             self.assertIn(word, warning)
 
-    def test_navigation_and_upload_button_state_are_gated_by_controller_state(self):
+    def test_navigation_and_folder_button_state_are_gated_by_controller_state(self):
         initial = WizardState()
         self.assertFalse(button_state(initial)["next"])
-        self.assertFalse(button_state(initial)["open_upload"])
+        self.assertFalse(button_state(initial).get("open_folder"))
         questionnaire = replace(initial, step=WizardStep.QUESTIONNAIRE)
         self.assertTrue(button_state(questionnaire)["back"])
-        self.assertFalse(button_state(questionnaire)["open_upload"])
+        self.assertFalse(button_state(questionnaire).get("open_folder"))
         bundle = BundleResult(Path("bundle.zip"), "a" * 64, 123, ("feedback.json",))
         final = replace(questionnaire, step=WizardStep.RETURN, bundle=bundle)
-        self.assertTrue(button_state(final)["open_upload"])
+        self.assertTrue(button_state(final).get("open_folder"))
         self.assertFalse(button_state(final)["next"])
 
     def test_selection_summary_clears_stale_paths_after_controller_reset(self):
@@ -129,17 +129,22 @@ class AppContractTests(unittest.TestCase):
         self.assertEqual(rows["Persönlicher Faktor"], "Nicht verfügbar")
         self.assertEqual(rows["Herzfrequenz"], "Nicht verfügbar")
 
-    def test_upload_url_is_only_returned_for_existing_bundle_and_https(self):
-        self.assertIsNone(validated_upload_url(None, None))
+    def test_return_reminder_requires_existing_bundle_and_email(self):
+        self.assertIsNone(return_reminder_text(None, None))
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "bundle.zip"
             bundle = BundleResult(path, "a" * 64, 123, ())
-            self.assertIsNone(validated_upload_url(bundle, "https://example.invalid/upload"))
+            self.assertIsNone(return_reminder_text(bundle, "rinklogic@example.invalid"))
             path.write_bytes(b"synthetic bundle")
-            self.assertIsNone(validated_upload_url(bundle, "http://example.invalid/upload"))
-            self.assertIsNone(validated_upload_url(bundle, "https://example.invalid@evil.invalid/upload"))
-            self.assertEqual(validated_upload_url(bundle, "https://example.invalid/upload"),
-                             "https://example.invalid/upload")
+            self.assertIsNone(return_reminder_text(bundle, None))
+            reminder = return_reminder_text(bundle, "rinklogic@example.invalid")
+            self.assertIsNotNone(reminder)
+            self.assertIn(str(path), reminder)
+            self.assertIn("a" * 64, reminder)
+            self.assertIn("rinklogic@example.invalid", reminder)
+            self.assertIn("ZIP-Datei", reminder)
+            self.assertIn("manuell", reminder)
+            self.assertIn("sendet nichts automatisch", reminder)
 
     def test_bundle_action_revalidates_current_questionnaire_text(self):
         from tester_assistant.app import BetaTestApp
@@ -171,10 +176,92 @@ class AppContractTests(unittest.TestCase):
         app._raw_answers = lambda: {"priority_improvement": "edited value"}
         app._refresh = lambda: None
         with patch("tester_assistant.app.filedialog.askdirectory", return_value="destination"), \
-             patch("tester_assistant.app.messagebox.askyesno", return_value=False):
+             patch("tester_assistant.app.messagebox.askyesno", return_value=False), \
+             patch("tester_assistant.app.messagebox.showinfo") as reminder:
             app._next()
         self.assertEqual(controller.checked, {"priority_improvement": "edited value"})
         self.assertFalse(controller.created)
+        reminder.assert_not_called()
+
+    def test_cancelled_destination_creates_nothing_and_shows_no_reminder(self):
+        from tester_assistant.app import BetaTestApp
+
+        class Controller:
+            def __init__(self):
+                self.created = False
+                self.state = replace(WizardState(), step=WizardStep.QUESTIONNAIRE,
+                                     answers=object())
+
+            def state_snapshot(self):
+                return self.state
+
+            def submit_answers(self, _answers):
+                return self.state
+
+            def create_bundle(self, _destination):
+                self.created = True
+                raise AssertionError("bundle created after cancellation")
+
+        controller = Controller()
+        app = object.__new__(BetaTestApp)
+        app.root = object()
+        app.controller = controller
+        app.view_step = WizardStep.QUESTIONNAIRE
+        app._raw_answers = lambda: {"priority_improvement": "edited value"}
+        app._refresh = lambda: None
+        with patch("tester_assistant.app.filedialog.askdirectory", return_value=""), \
+             patch("tester_assistant.app.messagebox.askyesno") as confirm, \
+             patch("tester_assistant.app.messagebox.showinfo") as reminder:
+            app._next()
+        self.assertFalse(controller.created)
+        confirm.assert_not_called()
+        reminder.assert_not_called()
+
+    def test_successful_bundle_shows_one_manual_email_reminder(self):
+        from tester_assistant.app import BetaTestApp
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "return.zip"
+            path.write_bytes(b"synthetic bundle")
+            bundle = BundleResult(path, "b" * 64, path.stat().st_size,
+                                  ("feedback.json", "original/original.fit"))
+
+            class Controller:
+                def __init__(self):
+                    self.state = replace(WizardState(), step=WizardStep.QUESTIONNAIRE,
+                                         answers=object())
+
+                def state_snapshot(self):
+                    return self.state
+
+                def submit_answers(self, _answers):
+                    return self.state
+
+                def create_bundle(self, _destination):
+                    self.state = replace(self.state, step=WizardStep.RETURN,
+                                         bundle=bundle)
+                    return self.state
+
+                def return_email(self):
+                    return "rinklogic@example.invalid"
+
+            app = object.__new__(BetaTestApp)
+            app.root = object()
+            app.controller = Controller()
+            app.view_step = WizardStep.QUESTIONNAIRE
+            app._raw_answers = lambda: {"priority_improvement": "edited value"}
+            app._refresh = lambda: None
+            with patch("tester_assistant.app.filedialog.askdirectory", return_value=directory), \
+                 patch("tester_assistant.app.messagebox.askyesno", return_value=True), \
+                 patch("tester_assistant.app.messagebox.showinfo") as reminder:
+                app._next()
+            self.assertEqual(app.view_step, WizardStep.RETURN)
+            reminder.assert_called_once()
+            title, text = reminder.call_args.args
+            self.assertEqual(title, "Rückgabe bereit")
+            self.assertIn(str(path), text)
+            self.assertIn("rinklogic@example.invalid", text)
+            self.assertIn("b" * 64, text)
 
     def test_rating_controls_produce_validated_integer_answers(self):
         from tester_assistant.app import BetaTestApp
@@ -269,36 +356,11 @@ class AppContractTests(unittest.TestCase):
         control.bindings["<MouseWheel>"](type("Event", (), {"delta": -120})())
         self.assertEqual(canvas.scrolls, [(1, "units")])
 
-    def test_browser_handoff_requires_bundle_file_and_explicit_confirmation(self):
+    def test_return_page_has_no_upload_or_browser_action(self):
         from tester_assistant.app import BetaTestApp
-
-        class Controller:
-            def __init__(self, bundle):
-                self.state = replace(WizardState(), step=WizardStep.RETURN, bundle=bundle)
-
-            def state_snapshot(self):
-                return self.state
-
-            def upload_url(self):
-                return "https://example.invalid/upload"
-
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "bundle.zip"
-            bundle = BundleResult(path, "a" * 64, 123, ())
-            app = object.__new__(BetaTestApp)
-            app.root = object()
-            app.controller = Controller(bundle)
-            with patch("tester_assistant.app.webbrowser.open") as browser, \
-                 patch("tester_assistant.app.messagebox.showerror"):
-                app._open_upload()
-                browser.assert_not_called()
-                path.write_bytes(b"synthetic bundle")
-                with patch("tester_assistant.app.messagebox.askyesno", return_value=False):
-                    app._open_upload()
-                browser.assert_not_called()
-                with patch("tester_assistant.app.messagebox.askyesno", return_value=True):
-                    app._open_upload()
-                browser.assert_called_once_with("https://example.invalid/upload")
+        self.assertFalse(hasattr(BetaTestApp, "_open_upload"))
+        self.assertFalse(hasattr(app_module, "validated_upload_url"))
+        self.assertNotIn("open_upload", button_state(WizardState()))
 
     def test_self_check_cli_does_not_create_tk_or_open_network(self):
         output = StringIO()
