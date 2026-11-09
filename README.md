@@ -12,11 +12,12 @@ kompatibel bleiben.
 
 ## Projektstatus
 
-Die aktuelle V2 ist für die Garmin Venu 2 Plus gebaut, im Simulator
-automatisiert getestet und als private Connect-IQ-Beta auf der Zieluhr geprüft.
-Schichtzählung, Herzfrequenz, Shift-Dauer, Durchschnittspuls pro Shift, alle
-drei Abschlussseiten und die benutzerdefinierten Aktivitätsfelder wurden auf
-Uhr beziehungsweise in Garmin Connect Mobile beobachtet.
+Der kontrollierte Remote-Testkandidat `0.2.0-beta.7` wurde für 69 signierte
+Paketvarianten gebaut. Die Ring-1-Matrix enthält 50 freigegebene Produkt-IDs;
+das bedeutet nicht, dass alle 50 Modelle physisch geprüft wurden. Automatisiert
+bestanden 275/275 Venu-2-Plus-Tests sowie Responsive-Tests für Venu 2S,
+Forerunner 255S, Instinct 3 AMOLED und fēnix 9 Pro 51 mm. Installation und
+Rückgabe erfolgen ausschließlich privat nach der Beta-7-Testanleitung.
 
 Automatische Shift-Vorschläge, Anschubzählung, Kadenz und geschätzte Distanz
 sind experimentell. Sie sind keine Leistungs- oder Gesundheitsdiagnostik und
@@ -54,8 +55,10 @@ Shift-Werte ersetzt werden.
   von der App nicht als H10-verifiziert behauptet
 - Connect IQ SDK 9.2.0
 
-Andere Garmin-Geräte sind nicht freigegeben, solange sie nicht gebaut und auf
-Hardware geprüft wurden.
+Für den kontrollierten Beta-7-Test sind nur die 50 in
+`watch-v2/device-matrix.json` als `release-enabled` markierten Ring-1-IDs
+zulässig. Ring 2 bleibt ausgeschlossen. Die Matrix ist eine Buildfreigabe, kein
+Beleg für einen vollständigen Hardwaretest jedes Modells.
 
 ## Projektstruktur
 
@@ -117,6 +120,8 @@ anonymisiert sein. Details stehen in [`SECURITY.md`](SECURITY.md) und
 - [Projektlandkarte](docs/PROJECT-MAP.md)
 - [Entwicklungsjournal](docs/DEVELOPMENT.md)
 - [Post-Training-Hardwaretest](docs/testing/V2-POST-TRAINING-SUMMARY.md)
+- [Beta-7-Remote-Kalibrierung](docs/testing/BETA7-REMOTE-CALIBRATION.md)
+- [Beta-7-Geräteinstallation](docs/DEVICE-INSTALL-CHECKLIST.md)
 - [FIT-Schema](docs/data/FIT-SCHEMA.md)
 
 ## Lizenzstatus
