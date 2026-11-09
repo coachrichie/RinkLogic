@@ -22,7 +22,7 @@ SYNTHETIC_PRG_SHA256 = "A" * 64
 def _assignment(*, tester_id: str, product_id: str, surface: str,
                 protocol: str = "calibration") -> dict[str, object]:
     return {
-        "contract_version": 2,
+        "contract_version": 3,
         "tester_id": tester_id,
         "assignment_id": f"{tester_id}-R1-001",
         "release_id": "RL-B7-20261107-7FEF470",
@@ -36,7 +36,7 @@ def _assignment(*, tester_id: str, product_id: str, surface: str,
         # Assignments bind the extracted device-specific PRG, not the IQ
         # container hash documented for the coordinator.
         "expected_prg_sha256": SYNTHETIC_PRG_SHA256,
-        "upload_url": "https://example.invalid/private-return",
+        "return_email": "rinklogic@example.invalid",
         "consent_version": "beta6-consent-2026-10-23",
     }
 
@@ -93,7 +93,7 @@ class Beta7SyntheticEndToEndTests(unittest.TestCase):
             state = controller.create_bundle(destination)
             self.assertEqual(state.step, WizardStep.RETURN)
             self.assertIsNotNone(state.bundle)
-            self.assertEqual(controller.upload_url(), values["upload_url"])
+            self.assertEqual(controller.return_email(), values["return_email"])
             connect.assert_not_called()
             urlopen.assert_not_called()
 

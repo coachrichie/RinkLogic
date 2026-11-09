@@ -4,13 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-import ipaddress
 import json
 from pathlib import Path
 import re
 import sys
 from typing import Mapping
-from urllib.parse import urlsplit
 
 
 class AssignmentError(ValueError):
@@ -31,7 +29,7 @@ _FIELD_NAMES = frozenset(
         "surface",
         "protocol",
         "expected_prg_sha256",
-        "upload_url",
+        "return_email",
         "consent_version",
     }
 )
@@ -42,6 +40,7 @@ _ASSIGNMENT_ID = re.compile(r"(?P<tester>T[A-Z0-9]{5})-R[0-4]-[0-9]{3}\Z")
 _RELEASE_ID = re.compile(r"RL-B7-[0-9]{8}-[A-F0-9]{7}\Z")
 _SHA256 = re.compile(r"[0-9a-fA-F]{64}\Z")
 _DNS_LABEL = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\Z")
+_EMAIL_LOCAL = re.compile(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+\Z")
 _PRODUCT_ID = re.compile(r"[a-z0-9]+\Z")
 _DEVICE_FIELD_NAMES = frozenset(
     {
@@ -130,33 +129,32 @@ def load_release_device_ids() -> frozenset[str]:
     return frozenset(release_ids)
 
 
-def _is_valid_upload_host(host: str) -> bool:
-    """Accept valid IP literals and DNS names, rejecting malformed host characters."""
-    if ":" in host:
-        try:
-            return ipaddress.ip_address(host).version == 6
-        except ValueError:
-            return False
-
-    try:
-        return ipaddress.ip_address(host).version == 4
-    except ValueError:
-        pass
-
-    try:
-        ascii_host = host.encode("idna").decode("ascii")
-    except UnicodeError:
+def _is_valid_return_email(value: str) -> bool:
+    """Accept one bounded plain ASCII mailbox, never a header or display name."""
+    if not value.isascii() or len(value) > 254 or value.count("@") != 1:
         return False
-    if ascii_host.endswith("."):
-        ascii_host = ascii_host[:-1]
-    if not ascii_host or len(ascii_host) > 253:
+    local, domain = value.rsplit("@", 1)
+    if (
+        not local
+        or len(local) > 64
+        or _EMAIL_LOCAL.fullmatch(local) is None
+        or local.startswith(".")
+        or local.endswith(".")
+        or ".." in local
+        or not domain
+        or len(domain) > 253
+        or "." not in domain
+        or domain.startswith(".")
+        or domain.endswith(".")
+        or ".." in domain
+    ):
         return False
-    return all(_DNS_LABEL.fullmatch(label) for label in ascii_host.split("."))
+    return all(_DNS_LABEL.fullmatch(label) for label in domain.split("."))
 
 
 @dataclass(frozen=True, slots=True)
 class Assignment:
-    """Validated Beta-7 assignment metadata; never contains tester contact data."""
+    """Validated Beta-7 assignment metadata with one operator return address."""
 
     contract_version: int
     tester_id: str
@@ -170,7 +168,7 @@ class Assignment:
     surface: str
     protocol: str
     expected_prg_sha256: str
-    upload_url: str
+    return_email: str
     consent_version: str
 
     def __post_init__(self) -> None:
@@ -237,7 +235,7 @@ class Assignment:
             if any(ord(char) < 32 or ord(char) == 127 for char in value):
                 raise AssignmentError(f"Assignment field {name} contains control characters")
 
-        if type(values["contract_version"]) is not int or values["contract_version"] != 2:
+        if type(values["contract_version"]) is not int or values["contract_version"] != 3:
             raise AssignmentError("Unsupported assignment contract version")
         if type(values["internal_version"]) is not int or values["internal_version"] != 7:
             raise AssignmentError("Assignment is not for Beta-7 internal version 7")
@@ -272,19 +270,6 @@ class Assignment:
         if not _SHA256.fullmatch(values["expected_prg_sha256"]):  # type: ignore[arg-type]
             raise AssignmentError("Expected PRG SHA-256 is malformed")
 
-        upload_url = values["upload_url"]
-        try:
-            parsed_url = urlsplit(upload_url)  # type: ignore[arg-type]
-            parsed_url.port
-        except ValueError as exc:
-            raise AssignmentError("Upload URL is malformed") from exc
-        if (
-            parsed_url.scheme.lower() != "https"
-            or not parsed_url.hostname
-            or not _is_valid_upload_host(parsed_url.hostname)
-            or any(char.isspace() for char in upload_url)  # type: ignore[union-attr]
-            or parsed_url.username is not None
-            or parsed_url.password is not None
-            or parsed_url.fragment
-        ):
-            raise AssignmentError("Upload URL must be an HTTPS URL with a host")
+        return_email = values["return_email"]
+        if not _is_valid_return_email(return_email):  # type: ignore[arg-type]
+            raise AssignmentError("Return email must be one plain valid mailbox address")

@@ -52,7 +52,7 @@ def pilot_result(
 def beta7_assignment_dict() -> dict[str, object]:
     """Return a complete synthetic Beta-7 assignment without writing private data."""
     return {
-        "contract_version": 2,
+        "contract_version": 3,
         "tester_id": "TDEMO1",
         "assignment_id": "TDEMO1-R1-001",
         "release_id": "RL-B7-20261028-3059786",
@@ -64,7 +64,7 @@ def beta7_assignment_dict() -> dict[str, object]:
         "surface": "inline",
         "protocol": "calibration",
         "expected_prg_sha256": "0" * 64,
-        "upload_url": "https://example.invalid/private-upload",
+        "return_email": "rinklogic@example.invalid",
         "consent_version": "beta6-consent-2026-10-23",
     }
 

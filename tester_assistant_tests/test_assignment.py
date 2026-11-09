@@ -27,7 +27,7 @@ class AssignmentTests(unittest.TestCase):
     def test_loads_a_valid_beta7_assignment_and_exposes_immutable_fields(self):
         assignment = self._valid_assignment()
 
-        self.assertEqual(assignment.contract_version, 2)
+        self.assertEqual(assignment.contract_version, 3)
         self.assertEqual(assignment.tester_id, "TDEMO1")
         self.assertEqual(assignment.assignment_id, "TDEMO1-R1-001")
         self.assertEqual(assignment.release_id, "RL-B7-20261028-3059786")
@@ -39,7 +39,7 @@ class AssignmentTests(unittest.TestCase):
         self.assertEqual(assignment.surface, "inline")
         self.assertEqual(assignment.protocol, "calibration")
         self.assertEqual(assignment.expected_prg_sha256, "0" * 64)
-        self.assertEqual(assignment.upload_url, "https://example.invalid/private-upload")
+        self.assertEqual(assignment.return_email, "rinklogic@example.invalid")
         self.assertEqual(assignment.consent_version, "beta6-consent-2026-10-23")
         with self.assertRaises((AttributeError, TypeError)):
             assignment.tester_id = "TOTHER"
@@ -188,7 +188,7 @@ class AssignmentTests(unittest.TestCase):
 
     def test_rejects_unknown_keys(self):
         raw = beta7_assignment_dict()
-        raw["upload_urll"] = raw["upload_url"]
+        raw["upload_url"] = "https://example.invalid/private-upload"
         with self.assertRaises(AssignmentError):
             Assignment.from_dict(raw)
 
@@ -212,6 +212,7 @@ class AssignmentTests(unittest.TestCase):
             ("app_version", "0.2.0-beta.5"),
             ("internal_version", 5),
             ("fit_schema", 11),
+            ("contract_version", 2),
             ("model_id", "fixed_v1"),
             ("consent_version", "beta6-consent-2026-10-22"),
         ):
@@ -241,20 +242,41 @@ class AssignmentTests(unittest.TestCase):
                 with self.assertRaises(AssignmentError):
                     Assignment.from_dict(raw)
 
-    def test_rejects_non_https_upload_url(self):
+    def test_rejects_malformed_or_ambiguous_return_email(self):
         for value in (
-            "http://example.invalid/upload",
             "",
-            "https:///missing-host",
-            "https://example.invalid:bad/upload",
-            "https://%",
-            "https://exa\\mple.invalid/upload",
+            " rinklogic@example.invalid",
+            "rinklogic@example.invalid ",
+            "RinkLogic <rinklogic@example.invalid>",
+            "one@example.invalid,two@example.invalid",
+            "one@example.invalid;two@example.invalid",
+            "one@@example.invalid",
+            ".rinklogic@example.invalid",
+            "rinklogic.@example.invalid",
+            "rink..logic@example.invalid",
+            "rinklogic@example",
+            "rinklogic@-example.invalid",
+            "rinklogic@example..invalid",
+            "rinklogic@example.invalid\r\nBcc: other@example.invalid",
+            f"{'a' * 65}@example.invalid",
+            f"a@{'b' * 250}.invalid",
         ):
             with self.subTest(value=value):
                 raw = beta7_assignment_dict()
-                raw["upload_url"] = value
+                raw["return_email"] = value
                 with self.assertRaises(AssignmentError):
                     Assignment.from_dict(raw)
+
+    def test_accepts_plain_ascii_return_email_forms(self):
+        for value in (
+            "rinklogic@example.invalid",
+            "beta+rink_1@example-test.invalid",
+            "operator.o'hara@example.invalid",
+        ):
+            with self.subTest(value=value):
+                raw = beta7_assignment_dict()
+                raw["return_email"] = value
+                self.assertEqual(Assignment.from_dict(raw).return_email, value)
 
     def test_rejects_filename_with_nonmatching_assignment_stem(self):
         assignment = self._valid_assignment()

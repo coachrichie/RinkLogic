@@ -47,7 +47,7 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(self.controller.select_original(self.original).step, WizardStep.ASSIGNMENT)
         self.assertEqual(self.controller.submit_answers(self._answers()).step, WizardStep.ASSIGNMENT)
         self.assertEqual(self.controller.create_bundle(self.destination).step, WizardStep.ASSIGNMENT)
-        self.assertIsNone(self.controller.upload_url())
+        self.assertIsNone(self.controller.return_email())
         self.assertEqual(list(self.destination.iterdir()), [])
 
     def test_successful_validation_visits_each_step_and_builds_bundle(self):
@@ -58,7 +58,7 @@ class ControllerTests(unittest.TestCase):
         state = self.controller.create_bundle(self.destination)
         self.assertEqual(state.step, WizardStep.RETURN)
         self.assertEqual(state.bundle.path.read_bytes()[:2], b"PK")
-        self.assertEqual(self.controller.upload_url(), "https://example.invalid/private-upload")
+        self.assertEqual(self.controller.return_email(), "rinklogic@example.invalid")
 
     def test_failed_diagnostic_is_safe_and_blocks_progress(self):
         self.controller.load_assignment(self.assignment_path)
@@ -137,7 +137,7 @@ class ControllerTests(unittest.TestCase):
         self.assertIsNone(state.diagnostics)
         self.assertIsNone(state.answers)
         self.assertIsNone(state.bundle)
-        self.assertIsNone(self.controller.upload_url())
+        self.assertIsNone(self.controller.return_email())
 
     def test_invalid_replacement_path_clears_earlier_bundle_state(self):
         self._reach_questionnaire()
@@ -150,7 +150,7 @@ class ControllerTests(unittest.TestCase):
         self.assertIsNone(state.diagnostics)
         self.assertIsNone(state.answers)
         self.assertIsNone(state.bundle)
-        self.assertIsNone(self.controller.upload_url())
+        self.assertIsNone(self.controller.return_email())
 
     def test_correcting_blocked_input_then_retrying_succeeds(self):
         self.controller.load_assignment(self.assignment_path)

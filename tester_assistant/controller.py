@@ -158,11 +158,11 @@ class BetaTestController:
         self._state = replace(self._state, step=WizardStep.RETURN, bundle=result)
         return self._status("bundle_created")
 
-    def upload_url(self) -> str | None:
-        """Return the validated destination only after a bundle exists; never open it."""
+    def return_email(self) -> str | None:
+        """Return the validated mailbox only after a local bundle exists."""
         if self._state.bundle is None or self._state.assignment is None:
             return None
-        return self._state.assignment.upload_url
+        return self._state.assignment.return_email
 
     def reset(self) -> WizardState:
         """Forget controller state without touching any selected or generated file."""

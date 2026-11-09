@@ -103,7 +103,7 @@ class BundleTests(unittest.TestCase):
         self.assertIn(f"{hashlib.sha256(FIT_BYTES).hexdigest()}  original/{self.original.name}\n", sums)
         all_text = json.dumps([manifest, diagnostic, feedback]) + sums
         self.assertNotIn(str(self.root), all_text)
-        self.assertNotIn(self.assignment.upload_url, all_text)
+        self.assertNotIn(self.assignment.return_email, all_text)
 
     def test_noncalibration_bundle_omits_reference(self):
         values = beta7_assignment_dict()

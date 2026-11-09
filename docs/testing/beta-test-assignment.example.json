@@ -1,5 +1,5 @@
 {
-  "contract_version": 2,
+  "contract_version": 3,
   "tester_id": "TDEMO1",
   "assignment_id": "TDEMO1-R1-001",
   "release_id": "RL-B7-20261028-3059786",
@@ -11,6 +11,6 @@
   "surface": "inline",
   "protocol": "calibration",
   "expected_prg_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-  "upload_url": "https://example.invalid/private-upload",
+  "return_email": "rinklogic@example.invalid",
   "consent_version": "beta6-consent-2026-10-23"
 }
