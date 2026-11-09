@@ -36,14 +36,18 @@ getestet. `watch-v2/device-matrix.json` bleibt die verbindliche Freigabematrix.
    Part-Number gehörende PRG auswählen. Der `.iq`-Container wird nicht direkt
    nach `GARMIN/APPS/` kopiert.
 4. SHA-256 der ausgewählten PRG berechnen und genau diesen Wert in den
-   persönlichen Beta-7-Testauftrag eintragen. PRG, Auftrag und Windows-
-   Testerassistent werden dem Tester über einen privaten Kanal bereitgestellt.
+   persönlichen Beta-7-Testauftrag eintragen. Der Auftrag verwendet
+   Vertragsversion `3` und enthält in `return_email` genau eine geprüfte
+   Rückgabeadresse des Koordinators. PRG, Auftrag und Windows-Testerassistent
+   werden dem Tester über einen privaten Kanal bereitgestellt.
 5. Für Eis und Inline getrennte Aufträge verwenden. Sportprofil, Kalibrierung
    und Rückgabepaket dürfen nicht zwischen den Sportarten vermischt werden.
 
 Der Auftrag enthält nur eine pseudonyme Tester-ID, Geräte-ID, Sport, Protokoll,
-erwarteten PRG-Hash und den privaten Rückgabekanal. Keine Garmin-Zugangsdaten
-und keine Kontakt- oder Gesundheitsdaten werden in App oder Auftrag eingebettet.
+erwarteten PRG-Hash und die Rückgabeadresse des Koordinators. Er enthält keine
+Garmin-Zugangsdaten, Tester-Kontaktdaten oder Gesundheitsdaten. Eine echte
+Rückgabeadresse bleibt ausschließlich im privaten lokalen Auftrag und wird
+weder in den öffentlichen Beispielauftrag noch in das Rückgabe-ZIP übernommen.
 
 ## Installation durch den Tester
 
@@ -124,19 +128,24 @@ experimentelle Schätzung und ist keine Leistungs- oder Gesundheitsdiagnostik.
 
    `<assignment-id>_<JJJJ-MM-TT>_<ice|inline>_<protocol>_original.<fit|zip>`
 4. Den lokalen Windows-Testerassistenten öffnen und nacheinander Auftrag,
-   Originalexport und Rückgabeordner wählen. Der Assistent prüft lokal Schema,
-   Identität, zehn Kalibrierungsabschnitte und Faktor. Er meldet sich nicht bei
-   Garmin an und sendet nichts im Hintergrund.
+   Originalexport und den selbst gewählten lokalen Zielordner wählen. Der
+   Assistent prüft lokal Schema, Identität, zehn Kalibrierungsabschnitte und
+   Faktor. Er meldet sich nicht bei Garmin an und sendet nichts im Hintergrund.
 5. Genau zehn deutsche Feedbackfragen beantworten. Keine Namen,
    E-Mail-Adressen, Gesundheitsangaben oder Informationen über Dritte in den
    Freitext schreiben.
-6. Das erzeugte Rückgabe-ZIP bewusst über den im Auftrag genannten privaten
-   Kanal senden. Die Upload-Seite wird nur nach ausdrücklicher Bestätigung
-   geöffnet; der Assistent lädt nicht automatisch hoch.
+6. Nach erfolgreicher Erstellung zeigt der Assistent einmal als Erinnerung und
+   dauerhaft auf der Abschlussseite den vollständigen ZIP-Pfad, dessen SHA-256
+   und die geprüfte `return_email` aus dem Auftrag. Genau dieses ZIP manuell als
+   E-Mail-Anhang an die angezeigte Adresse senden.
 
 Das Rückgabe-ZIP enthält den Originalexport byte-identisch, sichere
 Diagnoseaggregate, die zehn Antworten und bei Kalibrierung eine lokal erzeugte,
-analysevalidierte 10-Zeilen-Referenz. Es enthält keine Garmin-Anmeldedaten.
+analysevalidierte 10-Zeilen-Referenz. Der Fragebogen liegt darin als
+`feedback.json`; zusätzliche lose FIT- oder Fragebogenkopien werden nicht
+erzeugt. Das ZIP enthält weder Garmin-Anmeldedaten noch die Rückgabeadresse.
+Der Assistent versendet keine E-Mail, öffnet weder Mailprogramm noch Browser,
+lädt nichts hoch und bestätigt keinen Eingang.
 
 ## Sofort stoppen und nichts senden, wenn …
 
@@ -148,8 +157,8 @@ analysevalidierte 10-Zeilen-Referenz. Es enthält keine Garmin-Anmeldedaten.
 - Eis-/Inline-Profil, Strecke, Reihenfolge oder Tempo nicht eingehalten wurden;
 - `IQ!`, Absturz, Speicherfehler oder Datenverlust auftritt;
 - der Assistent die Diagnose nicht mit **bestanden** abschließt;
-- das Rückgabe-ZIP unerwartete Dateien enthält oder ein automatischer Upload
-  angeboten wird.
+- das Rückgabe-ZIP unerwartete Dateien enthält oder der Assistent einen Upload,
+  Browserstart, Mailprogrammstart oder automatischen Versand anbietet.
 
 In diesen Fällen nur Fehlercode, Uhrmodell, Firmware, sichtbaren Schritt und
 den Zeitpunkt pseudonym an den Koordinator melden. FIT- und Logdateien bleiben

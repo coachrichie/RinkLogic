@@ -16,6 +16,8 @@ Diese Checkliste ist für den kontrollierten Remote-Test bestimmt. Sie ist keine
 - [ ] Aus dem `.iq`-Container wurde nur die PRG zur exakten Geräte-Part-Number
       gewählt. Der `.iq`-Container selbst wird nicht nach `GARMIN/APPS/` kopiert.
 - [ ] SHA-256 dieser PRG entspricht `expected_prg_sha256` im persönlichen Auftrag.
+- [ ] Persönlicher Auftrag hat Vertragsversion `3`; `return_email` enthält genau
+      eine vom Koordinator bestätigte Rückgabeadresse und keine Testeradresse.
 - [ ] Auftrag, PRG und Testerassistent wurden privat und ohne Garmin-Zugangsdaten
       bereitgestellt.
 
@@ -49,7 +51,14 @@ Diese Checkliste ist für den kontrollierten Remote-Test bestimmt. Sie ist keine
 - [ ] Datei nur nach Auftragsmuster umbenannt; Inhalt unverändert.
 - [ ] Lokaler Testerassistent meldet Diagnose **bestanden**.
 - [ ] Genau zehn Feedbackfragen beantwortet, ohne Kontakt-/Gesundheitsdaten.
-- [ ] Rückgabe-ZIP lokal erzeugt und bewusst über den privaten Kanal gesendet.
+- [ ] Selbst gewählten lokalen Zielordner kontrolliert; Rückgabe-ZIP liegt am
+      vom Assistenten angezeigten vollständigen Pfad.
+- [ ] Erinnerung zeigt ZIP-Pfad, SHA-256 und die erwartete Rückgabeadresse.
+- [ ] ZIP enthält den byte-identischen Originalexport und `feedback.json`;
+      keine zusätzlichen losen FIT-/Fragebogenkopien erzeugt.
+- [ ] Genau dieses ZIP manuell als E-Mail-Anhang an die angezeigte Adresse gesendet.
+- [ ] Assistent hat weder E-Mail noch Mailprogramm oder Browser gestartet, nichts
+      hochgeladen und keinen Eingang bestätigt.
 - [ ] Kein automatischer Upload, kein Portal-Upload und keine Cloudfunktion genutzt.
 
 Vollständiger Ablauf und Stopbedingungen:

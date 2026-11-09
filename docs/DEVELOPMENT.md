@@ -25,8 +25,15 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
   RinkLogic-Entwicklerfeldern und bleibt experimentell. Eine leere native
   Garmin-Distanz darf nicht als Nullmessung interpretiert werden.
 - Original-FIT/ZIP, lokale Diagnose, zehn Fragen und Rückgabe-ZIP bleiben ein
-  manueller privater Ablauf. Es gibt keine Cloudarchitektur, keinen
-  automatischen Upload und ohne erneute Freigabe keinen Developer-Portal-Upload.
+  manueller privater Ablauf. Der Desktop-Auftrag verwendet Contract `3` und
+  ersetzt die frühere Upload-URL durch eine streng geprüfte `return_email` des
+  Koordinators. Der Tester wählt den lokalen Zielordner; das atomare ZIP enthält
+  den byte-identischen Originalexport und `feedback.json`. Nach Erstellung zeigt
+  die App Pfad, SHA-256 und Rückgabeadresse mit der Bitte um manuellen Versand
+  als E-Mail-Anhang. Die Adresse wird nicht in das ZIP geschrieben.
+- Der Assistent sendet keine E-Mail, öffnet weder Mailprogramm noch Browser,
+  lädt nichts hoch und bestätigt keinen Eingang. Es gibt keine Cloudarchitektur
+  und ohne erneute Freigabe keinen Developer-Portal-Upload.
 - Operative Anleitung: [Beta-7-Remote-Kalibrierung](testing/BETA7-REMOTE-CALIBRATION.md)
   und [Geräte-Installationscheckliste](DEVICE-INSTALL-CHECKLIST.md).
 - Desktop-Verifikation am 09.11.2026: Quell- und paketierter Offline-Selbsttest
@@ -35,7 +42,9 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
   Fragebogen-Scrollen bei Windows-Skalierung 100 %/150 % wurde in dieser
   nicht-interaktiven Prüfumgebung nicht beobachtet und bleibt ein manueller
   Gate vor der Ausgabe des Windows-Assistenten. Es wurden weder echte FIT-Daten
-  verwendet noch eine Rückgabe- oder Upload-Seite geöffnet.
+  verwendet noch ein echter Rückgabeversand ausgelöst. Der Abschlussdialog der
+  Contract-3-Mailerinnerung wurde nicht interaktiv bei beiden Skalierungen
+  beobachtet.
 
 ## 2026-10-23 – Beta 6: persönliche Kalibrierung und Remote-Testvorbereitung
 

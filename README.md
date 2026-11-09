@@ -19,6 +19,14 @@ bestanden 275/275 Venu-2-Plus-Tests sowie Responsive-Tests für Venu 2S,
 Forerunner 255S, Instinct 3 AMOLED und fēnix 9 Pro 51 mm. Installation und
 Rückgabe erfolgen ausschließlich privat nach der Beta-7-Testanleitung.
 
+Der lokale Windows-Testassistent prüft den Garmin-Originalexport, führt durch
+genau zehn Feedbackfragen und erstellt im vom Tester gewählten Ordner ein
+atomisches Rückgabe-ZIP. Dieses enthält den byte-identischen Originalexport und
+`feedback.json`. Erst danach zeigt die App ZIP-Pfad, SHA-256 und die im privaten
+Contract-3-Auftrag konfigurierte Rückgabeadresse mit der Bitte, das ZIP manuell
+als E-Mail-Anhang zu senden. Sie versendet keine E-Mail, öffnet weder Mailprogramm
+noch Browser, lädt nichts hoch und bestätigt keinen Eingang.
+
 Automatische Shift-Vorschläge, Anschubzählung, Kadenz und geschätzte Distanz
 sind experimentell. Sie sind keine Leistungs- oder Gesundheitsdiagnostik und
 dürfen bei fehlender Messgrundlage nicht als `0` interpretiert werden.
