@@ -8,7 +8,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from tester_assistant.app import diagnostic_message
 from tester_assistant.controller import BetaTestController, WizardStep
+from tester_assistant.diagnostics import DiagnosticError
 from tester_assistant.questionnaire import QUESTION_IDS
 from tester_assistant_tests.fixtures import (
     beta6_assignment_dict, beta6_original_name, pilot_result,
@@ -83,6 +85,33 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(state.diagnostic_code, "diagnostic_error")
         self.assertNotIn("secret", repr(state))
         self.assertNotIn("C:/private/activity.fit", repr(state))
+
+    def test_calibration_diagnostic_codes_reach_specific_german_guidance(self):
+        expected_words = {
+            "calibration_lap_count": "zehn",
+            "calibration_factor_missing": "fehlt",
+            "calibration_factor_invalid": "ungültig",
+            "calibration_factor_out_of_range": "außerhalb",
+        }
+        self.controller.load_assignment(self.assignment_path)
+        for code, expected_word in expected_words.items():
+            with self.subTest(code=code), patch(
+                "tester_assistant.controller.inspect_original",
+                side_effect=DiagnosticError(code),
+            ):
+                state = self.controller.select_original(self.original)
+                self.assertEqual(state.diagnostic_code, code)
+                self.assertIn(expected_word, diagnostic_message(state.diagnostic_code))
+
+    def test_unknown_diagnostic_error_code_is_redacted(self):
+        self.controller.load_assignment(self.assignment_path)
+        with patch(
+            "tester_assistant.controller.inspect_original",
+            side_effect=DiagnosticError("future_private_detail"),
+        ):
+            state = self.controller.select_original(self.original)
+        self.assertEqual(state.diagnostic_code, "diagnostic_error")
+        self.assertNotIn("future_private_detail", repr(state))
 
     def test_calibration_reference_is_generated_only_for_calibration(self):
         self._reach_questionnaire()

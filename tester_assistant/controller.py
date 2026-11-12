@@ -27,6 +27,8 @@ _DIAGNOSTIC_CODES = frozenset({
     "zip_no_fit", "zip_multiple_fit", "zip_unexpected_member", "fit_too_large",
     "empty_fit", "unsupported_zip_compression", "corrupt_zip", "invalid_metric",
     "parser_error", "schema_mismatch", "missing_session_start", "invalid_duration",
+    "calibration_lap_count", "calibration_factor_missing",
+    "calibration_factor_invalid", "calibration_factor_out_of_range",
     "unsupported_extension", "original_name_mismatch",
 })
 

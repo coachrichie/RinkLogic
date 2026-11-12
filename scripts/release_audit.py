@@ -21,29 +21,29 @@ ABSOLUTE_PATH_EXEMPTIONS = {
 }
 SYNTHETIC_ABSOLUTE_PATH_FIXTURES = {
     "tester_assistant_tests/test_bundle.py": (
-        "/home/tester/run.fit",
-        r"C:\Users\Tester\run.fit",
-        r"C:\\Users\\Tester\\run.fit",
+        '"path=/home/tester/run.fit",',
+        'fixture = "path=/home/tester/run.fit"',
+        r'byte_fixture = b"run,note\n1,/home/tester/run.fit\n"',
+        r'b"run,note\n1,C:\\Users\\Tester\\run.fit\n",',
+        r'b"run,note\n1,/home/tester/run.fit\n",',
+        r'b"run,note\n1,path=/home/tester/run.fit\n",',
+        r'for data in (b"run,note\n1,C:\\Users\\Tester\\run.fit\n",',
+        r'b"run,note\n1,/home/tester/run.fit\n"):',
+        r'for text in ("Kontakt: person@example.invalid", r"Log: C:\Users\Tester\run.fit"):',
+        r'r"Log: C:\Users\Tester\run.fit",',
     ),
     "tester_assistant_tests/test_questionnaire.py": (
-        r"C:\Users\Tester\Documents\original.fit",
-        r"C:\\Users\\Tester\\Documents\\original.fit",
+        r'windows_path = r"C:\Users\Tester\Documents\original.fit"',
+        r'fixture = r"C:\Users\Tester\Documents\original.fit"',
     ),
 }
-PATH_TOKEN_CHARACTER_PATTERN = r"[\w./\\:-]"
 
 
 def _contains_unapproved_absolute_path(line: str, allowed: tuple[str, ...]) -> bool:
-    """Return whether a line contains an absolute path beyond exact fixtures."""
-    remainder = line
-    for token in allowed:
-        exact_fixture = re.compile(
-            rf"(?<!{PATH_TOKEN_CHARACTER_PATTERN})"
-            rf"{re.escape(token)}"
-            rf"(?:(?=\\[nrt][\"'])|(?!{PATH_TOKEN_CHARACTER_PATTERN}))"
-        )
-        remainder = exact_fixture.sub("", remainder)
-    return re.search(ABSOLUTE_PATH_PATTERN, remainder) is not None
+    """Allow only complete, known synthetic source lines containing paths."""
+    if re.search(ABSOLUTE_PATH_PATTERN, line) is None:
+        return False
+    return line.strip() not in allowed
 
 
 def _run_git(repo_root: Path, *args: str, text: bool = False) -> subprocess.CompletedProcess:

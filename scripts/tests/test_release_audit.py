@@ -222,6 +222,31 @@ class ReleaseAuditTests(unittest.TestCase):
                 audit_repository(root),
             )
 
+    def test_allowed_fixture_path_with_punctuation_or_space_extension_is_reported(self):
+        source_lines = (
+            'fixture = "/home/tester/run.fit?private"\n',
+            'fixture = "/home/tester/run.fit#private"\n',
+            'fixture = "/home/tester/run.fit private"\n',
+            'fixture = r"C:\\Users\\Tester\\run.fit?private"\n',
+            'fixture = r"C:\\Users\\Tester\\run.fit#private"\n',
+            'fixture = r"C:\\Users\\Tester\\run.fit private"\n',
+        )
+        for source_line in source_lines:
+            with self.subTest(source_line=source_line), TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                initialize_repository(root)
+                fixture = root / "tester_assistant_tests" / "test_bundle.py"
+                fixture.parent.mkdir(parents=True)
+                fixture.write_text(source_line, encoding="utf-8")
+                run_git(root, "add", "tester_assistant_tests/test_bundle.py")
+                run_git(root, "commit", "-m", "extend fixture with punctuation")
+                commit = run_git(root, "rev-parse", "HEAD")
+
+                self.assertIn(
+                    f"absolute-path: {commit}:tester_assistant_tests/test_bundle.py",
+                    audit_repository(root),
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
