@@ -46,6 +46,37 @@ Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entsch
   Contract-3-Mailerinnerung wurde nicht interaktiv bei beiden Skalierungen
   beobachtet.
 
+## 2026-10-29 – Beta 7: geführte Multisport-Kalibrierung und Ring 1
+
+- Zielversion `0.2.0-beta.7`; App-ID und langfristiges Garmin-Schlüsselpaar
+  bleiben unverändert. FIT-Schema 12 und die bisherigen Garmin-Connect-Felder
+  werden nicht umgedeutet.
+- Der Startablauf lautet `WEITER` und danach `TRAINING`, `KALIBRIERUNG` oder
+  `EXIT`. Training und Kalibrierung verlangen eine ausdrückliche Auswahl von
+  Eis- oder Inlinehockey.
+- Die Kalibrierung verwendet fest 20 m, fünf gültige Läufe ohne und fünf mit
+  Stickhandling. Eis und Inline besitzen getrennte, transaktional aktivierte
+  Profile; bei fehlendem oder ungültigem Profil greift das Basismodell.
+- Die Ring-1-Matrix enthält 50 releasefähige Geräteprofile. Compile-,
+  Simulator- und Hardwarestatus werden getrennt dokumentiert; eine erfolgreiche
+  Kompilierung ist keine Hardwarefreigabe.
+- Remote-Tester senden Original-FIT und Testformular weiterhin manuell über
+  einen privaten Kanal. Es gibt in Beta 7 keine Cloudarchitektur, kein globales
+  Modell und keinen GPS-Zwang.
+- Am 5. November lagen 50/50 Ring-1-Einzelbuilds sowie 266/266 bestandene
+  Venu-2-Plus-Tests vor. Acht weitere Repräsentanten bestanden ebenfalls die
+  Vollsuite; auf der Forerunner 255S bestand der gezielte Responsive-Test,
+  während ein wiederholter Komplettlauf am Simulatorprozess endete.
+- Der Vorabexport vom 5. November 2026 mit SHA-256 `918F13E4…D6CB8` wurde nach
+  dem UI-Review gesperrt. Der korrigierte signierte Remote-Testkandidat vom
+  7. November aus Commit `7fef470` umfasst 69/69 Garmin-Paketvarianten, ist
+  8.624.741 Byte groß und hat SHA-256
+  `4E6A62C40B0AE9FB978CB702CF82854A784A9E98CD79FFF662C7DCC7A90D40DF`.
+  Die App-ID blieb `4c7d5f9e2b484f0da6913b1c8e7f2a64`; `manifest.sig2` und
+  `dev_key.pub` sind enthalten. 275/275 Venu-2-Plus-Tests und die visuelle
+  Venu-2S-Simulatorprüfung bestanden; Hardware- und Connect-Abnahme bleiben
+  offen.
+
 ## 2026-10-23 – Beta 6: persönliche Kalibrierung und Remote-Testvorbereitung
 
 - Zielversion `0.2.0-beta.6`, interne Portalversion `6`, FIT-Schema 12 und

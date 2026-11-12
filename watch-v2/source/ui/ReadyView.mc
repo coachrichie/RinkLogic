@@ -105,13 +105,15 @@ class ReadyView extends WatchUi.View {
             WatchUi.loadResource(Rez.Strings.AppName),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
 
-        var phoneX = width * 36 / 100;
-        var heartX = width * 64 / 100;
-        var iconY = height * 64 / 100;
+        var compact = height < 300;
+        var phoneX = width * 30 / 100;
+        var heartX = width * 70 / 100;
+        var iconY = height * 62 / 100;
         dc.setColor(status[:phoneConnected] ? active : inactive, Graphics.COLOR_TRANSPARENT);
         dc.drawRoundedRectangle(phoneX - 10, iconY - 14, 20, 28, 3);
         dc.drawLine(phoneX - 3, iconY + 10, phoneX + 3, iconY + 10);
-        dc.drawText(phoneX, height * 71 / 100, Graphics.FONT_XTINY,
+        var statusY = height * (compact ? 68 : 69) / 100;
+        dc.drawText(phoneX, statusY, Graphics.FONT_XTINY,
             WatchUi.loadResource(Rez.Strings.PhoneStatus),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
 
@@ -120,25 +122,30 @@ class ReadyView extends WatchUi.View {
         dc.fillCircle(heartX + 6, iconY - 5, 7);
         dc.fillPolygon([[heartX - 13, iconY - 4], [heartX + 13, iconY - 4],
             [heartX, iconY + 15]]);
-        dc.drawText(heartX, height * 71 / 100, Graphics.FONT_XTINY,
+        dc.drawText(heartX, statusY, Graphics.FONT_XTINY,
             WatchUi.loadResource(Rez.Strings.HrSignalStatus),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
 
         dc.setColor(inactive, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 75 / 100, Graphics.FONT_XTINY,
+        dc.drawText(centerX, height * (compact ? 74 : 75) / 100, Graphics.FONT_XTINY,
             WatchUi.loadResource(Rez.Strings.PulseSourceUnknown),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(0xB6C6D8, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 79 / 100, Graphics.FONT_XTINY,
+        dc.drawText(centerX, height * (compact ? 80 : 81) / 100, Graphics.FONT_XTINY,
             WatchUi.loadResource(Rez.Strings.SportIce) + " " +
                 (mCalibrationStatuses[:ice] ? "✓" : "—") + " · " +
                 WatchUi.loadResource(Rez.Strings.SportInline) + " " +
                 (mCalibrationStatuses[:inline] ? "✓" : "—"),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        var maximumButtonWidth = compact ? 130 : (width < 390 ? 180 : 200);
+        var buttonWidth = width - 18 < maximumButtonWidth ? width - 18 : maximumButtonWidth;
+        var buttonHeight = height * 10 / 100 < 40 ? height * 10 / 100 : 40;
+        var buttonY = height * (compact ? 85 : 87) / 100;
         dc.setColor(0x0D6CC1, Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle(centerX - 100, height * 85 / 100, 200, 40);
+        dc.fillRectangle(centerX - buttonWidth / 2, buttonY,
+            buttonWidth, buttonHeight);
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 85 / 100 + 20, Graphics.FONT_SMALL,
+        dc.drawText(centerX, buttonY + buttonHeight / 2, Graphics.FONT_SMALL,
             WatchUi.loadResource(Rez.Strings.ReadyContinue),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
@@ -159,11 +166,22 @@ class ReadyInputDelegate extends WatchUi.InputDelegate {
 
     function onTap(event as WatchUi.ClickEvent) as Lang.Boolean {
         var coordinates = event.getCoordinates();
+        if (coordinates == null || coordinates.size() < 2) { return false; }
         var settings = Toybox.System.getDeviceSettings();
         var centerX = settings.screenWidth / 2;
-        var startY = settings.screenHeight * 85 / 100;
-        if (coordinates[1] < startY || coordinates[1] > startY + 40) { return false; }
-        if (coordinates[0] >= centerX - 100 && coordinates[0] <= centerX + 100) {
+        var compact = settings.screenHeight < 300;
+        var startY = settings.screenHeight * (compact ? 85 : 87) / 100;
+        var buttonHeight = settings.screenHeight * 10 / 100 < 40 ?
+            settings.screenHeight * 10 / 100 : 40;
+        var maximumButtonWidth = compact ? 130 :
+            (settings.screenWidth < 390 ? 180 : 200);
+        var buttonWidth = settings.screenWidth - 18 < maximumButtonWidth ?
+            settings.screenWidth - 18 : maximumButtonWidth;
+        if (coordinates[1] < startY || coordinates[1] > startY + buttonHeight) {
+            return false;
+        }
+        if (coordinates[0] >= centerX - buttonWidth / 2 &&
+            coordinates[0] <= centerX + buttonWidth / 2) {
             mView.requestContinue();
             return true;
         }

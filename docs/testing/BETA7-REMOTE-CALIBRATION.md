@@ -24,8 +24,11 @@ Größe, anderem Hash, anderer App-ID oder unbekannter Herkunft: Test stoppen.
 Der freigegebene Container enthält 69 geprüfte, signierte Paketvarianten.
 Automatisiert bestanden 275/275 Venu-2-Plus-Tests sowie zusätzliche
 Responsive-Tests für Venu 2S, Forerunner 255S, Instinct 3 AMOLED und fēnix 9
-Pro 51 mm. Das ist keine Behauptung, alle 50 Ring-1-Modelle seien physisch
-getestet. `watch-v2/device-matrix.json` bleibt die verbindliche Freigabematrix.
+Pro 51 mm. Die zuvor als P0 gesperrten Touchzonen und die semantische
+Accepted-Laufanzeige wurden für diesen Kandidaten korrigiert. Der Remote-Test
+prüft diese Gates trotzdem erneut auf echter Hardware. Das ist keine Behauptung,
+alle 50 Ring-1-Modelle seien physisch getestet. `watch-v2/device-matrix.json`
+bleibt die verbindliche Freigabematrix.
 
 ## Was der Testkoordinator vorbereitet
 

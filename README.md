@@ -27,9 +27,25 @@ Contract-3-Auftrag konfigurierte Rückgabeadresse mit der Bitte, das ZIP manuell
 als E-Mail-Anhang zu senden. Sie versendet keine E-Mail, öffnet weder Mailprogramm
 noch Browser, lädt nichts hoch und bestätigt keinen Eingang.
 
+Die aktuelle Beta 7 erweitert die bisher auf einer Garmin Venu 2 Plus
+hardwaregeprüfte V2 auf eine maschinenlesbare Ring-1-Matrix mit 50 Garmin-
+Modellen. Diese Modelle werden einzeln kompiliert; ausgewählte Display- und
+Bedienklassen werden zusätzlich im Simulator geprüft. Nur die Venu 2 Plus gilt
+bislang als hardwareverifiziert.
+Schichtzählung, Herzfrequenz, Shift-Dauer, Durchschnittspuls pro Shift, alle
+drei Abschlussseiten und die benutzerdefinierten Aktivitätsfelder wurden auf
+Uhr beziehungsweise in Garmin Connect Mobile beobachtet.
+
 Automatische Shift-Vorschläge, Anschubzählung, Kadenz und geschätzte Distanz
 sind experimentell. Sie sind keine Leistungs- oder Gesundheitsdiagnostik und
 dürfen bei fehlender Messgrundlage nicht als `0` interpretiert werden.
+
+Beta 7 ergänzt eine geführte persönliche Kalibrierung für Eis- und
+Inlinehockey. Beide Sportprofile werden getrennt gespeichert. Das Protokoll
+verwendet eine gemessene Strecke von genau 20 m sowie je fünf gültige Läufe
+ohne und mit Stickhandling. Ohne gültiges Profil bleibt das wissenschaftliche
+Basismodell aktiv. Es gibt weder Cloud-Upload noch GPS-Zwang oder globales
+Nutzermodell; Testpersonen übermitteln FIT-Dateien vorerst manuell.
 
 ## Aktuelle Funktionen
 
@@ -56,9 +72,12 @@ einem eigenen Aktivitätsabschnitt; die nativen Overview-Karten werden von
 Garmin anhand des Aktivitätstyps ausgewählt und können von der App nicht durch
 Shift-Werte ersetzt werden.
 
-## Referenzhardware
+## Geräteunterstützung
 
-- Garmin Venu 2 Plus (`venu2plus`)
+- Hardwareverifiziert: Garmin Venu 2 Plus (`venu2plus`)
+- Ring 1: 50 freigegebene Geräteprofile; exakter Status in
+  [`docs/testing/BETA7-DEVICE-MATRIX.md`](docs/testing/BETA7-DEVICE-MATRIX.md)
+- Ring 2: Venu X1 und Instinct 3 Solar vorerst zurückgestellt
 - Polar H10 als vorgesehener externer Sensor; die aktive Garmin-HR-Quelle wird
   von der App nicht als H10-verifiziert behauptet
 - Connect IQ SDK 9.2.0
@@ -67,6 +86,8 @@ Für den kontrollierten Beta-7-Test sind nur die 50 in
 `watch-v2/device-matrix.json` als `release-enabled` markierten Ring-1-IDs
 zulässig. Ring 2 bleibt ausgeschlossen. Die Matrix ist eine Buildfreigabe, kein
 Beleg für einen vollständigen Hardwaretest jedes Modells.
+Compile- oder Simulatorprüfung ersetzt keinen Hardwaretest. Die
+Gerätematrix weist diese Nachweisstufen deshalb getrennt aus.
 
 ## Projektstruktur
 
@@ -90,13 +111,14 @@ python -m unittest discover -s scripts/tests -p "test_*.py" -v
 python scripts/repository_policy.py
 ```
 
-Für einen signierten Venu-2-Plus-Build müssen das aktive Connect IQ SDK und
+Für einen signierten Einzel- oder Matrix-Build müssen das aktive Connect IQ SDK und
 `SHIFTSENSE_DEVELOPER_KEY` lokal konfiguriert sein. Der Schlüssel bleibt
 außerhalb des Repositorys.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/watch-v2-build.ps1 -Device venu2plus -UnitTest
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/watch-v2-build.ps1 -Device venu2plus
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/watch-v2-matrix-build.ps1 -Ring Ring1 -BuildOnly
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/watch-v2-build.ps1 -DistanceModel PersonalCalibrationBeta -ExportPackage
 ```
 
 Buildausgaben unter `watch-v2/bin/` werden nicht versioniert.
@@ -131,6 +153,8 @@ anonymisiert sein. Details stehen in [`SECURITY.md`](SECURITY.md) und
 - [Beta-7-Remote-Kalibrierung](docs/testing/BETA7-REMOTE-CALIBRATION.md)
 - [Beta-7-Geräteinstallation](docs/DEVICE-INSTALL-CHECKLIST.md)
 - [FIT-Schema](docs/data/FIT-SCHEMA.md)
+- [Beta-7-Gerätematrix](docs/testing/BETA7-DEVICE-MATRIX.md)
+- [Beta-7-Remote-Kalibrierung](docs/testing/BETA7-REMOTE-CALIBRATION.md)
 
 ## Lizenzstatus
 

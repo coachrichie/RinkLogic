@@ -11,6 +11,7 @@ class CalibrationRunView extends WatchUi.View {
     private var mRunStartedAt = null;
     private var mPromptCondition;
     private var mPromptPace;
+    private var mPromptWithinConditionIndex;
 
     function initialize(target, controller) {
         View.initialize();
@@ -25,7 +26,7 @@ class CalibrationRunView extends WatchUi.View {
     function prompt() as Lang.Dictionary {
         var progress = mController.progress();
         return {:condition=>mPromptCondition, :pace=>mPromptPace,
-            :withinConditionIndex=>progress[:withinConditionIndex],
+            :withinConditionIndex=>mPromptWithinConditionIndex,
             :repetition=>progress[:acceptedCount] + 1,
             :acceptedCount=>progress[:acceptedCount],
             :durationMinutes=>mLastDurationMinutes,
@@ -106,6 +107,13 @@ class CalibrationRunView extends WatchUi.View {
         return WatchUi.loadResource(Rez.Strings.CalibrationReady);
     }
 
+    function lowerActionLabel() as Lang.String {
+        if (mState == :running) { return WatchUi.loadResource(Rez.Strings.CalibrationLowerEnd); }
+        if (mState == :accepted) { return WatchUi.loadResource(Rez.Strings.CalibrationLowerNext); }
+        if (mState == :retry) { return WatchUi.loadResource(Rez.Strings.CalibrationLowerRetry); }
+        return WatchUi.loadResource(Rez.Strings.CalibrationLowerStart);
+    }
+
     function rejectionLabel(reason) as Lang.String {
         if (reason == :too_short) { return WatchUi.loadResource(Rez.Strings.CalibrationTooShort); }
         if (reason == :too_long) { return WatchUi.loadResource(Rez.Strings.CalibrationTooLong); }
@@ -124,36 +132,43 @@ class CalibrationRunView extends WatchUi.View {
         dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_BLACK);
         dc.clear();
         dc.setColor(0xC8E5F4, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 12 / 100, Graphics.FONT_MEDIUM,
+        dc.drawText(centerX, height * 18 / 100, Graphics.FONT_SMALL,
             conditionLabel(mPromptCondition),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 27 / 100, Graphics.FONT_LARGE,
-            progress[:withinConditionIndex].toString() + " / 5",
+        dc.drawText(centerX, height * 31 / 100, Graphics.FONT_LARGE,
+            mPromptWithinConditionIndex.toString() + " / 5",
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.drawText(centerX, height * 39 / 100, Graphics.FONT_XTINY,
+        dc.drawText(centerX, height * 43 / 100, Graphics.FONT_XTINY,
             WatchUi.loadResource(Rez.Strings.CalibrationRun) + " " +
                 progress[:acceptedCount].toString() + " / 10",
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.drawText(centerX, height * 49 / 100, Graphics.FONT_SMALL,
+        dc.drawText(centerX, height * 52 / 100, Graphics.FONT_SMALL,
             paceLabel(mPromptPace),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(mState == :retry ? 0xF6C246 : 0x20D49A,
             Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 64 / 100, Graphics.FONT_SMALL, stateLabel(),
+        dc.drawText(centerX, height * 62 / 100, Graphics.FONT_SMALL, stateLabel(),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(0x8FA6C1, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 76 / 100, Graphics.FONT_XTINY, durationLabel(),
+        dc.drawText(centerX, height * 70 / 100, Graphics.FONT_XTINY, durationLabel(),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        if (mState != :complete) {
+            dc.drawText(centerX, height * 78 / 100, Graphics.FONT_XTINY,
+                lowerActionLabel(),
+                Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        }
         dc.drawText(centerX, height * 88 / 100, Graphics.FONT_XTINY,
             mState == :complete ? WatchUi.loadResource(Rez.Strings.CalibrationUpperSave) :
-                WatchUi.loadResource(Rez.Strings.CalibrationRunHint),
+                WatchUi.loadResource(Rez.Strings.CalibrationUpperCancel),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 
     private function refreshPrompt() as Void {
-        mPromptCondition = mController.currentCondition();
-        mPromptPace = mController.currentPace();
+        var progress = mController.progress();
+        mPromptCondition = progress[:condition];
+        mPromptPace = progress[:pace];
+        mPromptWithinConditionIndex = progress[:withinConditionIndex];
     }
 }
 

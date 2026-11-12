@@ -18,6 +18,7 @@ function readyStatusNeverInfersH10FromSensorName(logger as Test.Logger) as Lang.
 class ReadyDcFake extends Graphics.Dc {
     var bitmapCount = 0;
     var texts = [];
+    var textY = [];
     var textColors = [];
     var foregroundColor = Graphics.COLOR_BLACK;
     function getWidth() as Lang.Number { return 416; }
@@ -27,6 +28,7 @@ class ReadyDcFake extends Graphics.Dc {
     function drawBitmap(x, y, bitmap) as Void { bitmapCount += 1; }
     function drawText(x, y, font, value, justification) as Void {
         texts.add(value);
+        textY.add(y);
         textColors.add(foregroundColor);
     }
     function drawLine(x1, y1, x2, y2) as Void { }
@@ -34,6 +36,24 @@ class ReadyDcFake extends Graphics.Dc {
     function fillPolygon(points) as Void { }
     function fillRectangle(x, y, width, height) as Void { }
     function drawRoundedRectangle(x, y, width, height, radius) as Void { }
+}
+
+(:test)
+function readySmallScreenStatusRowsKeepReadableSpacing(logger as Test.Logger) as Lang.Boolean {
+    var ready = new ReadyView(new ReadyStartTargetFake(), new ReadyStatusSourceFake(),
+        new HeartRateSourceFake(), new ClockFake());
+    var dc = new ReadyDcFake();
+    ready.onUpdate(dc);
+    var phoneY = null;
+    var sourceY = null;
+    var profilesY = null;
+    for (var i = 0; i < dc.texts.size(); i += 1) {
+        if (dc.texts[i].equals("PHONE")) { phoneY = dc.textY[i]; }
+        if (dc.texts[i].equals("SOURCE UNKNOWN")) { sourceY = dc.textY[i]; }
+        if (dc.texts[i].find("ICE ") == 0) { profilesY = dc.textY[i]; }
+    }
+    return phoneY != null && sourceY != null && profilesY != null &&
+        sourceY - phoneY >= 24 && profilesY - sourceY >= 24;
 }
 
 (:test)

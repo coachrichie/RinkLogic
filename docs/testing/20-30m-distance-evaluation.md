@@ -1,6 +1,13 @@
 # 20–30-m-Bewegungs- und Distanztest
 
-Stand: 2026-10-23
+Stand: 2026-10-28
+
+Für Beta 7 gilt auf der Uhr ein festes 20-m-Protokoll. Die wissenschaftliche
+Einordnung, Claim-Grenzen und Holdout-Auswertung stehen im
+[`Beta-7-Evidenz- und Methodenaudit`](../data/BETA7-CALIBRATION-EVIDENCE-AUDIT-2026-10-28.md).
+Die weiterhin beschriebenen 20–30-m-Läufe dienen zusätzlich der externen
+Validierung und dürfen nicht mit der festen On-Watch-Kalibrierstrecke
+gleichgesetzt werden.
 
 Zweck: lokale Validierung der Anschub-/Distanzschätzung und der persönlichen
 Beta-6-Kalibrierung von RinkLogic auf der Venu 2 Plus.

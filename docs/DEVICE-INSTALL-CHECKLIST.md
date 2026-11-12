@@ -3,6 +3,14 @@
 Diese Checkliste ist für den kontrollierten Remote-Test bestimmt. Sie ist keine
 öffentliche Freigabe und führt keinen Upload in das Garmin Developer Portal aus.
 
+Der signierte Kandidat aus Commit `7fef470` umfasst 69/69 geprüfte
+Paketvarianten. 275/275 Venu-2-Plus-Tests und Responsive-Tests auf Venu 2S,
+Forerunner 255S, Instinct 3 AMOLED und fēnix 9 Pro 51 mm bestanden. Die zuvor
+blockierenden Touchzonen und die Accepted-Laufanzeige sind im Kandidaten
+korrigiert; jede abweichende Touchaktion oder Laufanzeige bleibt ein Stopgrund.
+Compile- und Simulatortests ersetzen keinen Hardwaretest; der genaue Status
+steht in `docs/testing/BETA7-DEVICE-MATRIX.md`.
+
 ## Vor Übergabe an den Tester
 
 - [ ] Nur Commit `7fef4700d30088f9573cc41f1b14774b47bc4517` verwenden.

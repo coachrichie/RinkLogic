@@ -54,13 +54,19 @@ Bei Änderungen unter `watch-v2/` zusätzlich:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/watch-v2-build.ps1 -Device venu2plus -UnitTest
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/watch-v2-build.ps1 -Device venu2plus
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/watch-v2-matrix-build.ps1 -Ring Ring1 -BuildOnly
 ```
 
 Der Pull Request nennt die tatsächlich ausgeführten Prüfungen. Simulator- und
 Buildnachweise ersetzen keinen Gerätetest. Ein Hardwarebefund enthält Commit,
 Gerät, Firmware, genaue Bedienfolge und beobachtetes Ergebnis, aber keine
 private Rohdatei.
+
+Änderungen an Layout, Eingaben oder Gerätefreigaben müssen außerdem die
+maschinenlesbare Datei `watch-v2/device-matrix.json` und mindestens einen
+Repräsentanten jeder betroffenen Display-/Eingabeklasse prüfen. In Berichten
+sind `compile-verified`, `simulator-verified` und `hardware-verified` strikt zu
+trennen.
 
 ## Daten- und Geheimnisgrenzen
 

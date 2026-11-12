@@ -31,10 +31,17 @@ class SportSelectionView extends WatchUi.View {
         mTarget.confirmSport(mPurpose, mSelection);
     }
 
-    function selectAt(y, height) as Void {
-        if (mPurpose == null) { return; }
-        mSelection = y < height / 2 ? :ice : :inline;
+    function selectAt(y, height) as Lang.Boolean {
+        if (mPurpose == null || height <= 0) { return false; }
+        if (y >= height * 35 / 100 && y <= height * 50 / 100) {
+            mSelection = :ice;
+        } else if (y >= height * 53 / 100 && y <= height * 69 / 100) {
+            mSelection = :inline;
+        } else {
+            return false;
+        }
         confirmSelection();
+        return true;
     }
 
     function onUpdate(dc as Graphics.Dc) as Void {
@@ -43,9 +50,7 @@ class SportSelectionView extends WatchUi.View {
         dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_BLACK);
         dc.clear();
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        var title = mPurpose == :calibration ?
-            WatchUi.loadResource(Rez.Strings.SelectCalibrationSport) :
-            WatchUi.loadResource(Rez.Strings.SelectTrainingSport);
+        var title = WatchUi.loadResource(Rez.Strings.SelectSport);
         dc.drawText(centerX, height * 22 / 100, Graphics.FONT_SMALL, title,
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         drawSport(dc, centerX, height * 43 / 100, :ice,
@@ -53,8 +58,11 @@ class SportSelectionView extends WatchUi.View {
         drawSport(dc, centerX, height * 61 / 100, :inline,
             WatchUi.loadResource(Rez.Strings.SportInline));
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height * 82 / 100, Graphics.FONT_XTINY,
-            WatchUi.loadResource(Rez.Strings.MenuHint),
+        dc.drawText(centerX, height * 80 / 100, Graphics.FONT_XTINY,
+            WatchUi.loadResource(Rez.Strings.MenuHintLower),
+            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.drawText(centerX, height * 87 / 100, Graphics.FONT_XTINY,
+            WatchUi.loadResource(Rez.Strings.MenuHintUpper),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 
@@ -75,8 +83,9 @@ class SportSelectionInputDelegate extends WatchUi.InputDelegate {
         return false;
     }
     function onTap(event as WatchUi.ClickEvent) as Lang.Boolean {
-        mView.selectAt(event.getCoordinates()[1],
+        var coordinates = event.getCoordinates();
+        if (coordinates == null || coordinates.size() < 2) { return false; }
+        return mView.selectAt(coordinates[1],
             System.getDeviceSettings().screenHeight);
-        return true;
     }
 }
