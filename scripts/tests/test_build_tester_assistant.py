@@ -84,9 +84,10 @@ class BuildTesterAssistantTests(unittest.TestCase):
 
             result = describe("-Assignment", str(assignment))
 
-        self.assertEqual(result.returncode, 0, result.stderr)
-        config = json.loads(result.stdout)
-        self.assertEqual(config["assignment"], str(assignment.resolve()))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            config = json.loads(result.stdout)
+            self.assertTrue(os.path.samefile(config["assignment"], assignment))
+
         self.assertEqual(
             config["included_files"],
             [
