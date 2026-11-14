@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +19,31 @@ ABSOLUTE_PATH_EXEMPTIONS = {
     "scripts/release_audit.py",
     "scripts/tests/test_release_audit.py",
 }
+SYNTHETIC_ABSOLUTE_PATH_FIXTURES = {
+    "tester_assistant_tests/test_bundle.py": (
+        '"path=/home/tester/run.fit",',
+        'fixture = "path=/home/tester/run.fit"',
+        r'byte_fixture = b"run,note\n1,/home/tester/run.fit\n"',
+        r'b"run,note\n1,C:\\Users\\Tester\\run.fit\n",',
+        r'b"run,note\n1,/home/tester/run.fit\n",',
+        r'b"run,note\n1,path=/home/tester/run.fit\n",',
+        r'for data in (b"run,note\n1,C:\\Users\\Tester\\run.fit\n",',
+        r'b"run,note\n1,/home/tester/run.fit\n"):',
+        r'for text in ("Kontakt: person@example.invalid", r"Log: C:\Users\Tester\run.fit"):',
+        r'r"Log: C:\Users\Tester\run.fit",',
+    ),
+    "tester_assistant_tests/test_questionnaire.py": (
+        r'windows_path = r"C:\Users\Tester\Documents\original.fit"',
+        r'fixture = r"C:\Users\Tester\Documents\original.fit"',
+    ),
+}
+
+
+def _contains_unapproved_absolute_path(line: str, allowed: tuple[str, ...]) -> bool:
+    """Allow only complete, known synthetic source lines containing paths."""
+    if re.search(ABSOLUTE_PATH_PATTERN, line) is None:
+        return False
+    return line.strip() not in allowed
 
 
 def _run_git(repo_root: Path, *args: str, text: bool = False) -> subprocess.CompletedProcess:
@@ -93,7 +119,17 @@ def _absolute_path_findings(repo_root: Path) -> list[str]:
             raise RuntimeError(f"unable to scan commit {commit}")
         for match in grep_result.stdout.splitlines():
             _, separator, path = match.partition(":")
-            if separator and path and path not in ABSOLUTE_PATH_EXEMPTIONS:
+            if not separator or not path or path in ABSOLUTE_PATH_EXEMPTIONS:
+                continue
+            show_result = _run_git(repo_root, "show", f"{commit}:{path}", text=True)
+            if show_result.returncode != 0:
+                raise RuntimeError(f"unable to inspect {commit}:{path}")
+            allowed = SYNTHETIC_ABSOLUTE_PATH_FIXTURES.get(path, ())
+            has_unapproved_match = any(
+                _contains_unapproved_absolute_path(line, allowed)
+                for line in show_result.stdout.splitlines()
+            )
+            if has_unapproved_match:
                 findings.add(f"absolute-path: {commit}:{path}")
     return sorted(findings)
 

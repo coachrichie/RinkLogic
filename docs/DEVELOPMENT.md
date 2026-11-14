@@ -2,6 +2,50 @@
 
 Dieses Dokument begleitet die Entwicklung von ShiftSense Hockey. Es hält Entscheidungen, Implementierungsstände, Tests, Messergebnisse, Abweichungen und bekannte Risiken nachvollziehbar fest.
 
+## 2026-11-07 – Beta 7 als kontrollierter Remote-Testkandidat
+
+- Verbindlicher Quellcommit ist `7fef4700d30088f9573cc41f1b14774b47bc4517`.
+  Das signierte Multi-Geräte-Paket `RinkLogic-0.2.0-beta.7.iq` hat
+  8.624.741 Byte und SHA-256
+  `4E6A62C40B0AE9FB978CB702CF82854A784A9E98CD79FFF662C7DCC7A90D40DF`.
+  Die App-ID bleibt `4c7d5f9e2b484f0da6913b1c8e7f2a64`.
+- 69/69 Paketvarianten und Signaturen wurden geprüft. Automatisiert bestanden
+  275/275 Venu-2-Plus-Tests sowie Responsive-Tests auf Venu 2S, Forerunner
+  255S, Instinct 3 AMOLED und fēnix 9 Pro 51 mm. Die Ring-1-Matrix umfasst 50
+  release-enabled IDs, ohne daraus einen Hardwaretest aller 50 abzuleiten.
+- Der vorherige Vorab-Build mit SHA-256
+  `918F13E499F338B3F3D81EE1D564C445697F39EE99E290BD305E0195F48D6CB8`
+  ist verworfen und dauerhaft von der Verteilung ausgeschlossen.
+- Remote-Tester installieren die für ihre Geräte-Part-Number ausgewählte PRG,
+  prüfen deren individuellen Hash gegen den Auftrag und verwenden getrennte
+  Eis-/Inline-Profile. Die Kalibrierung besteht aus exakt 20 m, fünf Läufen
+  ohne und fünf mit Stickhandling; Tempo je Block: langsam, schnell, normal,
+  langsam, schnell.
+- Beta 7 befüllt Garmins natives `total_distance` nicht. Distanz steht nur in
+  RinkLogic-Entwicklerfeldern und bleibt experimentell. Eine leere native
+  Garmin-Distanz darf nicht als Nullmessung interpretiert werden.
+- Original-FIT/ZIP, lokale Diagnose, zehn Fragen und Rückgabe-ZIP bleiben ein
+  manueller privater Ablauf. Der Desktop-Auftrag verwendet Contract `3` und
+  ersetzt die frühere Upload-URL durch eine streng geprüfte `return_email` des
+  Koordinators. Der Tester wählt den lokalen Zielordner; das atomare ZIP enthält
+  den byte-identischen Originalexport und `feedback.json`. Nach Erstellung zeigt
+  die App Pfad, SHA-256 und Rückgabeadresse mit der Bitte um manuellen Versand
+  als E-Mail-Anhang. Die Adresse wird nicht in das ZIP geschrieben.
+- Der Assistent sendet keine E-Mail, öffnet weder Mailprogramm noch Browser,
+  lädt nichts hoch und bestätigt keinen Eingang. Es gibt keine Cloudarchitektur
+  und ohne erneute Freigabe keinen Developer-Portal-Upload.
+- Operative Anleitung: [Beta-7-Remote-Kalibrierung](testing/BETA7-REMOTE-CALIBRATION.md)
+  und [Geräte-Installationscheckliste](DEVICE-INSTALL-CHECKLIST.md).
+- Desktop-Verifikation am 09.11.2026: Quell- und paketierter Offline-Selbsttest
+  bestanden; der synthetische Eis-/Inline-/Training-Durchlauf bestand ohne
+  Netzwerkzugriff. Ein interaktiver visueller Durchlauf von Abbruchpfaden und
+  Fragebogen-Scrollen bei Windows-Skalierung 100 %/150 % wurde in dieser
+  nicht-interaktiven Prüfumgebung nicht beobachtet und bleibt ein manueller
+  Gate vor der Ausgabe des Windows-Assistenten. Es wurden weder echte FIT-Daten
+  verwendet noch ein echter Rückgabeversand ausgelöst. Der Abschlussdialog der
+  Contract-3-Mailerinnerung wurde nicht interaktiv bei beiden Skalierungen
+  beobachtet.
+
 ## 2026-10-29 – Beta 7: geführte Multisport-Kalibrierung und Ring 1
 
 - Zielversion `0.2.0-beta.7`; App-ID und langfristiges Garmin-Schlüsselpaar

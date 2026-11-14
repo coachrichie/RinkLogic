@@ -12,6 +12,21 @@ kompatibel bleiben.
 
 ## Projektstatus
 
+Der kontrollierte Remote-Testkandidat `0.2.0-beta.7` wurde für 69 signierte
+Paketvarianten gebaut. Die Ring-1-Matrix enthält 50 freigegebene Produkt-IDs;
+das bedeutet nicht, dass alle 50 Modelle physisch geprüft wurden. Automatisiert
+bestanden 275/275 Venu-2-Plus-Tests sowie Responsive-Tests für Venu 2S,
+Forerunner 255S, Instinct 3 AMOLED und fēnix 9 Pro 51 mm. Installation und
+Rückgabe erfolgen ausschließlich privat nach der Beta-7-Testanleitung.
+
+Der lokale Windows-Testassistent prüft den Garmin-Originalexport, führt durch
+genau zehn Feedbackfragen und erstellt im vom Tester gewählten Ordner ein
+atomisches Rückgabe-ZIP. Dieses enthält den byte-identischen Originalexport und
+`feedback.json`. Erst danach zeigt die App ZIP-Pfad, SHA-256 und die im privaten
+Contract-3-Auftrag konfigurierte Rückgabeadresse mit der Bitte, das ZIP manuell
+als E-Mail-Anhang zu senden. Sie versendet keine E-Mail, öffnet weder Mailprogramm
+noch Browser, lädt nichts hoch und bestätigt keinen Eingang.
+
 Die aktuelle Beta 7 erweitert die bisher auf einer Garmin Venu 2 Plus
 hardwaregeprüfte V2 auf eine maschinenlesbare Ring-1-Matrix mit 50 Garmin-
 Modellen. Diese Modelle werden einzeln kompiliert; ausgewählte Display- und
@@ -67,6 +82,10 @@ Shift-Werte ersetzt werden.
   von der App nicht als H10-verifiziert behauptet
 - Connect IQ SDK 9.2.0
 
+Für den kontrollierten Beta-7-Test sind nur die 50 in
+`watch-v2/device-matrix.json` als `release-enabled` markierten Ring-1-IDs
+zulässig. Ring 2 bleibt ausgeschlossen. Die Matrix ist eine Buildfreigabe, kein
+Beleg für einen vollständigen Hardwaretest jedes Modells.
 Compile- oder Simulatorprüfung ersetzt keinen Hardwaretest. Die
 Gerätematrix weist diese Nachweisstufen deshalb getrennt aus.
 
@@ -131,6 +150,8 @@ anonymisiert sein. Details stehen in [`SECURITY.md`](SECURITY.md) und
 - [Projektlandkarte](docs/PROJECT-MAP.md)
 - [Entwicklungsjournal](docs/DEVELOPMENT.md)
 - [Post-Training-Hardwaretest](docs/testing/V2-POST-TRAINING-SUMMARY.md)
+- [Beta-7-Remote-Kalibrierung](docs/testing/BETA7-REMOTE-CALIBRATION.md)
+- [Beta-7-Geräteinstallation](docs/DEVICE-INSTALL-CHECKLIST.md)
 - [FIT-Schema](docs/data/FIT-SCHEMA.md)
 - [Beta-7-Gerätematrix](docs/testing/BETA7-DEVICE-MATRIX.md)
 - [Beta-7-Remote-Kalibrierung](docs/testing/BETA7-REMOTE-CALIBRATION.md)

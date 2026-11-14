@@ -13,11 +13,25 @@ DISALLOWED_PREFIXES = (
     ".secrets/",
     "analysis/private/",
     "fixtures/private/",
+    "private/",
+    "submissions/",
+    "dist/",
+    "build/",
+    "rinklogic-beta7-test-assistant/",
     "watch/tests/fixtures/private/",
     "watch/bin/",
     "watch-v2/bin/",
 )
-DISALLOWED_SUFFIXES = (".fit", ".prg", ".der", ".pem", ".key", ".log")
+DISALLOWED_SUFFIXES = (
+    ".fit",
+    ".prg",
+    ".der",
+    ".pem",
+    ".key",
+    ".log",
+    "_return.zip",
+    ".spec",
+)
 PUBLIC_FIXTURE_PREFIXES = ("fixtures/public/", "watch/tests/fixtures/public/")
 OPEN_SOURCE_LICENSE_FILES = (
     "LICENSE",
@@ -26,6 +40,8 @@ OPEN_SOURCE_LICENSE_FILES = (
     "LICENSES/CC-BY-4.0.txt",
     "REUSE.toml",
     "requirements-dev.txt",
+    "requirements-tester-app.txt",
+    "requirements-packaging.txt",
     "docs/LICENSING.md",
 )
 PUBLIC_COMMUNITY_FILES = ("CODE_OF_CONDUCT.md", "SUPPORT.md", "GOVERNANCE.md")
@@ -81,8 +97,10 @@ def find_disallowed_tracked_paths(paths: Iterable[str]) -> list[str]:
         is_environment_file = name == ".env" or (
             name.startswith(".env.") and name != ".env.example"
         )
+        is_embedded_assignment = name == "embedded-assignment.json"
         is_disallowed = (
             path.startswith(DISALLOWED_PREFIXES)
+            or is_embedded_assignment
             or is_environment_file
             or (path.endswith(DISALLOWED_SUFFIXES) and not is_public_fit_fixture)
         )

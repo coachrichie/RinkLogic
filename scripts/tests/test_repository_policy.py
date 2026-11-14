@@ -52,6 +52,48 @@ class RepositoryPolicyTests(unittest.TestCase):
 
         self.assertEqual(find_disallowed_tracked_paths(paths), [])
 
+    def test_generated_distributions_private_assignments_and_returns_are_rejected(self):
+        paths = [
+            "dist/RinkLogic-Beta7-Test-Assistant/app.exe",
+            "build/assistant/cache.dat",
+            "assistant.spec",
+            "RinkLogic-Beta7-Test-Assistant/embedded-assignment.json",
+            "private/tester-registry.json",
+            "submissions/RL-B7_return.zip",
+            "exports/RL-B7_return.zip",
+        ]
+
+        self.assertEqual(find_disallowed_tracked_paths(paths), paths)
+
+    def test_synthetic_assignment_and_public_fit_fixture_remain_allowed(self):
+        paths = [
+            "docs/testing/beta-test-assignment.example.json",
+            "fixtures/public/synthetic.fit",
+        ]
+
+        self.assertEqual(find_disallowed_tracked_paths(paths), [])
+
+    def test_generated_and_private_names_are_ignored(self):
+        paths = [
+            "dist/app.exe",
+            "build/cache.dat",
+            "assistant.spec",
+            "private/tester-registry.json",
+            "embedded-assignment.json",
+            "RinkLogic-Beta7-Test-Assistant/app.exe",
+        ]
+        result = subprocess.run(
+            ["git", "check-ignore", "-z", "--stdin"],
+            cwd=Path.cwd(),
+            input="\0".join(paths) + "\0",
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.rstrip("\0").split("\0"), paths)
+
     def test_environment_dotfiles_are_rejected(self):
         paths = [".env", ".env.production", ".secrets/token.txt"]
 
@@ -120,6 +162,8 @@ class RepositoryPolicyTests(unittest.TestCase):
             "LICENSES/CC-BY-4.0.txt",
             "REUSE.toml",
             "requirements-dev.txt",
+            "requirements-tester-app.txt",
+            "requirements-packaging.txt",
             "docs/LICENSING.md",
         )
 

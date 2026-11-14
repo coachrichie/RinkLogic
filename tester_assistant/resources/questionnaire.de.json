@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "privacy_warning": "Bitte gib in Freitext keine Namen, E-Mail-Adressen, Gesundheitsangaben oder sonstigen Informationen über Dritte an.",
+  "questions": [
+    {"id": "installation_ease", "prompt": "Wie einfach war die Installation der Beta-App?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
+    {"id": "instructions_clarity", "prompt": "Wie verständlich waren die Testanweisungen?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
+    {"id": "status_readability", "prompt": "Wie gut waren Status, Version und Hinweise auf der Uhr lesbar?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
+    {"id": "controls_reliability", "prompt": "Wie zuverlässig funktionierten Tasten und Touch während des Tests?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
+    {"id": "manual_shift_flow", "prompt": "Wie verständlich und zuverlässig war das manuelle Markieren von Eis- und Bankphasen?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
+    {"id": "calibration_flow", "prompt": "Wie verständlich waren die Auswahl des Sportprofils, der Aufbau der gemessenen 20-m-Strecke sowie fünf Läufe ohne und fünf mit Stickhandling?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
+    {"id": "distance_explanation", "prompt": "Wie verständlich war die Kennzeichnung der Distanz als experimentelle Schätzung?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
+    {"id": "stability", "prompt": "Wie stabil lief die App ohne Absturz, IQ!-Fehler oder Datenverlust?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
+    {"id": "export_ease", "prompt": "Wie einfach war der Export der Originaldatei aus Garmin Connect?", "choices": [1, 2, 3, 4, 5, "not_applicable"]},
+    {"id": "priority_improvement", "prompt": "Welche eine Verbesserung ist für dich am wichtigsten?", "choices": null, "min_length": 3, "max_length": 500}
+  ],
+  "optional_answers": {
+    "problem_details": {"question_id": "stability", "type": "string", "max_length": 1000}
+  }
+}

@@ -17,9 +17,14 @@ class WatchV2DeviceMatrixTests(unittest.TestCase):
         appdata = Path(os.environ["APPDATA"])
         cls.devices_root = appdata / "Garmin" / "ConnectIQ" / "Devices"
 
-    def test_ids_are_unique_and_installed(self):
+    def test_ids_are_unique(self):
         ids = [entry["id"] for entry in self.matrix["devices"]]
         self.assertEqual(len(ids), len(set(ids)))
+
+    def test_all_matrix_ids_are_installed_when_sdk_profiles_are_available(self):
+        if not self.devices_root.is_dir():
+            self.skipTest("Garmin Connect IQ device profiles are not installed")
+        ids = [entry["id"] for entry in self.matrix["devices"]]
         for device_id in ids:
             with self.subTest(device=device_id):
                 self.assertTrue((self.devices_root / device_id / "compiler.json").is_file())
@@ -58,6 +63,8 @@ class WatchV2DeviceMatrixTests(unittest.TestCase):
         self.assertFalse(any(device.startswith("instinct2") for device in manifest_ids))
 
     def test_matrix_metadata_matches_installed_profiles(self):
+        if not self.devices_root.is_dir():
+            self.skipTest("Garmin Connect IQ device profiles are not installed")
         for entry in self.matrix["devices"]:
             profile = json.loads(
                 (self.devices_root / entry["id"] / "compiler.json").read_text(encoding="utf-8")

@@ -123,6 +123,130 @@ class ReleaseAuditTests(unittest.TestCase):
 
             self.assertEqual(audit_repository(root), [])
 
+    def test_known_assistant_privacy_test_paths_are_narrowly_exempt(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            initialize_repository(root)
+            bundle = root / "tester_assistant_tests" / "test_bundle.py"
+            questionnaire = root / "tester_assistant_tests" / "test_questionnaire.py"
+            bundle.parent.mkdir(parents=True)
+            bundle.write_text(
+                'fixture = "path=/home/tester/run.fit"\n'
+                'byte_fixture = b"run,note\\n1,/home/tester/run.fit\\n"\n',
+                encoding="utf-8",
+            )
+            questionnaire.write_text(
+                'fixture = r"C:\\Users\\Tester\\Documents\\original.fit"\n',
+                encoding="utf-8",
+            )
+            run_git(root, "add", "tester_assistant_tests")
+            run_git(root, "commit", "-m", "add synthetic privacy fixtures")
+
+            self.assertEqual(audit_repository(root), [])
+
+    def test_other_absolute_path_in_privacy_test_file_is_still_reported(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            initialize_repository(root)
+            fixture = root / "tester_assistant_tests" / "test_bundle.py"
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                'fixture = r"C:\\Users\\RealPerson\\private.fit"\n',
+                encoding="utf-8",
+            )
+            run_git(root, "add", "tester_assistant_tests/test_bundle.py")
+            run_git(root, "commit", "-m", "add leaked path")
+            commit = run_git(root, "rev-parse", "HEAD")
+
+            self.assertIn(
+                f"absolute-path: {commit}:tester_assistant_tests/test_bundle.py",
+                audit_repository(root),
+            )
+
+    def test_allowed_fixture_does_not_hide_real_path_on_same_line(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            initialize_repository(root)
+            fixture = root / "tester_assistant_tests" / "test_bundle.py"
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                'fixtures = "/home/tester/run.fit C:\\Users\\RealPerson\\private.fit"\n',
+                encoding="utf-8",
+            )
+            run_git(root, "add", "tester_assistant_tests/test_bundle.py")
+            run_git(root, "commit", "-m", "mix fixture and leaked path")
+            commit = run_git(root, "rev-parse", "HEAD")
+
+            self.assertIn(
+                f"absolute-path: {commit}:tester_assistant_tests/test_bundle.py",
+                audit_repository(root),
+            )
+
+    def test_allowed_fixture_path_with_suffix_extension_is_reported(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            initialize_repository(root)
+            fixture = root / "tester_assistant_tests" / "test_bundle.py"
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                'posix = "/home/tester/run.fit/private.fit"\n'
+                'windows = r"C:\\Users\\Tester\\run.fit\\private.fit"\n',
+                encoding="utf-8",
+            )
+            run_git(root, "add", "tester_assistant_tests/test_bundle.py")
+            run_git(root, "commit", "-m", "extend synthetic fixture paths")
+            commit = run_git(root, "rev-parse", "HEAD")
+
+            self.assertIn(
+                f"absolute-path: {commit}:tester_assistant_tests/test_bundle.py",
+                audit_repository(root),
+            )
+
+    def test_allowed_fixture_path_with_prefix_extension_is_reported(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            initialize_repository(root)
+            fixture = root / "tester_assistant_tests" / "test_bundle.py"
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                'posix = "/private/home/tester/run.fit"\n'
+                'windows = r"private-C:\\Users\\Tester\\run.fit"\n',
+                encoding="utf-8",
+            )
+            run_git(root, "add", "tester_assistant_tests/test_bundle.py")
+            run_git(root, "commit", "-m", "prefix synthetic fixture paths")
+            commit = run_git(root, "rev-parse", "HEAD")
+
+            self.assertIn(
+                f"absolute-path: {commit}:tester_assistant_tests/test_bundle.py",
+                audit_repository(root),
+            )
+
+    def test_allowed_fixture_path_with_punctuation_or_space_extension_is_reported(self):
+        source_lines = (
+            'fixture = "/home/tester/run.fit?private"\n',
+            'fixture = "/home/tester/run.fit#private"\n',
+            'fixture = "/home/tester/run.fit private"\n',
+            'fixture = r"C:\\Users\\Tester\\run.fit?private"\n',
+            'fixture = r"C:\\Users\\Tester\\run.fit#private"\n',
+            'fixture = r"C:\\Users\\Tester\\run.fit private"\n',
+        )
+        for source_line in source_lines:
+            with self.subTest(source_line=source_line), TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                initialize_repository(root)
+                fixture = root / "tester_assistant_tests" / "test_bundle.py"
+                fixture.parent.mkdir(parents=True)
+                fixture.write_text(source_line, encoding="utf-8")
+                run_git(root, "add", "tester_assistant_tests/test_bundle.py")
+                run_git(root, "commit", "-m", "extend fixture with punctuation")
+                commit = run_git(root, "rev-parse", "HEAD")
+
+                self.assertIn(
+                    f"absolute-path: {commit}:tester_assistant_tests/test_bundle.py",
+                    audit_repository(root),
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

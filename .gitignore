@@ -16,5 +16,14 @@ watch-v2/bin/
 fixtures/private/
 watch/tests/fixtures/private/
 analysis/private/
+private/
+submissions/
+*.fit
+*_return.zip
+dist/
+build/
+*.spec
 __pycache__/
 *.pyc
+embedded-assignment.json
+RinkLogic-Beta7-Test-Assistant/
